@@ -27,3 +27,28 @@ func NewEventHeader() Header {
 		Timestamp: time.Now(),
 	}
 }
+
+type Recorder struct {
+	events []Event
+}
+
+func (e *Recorder) AddEvent(event Event) {
+	if e == nil {
+		return
+	}
+	e.events = append(e.events, event)
+}
+
+func (e *Recorder) GetUncommittedEvents() []Event {
+	if e == nil {
+		return nil
+	}
+	return e.events
+}
+
+func (e *Recorder) MarkEventsAsCommitted() {
+	if e == nil {
+		return
+	}
+	e.events = []Event{}
+}
