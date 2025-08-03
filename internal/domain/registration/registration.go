@@ -29,6 +29,10 @@ const (
 
 type Status string
 
+func (s Status) String() string {
+	return string(s)
+}
+
 const (
 	StatusPending   Status = "pending"
 	StatusExpired   Status = "expired"
@@ -39,6 +43,10 @@ type ID uuid.UUID
 
 func NewID() ID {
 	return ID(uuid.New())
+}
+
+func (id ID) String() string {
+	return uuid.UUID(id).String()
 }
 
 type Registration struct {
@@ -230,6 +238,22 @@ func (r *Registration) ID() ID {
 	}
 
 	return r.id
+}
+
+func (r *Registration) Email() string {
+	if r == nil {
+		return ""
+	}
+
+	return r.email
+}
+
+func (r *Registration) Status() Status {
+	if r == nil {
+		return ""
+	}
+
+	return r.status
 }
 
 func generateCode() (string, error) {

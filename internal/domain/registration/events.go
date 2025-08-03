@@ -10,6 +10,7 @@ const EventStreamName = "events_registration"
 
 type RegistrationStarted struct {
 	event.Header
+	event.Otel
 	RegistrationID   ID     `json:"registration_id"`
 	Email            string `json:"email"`
 	VerificationCode string `json:"verification_code"`
@@ -21,6 +22,7 @@ func (e RegistrationStarted) GetStreamName() string {
 
 type EmailVerified struct {
 	event.Header
+	event.Otel
 	RegistrationID ID     `json:"registration_id"`
 	Email          string `json:"email"`
 }
@@ -31,6 +33,7 @@ func (e EmailVerified) GetStreamName() string {
 
 type StudentRegistrationCompleted struct {
 	event.Header
+	event.Otel
 	RegistrationID ID        `json:"registration_id"`
 	Barcode        string    `json:"barcode"`
 	Email          string    `json:"email"`
@@ -46,6 +49,7 @@ func (e StudentRegistrationCompleted) GetStreamName() string {
 
 type StaffRegistrationCompleted struct {
 	event.Header
+	event.Otel
 	RegistrationID ID     `json:"registration_id"`
 	Barcode        string `json:"barcode"`
 	Email          string `json:"email"`
@@ -60,6 +64,7 @@ func (e StaffRegistrationCompleted) GetStreamName() string {
 
 type RegistrationFailed struct {
 	event.Header
+	event.Otel
 	RegistrationID ID     `json:"registration_id"`
 	Reason         string `json:"reason"`
 }
@@ -70,6 +75,7 @@ func (e RegistrationFailed) GetStreamName() string {
 
 type VerificationCodeResent struct {
 	event.Header
+	event.Otel
 	RegistrationID   ID     `json:"registration_id"`
 	Email            string `json:"email"`
 	VerificationCode string `json:"verification_code"`
