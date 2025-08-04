@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
 )
 
 var (
@@ -21,13 +22,7 @@ var (
 )
 
 type MailSender interface {
-	MailSend(ctx context.Context, payload MailSenderPayload) error
-}
-
-type MailSenderPayload struct {
-	ToEmail string
-	Subject string
-	Message string
+	SendMail(ctx context.Context, payload mail.Payload) error
 }
 
 type RegistrationStartedHandler struct {
@@ -82,12 +77,12 @@ func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration
 		return errors.New("verification code is empty")
 	}
 
-	payload := MailSenderPayload{
-		ToEmail: e.Email,
+	payload := mail.Payload{
+		To:      e.Email,
 		Subject: "Email Verification Code",
-		Message: fmt.Sprintf("Your email verification code is: %s", e.VerificationCode),
+		Body:    fmt.Sprintf("Your email verification code is: %s", e.VerificationCode),
 	}
-	if err := h.mailsender.MailSend(ctx, payload); err != nil {
+	if err := h.mailsender.SendMail(ctx, payload); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to send email verification code")
 		return fmt.Errorf("failed to send email verification code: %w", err)

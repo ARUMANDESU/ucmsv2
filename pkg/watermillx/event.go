@@ -12,9 +12,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 )
 
-func NewEventProcessor(router *message.Router, conn *pgxpool.Conn, logger watermill.LoggerAdapter) (*cqrs.EventProcessor, error) {
+func NewEventProcessor(router *message.Router, conn *pgxpool.Pool, logger watermill.LoggerAdapter) (*cqrs.EventProcessor, error) {
 	return cqrs.NewEventProcessorWithConfig(router, cqrs.EventProcessorConfig{
 		GenerateSubscribeTopic: func(params cqrs.EventProcessorGenerateSubscribeTopicParams) (string, error) {
 			evt, ok := params.EventHandler.NewEvent().(event.Event)
@@ -41,7 +42,7 @@ func NewEventProcessor(router *message.Router, conn *pgxpool.Conn, logger waterm
 	})
 }
 
-func NewEventGroupProcessor(router *message.Router, conn *pgxpool.Conn, logger watermill.LoggerAdapter) (*cqrs.EventGroupProcessor, error) {
+func NewEventGroupProcessor(router *message.Router, conn *pgxpool.Pool, logger watermill.LoggerAdapter) (*cqrs.EventGroupProcessor, error) {
 	return cqrs.NewEventGroupProcessorWithConfig(router, cqrs.EventGroupProcessorConfig{
 		GenerateSubscribeTopic: func(params cqrs.EventGroupProcessorGenerateSubscribeTopicParams) (string, error) {
 			evt, ok := params.EventGroupHandlers[0].NewEvent().(event.Event) // all handlers' events' stream names have to be the same
@@ -101,7 +102,7 @@ func NewTxEventBus(tx pgx.Tx, logger watermill.LoggerAdapter) (*cqrs.EventBus, e
 	return eventBus, nil
 }
 
-func Publish(ctx context.Context, tx pgx.Tx, logger watermill.LoggerAdapter, evts ...any) error {
+func Publish(ctx context.Context, tx pgx.Tx, logger watermill.LoggerAdapter, evts ...event.Event) error {
 	if len(evts) == 0 {
 		return nil
 	}
@@ -127,4 +128,32 @@ func MessageTopic(event event.Event) (string, error) {
 	}
 
 	return streamName, nil
+}
+
+func InitializeEventSchema(ctx context.Context, conn *pgxpool.Pool, logger watermill.LoggerAdapter) error {
+	subscriber, err := watermillSQL.NewSubscriber(
+		watermillSQL.BeginnerFromPgx(conn),
+		watermillSQL.SubscriberConfig{
+			SchemaAdapter:    watermillSQL.DefaultPostgreSQLSchema{},
+			OffsetsAdapter:   watermillSQL.DefaultPostgreSQLOffsetsAdapter{},
+			InitializeSchema: true,
+		},
+		logger,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create subscriber: %w", err)
+	}
+
+	events := []string{
+		registration.EventStreamName,
+		// user.EventStreamName,
+	}
+
+	for _, eventStream := range events {
+		if err := subscriber.SubscribeInitialize(eventStream); err != nil {
+			return fmt.Errorf("failed to initialize event schema for %s: %w", eventStream, err)
+		}
+	}
+
+	return nil
 }

@@ -82,10 +82,9 @@ func WriteJSON(w http.ResponseWriter, status int, data Envelope, headers http.He
 
 func Success(w http.ResponseWriter, r *http.Request, status int, message Envelope) {
 	if message == nil {
-		message = make(Envelope, 2)
+		message = make(Envelope, 1)
 	}
 	message["succeeded"] = true
-	message["request_id"] = "todo" // TODO: implement request id
 
 	err := WriteJSON(w, status, message, nil)
 	if err != nil {

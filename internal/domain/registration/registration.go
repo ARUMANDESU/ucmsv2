@@ -55,7 +55,7 @@ type Registration struct {
 	email            string
 	status           Status
 	verificationCode string
-	codeAttempts     int
+	codeAttempts     int8
 	resendTimeout    time.Time
 	codeExpiresAt    time.Time
 	createdAt        time.Time
@@ -102,6 +102,32 @@ func NewRegistration(email string, mode env.Mode) (*Registration, error) {
 	})
 
 	return reg, nil
+}
+
+type RehydrateArgs struct {
+	ID               ID
+	Email            string
+	Status           Status
+	VerificationCode string
+	CodeAttempts     int8
+	CodeExpiresAt    time.Time
+	ResendTimeout    time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+func Rehydrate(args RehydrateArgs) *Registration {
+	return &Registration{
+		id:               args.ID,
+		email:            args.Email,
+		status:           args.Status,
+		verificationCode: args.VerificationCode,
+		codeAttempts:     args.CodeAttempts,
+		codeExpiresAt:    args.CodeExpiresAt,
+		resendTimeout:    args.ResendTimeout,
+		createdAt:        args.CreatedAt,
+		updatedAt:        args.UpdatedAt,
+	}
 }
 
 func (r *Registration) VerifyCode(code string) error {
@@ -254,6 +280,54 @@ func (r *Registration) Status() Status {
 	}
 
 	return r.status
+}
+
+func (r *Registration) VerificationCode() string {
+	if r == nil {
+		return ""
+	}
+
+	return r.verificationCode
+}
+
+func (r *Registration) CodeAttempts() int8 {
+	if r == nil {
+		return 0
+	}
+
+	return r.codeAttempts
+}
+
+func (r *Registration) CodeExpiresAt() time.Time {
+	if r == nil {
+		return time.Time{}
+	}
+
+	return r.codeExpiresAt
+}
+
+func (r *Registration) ResendTimeout() time.Time {
+	if r == nil {
+		return time.Time{}
+	}
+
+	return r.resendTimeout
+}
+
+func (r *Registration) CreatedAt() time.Time {
+	if r == nil {
+		return time.Time{}
+	}
+
+	return r.createdAt
+}
+
+func (r *Registration) UpdatedAt() time.Time {
+	if r == nil {
+		return time.Time{}
+	}
+
+	return r.updatedAt
 }
 
 func generateCode() (string, error) {

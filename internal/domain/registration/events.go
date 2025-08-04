@@ -16,7 +16,7 @@ type RegistrationStarted struct {
 	VerificationCode string `json:"verification_code"`
 }
 
-func (e RegistrationStarted) GetStreamName() string {
+func (e *RegistrationStarted) GetStreamName() string {
 	return EventStreamName
 }
 
@@ -27,7 +27,7 @@ type EmailVerified struct {
 	Email          string `json:"email"`
 }
 
-func (e EmailVerified) GetStreamName() string {
+func (e *EmailVerified) GetStreamName() string {
 	return EventStreamName
 }
 
@@ -43,7 +43,7 @@ type StudentRegistrationCompleted struct {
 	GroupID        uuid.UUID `json:"group_id"`
 }
 
-func (e StudentRegistrationCompleted) GetStreamName() string {
+func (e *StudentRegistrationCompleted) GetStreamName() string {
 	return EventStreamName
 }
 
@@ -58,7 +58,7 @@ type StaffRegistrationCompleted struct {
 	PassHash       []byte `json:"pass_hash"`
 }
 
-func (e StaffRegistrationCompleted) GetStreamName() string {
+func (e *StaffRegistrationCompleted) GetStreamName() string {
 	return EventStreamName
 }
 
@@ -69,7 +69,7 @@ type RegistrationFailed struct {
 	Reason         string `json:"reason"`
 }
 
-func (e RegistrationFailed) GetStreamName() string {
+func (e *RegistrationFailed) GetStreamName() string {
 	return EventStreamName
 }
 
@@ -81,6 +81,6 @@ type VerificationCodeResent struct {
 	VerificationCode string `json:"verification_code"`
 }
 
-func (e VerificationCodeResent) GetStreamName() string {
+func (e *VerificationCodeResent) GetStreamName() string {
 	return EventStreamName
 }

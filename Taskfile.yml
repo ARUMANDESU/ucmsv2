@@ -1,0 +1,13 @@
+# https://taskfile.dev
+version: '3'
+
+vars:
+
+tasks:
+  openapi_http:
+    cmds:
+      - ./scripts/openapi-http.sh registration internal/ports/http registrationhttp
+  http:
+    cmds:
+        - cmd: go run ./cmd/api/
+          ignore_error: true

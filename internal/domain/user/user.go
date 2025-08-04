@@ -95,6 +95,7 @@ type RehydrateUserArgs struct {
 	ID        ID
 	FirstName string
 	LastName  string
+	Role      role.Global
 	AvatarURL string
 	Email     string
 	PassHash  []byte
@@ -107,6 +108,7 @@ func RehydrateUser(p RehydrateUserArgs) *User {
 		id:        p.ID,
 		firstName: p.FirstName,
 		lastName:  p.LastName,
+		role:      p.Role,
 		avatarURL: p.AvatarURL,
 		email:     p.Email,
 		passHash:  p.PassHash,
