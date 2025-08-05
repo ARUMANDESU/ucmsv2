@@ -3,11 +3,14 @@ package postgres
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
@@ -16,18 +19,38 @@ import (
 )
 
 type RegistrationRepo struct {
+	tracer  trace.Tracer
+	logger  *slog.Logger
 	pool    *pgxpool.Pool
 	wlogger watermill.LoggerAdapter
 }
 
-func NewRegistrationRepo(pool *pgxpool.Pool) *RegistrationRepo {
+// NewRegistrationRepo creates a new instance of RegistrationRepo.
+//
+//	WARNING; panics if pool is nil
+func NewRegistrationRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *RegistrationRepo {
+	if pool == nil {
+		panic("pgxpool.Pool cannot be nil")
+	}
+	if t == nil {
+		t = tracer
+	}
+	if l == nil {
+		l = logger
+	}
+
 	return &RegistrationRepo{
+		tracer:  t,
+		logger:  l,
 		pool:    pool,
 		wlogger: watermill.NewStdLogger(false, false),
 	}
 }
 
-func (re *RegistrationRepo) GetRegistrationByEmail(ctx context.Context, email string) (*registration.Registration, error) {
+func (r *RegistrationRepo) GetRegistrationByEmail(ctx context.Context, email string) (*registration.Registration, error) {
+	ctx, span := r.tracer.Start(ctx, "RegistrationRepo.GetRegistrationByEmail")
+	defer span.End()
+
 	query := `
         SELECT id, email, status, verification_code, code_attempts, code_expires_at, resend_timeout, created_at, updated_at
         FROM registrations
@@ -35,12 +58,14 @@ func (re *RegistrationRepo) GetRegistrationByEmail(ctx context.Context, email st
     `
 
 	var dto RegistrationDTO
-	err := re.pool.QueryRow(ctx, query, email).Scan(
+	err := r.pool.QueryRow(ctx, query, email).Scan(
 		&dto.ID, &dto.Email, &dto.Status,
 		&dto.VerificationCode, &dto.CodeAttempts, &dto.CodeExpiresAt,
 		&dto.ResendTimeout, &dto.CreatedAt, &dto.UpdatedAt,
 	)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to get registration by email")
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, repos.ErrNotFound
 		}
@@ -51,6 +76,9 @@ func (re *RegistrationRepo) GetRegistrationByEmail(ctx context.Context, email st
 }
 
 func (re *RegistrationRepo) GetRegistrationByID(ctx context.Context, id registration.ID) (*registration.Registration, error) {
+	ctx, span := re.tracer.Start(ctx, "RegistrationRepo.GetRegistrationByID")
+	defer span.End()
+
 	query := `
 		SELECT id, email, status, verification_code, code_attempts, code_expires_at, resend_timeout, created_at, updated_at
 		FROM registrations
@@ -64,6 +92,8 @@ func (re *RegistrationRepo) GetRegistrationByID(ctx context.Context, id registra
 		&dto.ResendTimeout, &dto.CreatedAt, &dto.UpdatedAt,
 	)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to get registration by ID")
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, repos.ErrNotFound
 		}
@@ -74,6 +104,9 @@ func (re *RegistrationRepo) GetRegistrationByID(ctx context.Context, id registra
 }
 
 func (re *RegistrationRepo) SaveRegistration(ctx context.Context, r *registration.Registration) error {
+	ctx, span := re.tracer.Start(ctx, "RegistrationRepo.SaveRegistration")
+	defer span.End()
+
 	dto := DomainToRegistrationDTO(r)
 
 	query := `
@@ -89,6 +122,8 @@ func (re *RegistrationRepo) SaveRegistration(ctx context.Context, r *registratio
 			dto.ResendTimeout, dto.CreatedAt, dto.UpdatedAt,
 		)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "failed to save registration")
 			return err
 		}
 		if res.RowsAffected() == 0 {
@@ -97,6 +132,8 @@ func (re *RegistrationRepo) SaveRegistration(ctx context.Context, r *registratio
 
 		if len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, re.wlogger, events...); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "failed to publish events")
 				return err
 			}
 		}
@@ -109,6 +146,14 @@ func (re *RegistrationRepo) UpdateRegistration(
 	id registration.ID,
 	fn func(ctx context.Context, r *registration.Registration) error,
 ) error {
+	ctx, span := re.tracer.Start(ctx, "RegistrationRepo.UpdateRegistration")
+	defer span.End()
+	if fn == nil {
+		span.RecordError(errors.New("update function cannot be nil"))
+		span.SetStatus(codes.Error, "update function cannot be nil")
+		return errors.New("update function cannot be nil")
+	}
+
 	selectquery := `
         SELECT id, email, status, verification_code, code_attempts, code_expires_at, resend_timeout, created_at, updated_at
         FROM registrations
@@ -131,6 +176,8 @@ func (re *RegistrationRepo) UpdateRegistration(
 			&dto.ResendTimeout, &dto.CreatedAt, &dto.UpdatedAt,
 		)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "failed to get registration for update")
 			if errors.Is(err, pgx.ErrNoRows) {
 				return repos.ErrNotFound
 			}
@@ -140,6 +187,8 @@ func (re *RegistrationRepo) UpdateRegistration(
 		reg := RegistrationToDomain(dto)
 
 		if err := fn(ctx, reg); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "failed to apply update function")
 			return err
 		}
 
@@ -151,6 +200,8 @@ func (re *RegistrationRepo) UpdateRegistration(
 			dto.ResendTimeout, dto.UpdatedAt,
 		)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "failed to update registration")
 			return err
 		}
 		if res.RowsAffected() == 0 {
@@ -160,6 +211,8 @@ func (re *RegistrationRepo) UpdateRegistration(
 		events := reg.GetUncommittedEvents()
 		if len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, re.wlogger, events...); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "failed to publish events")
 				return err
 			}
 		}

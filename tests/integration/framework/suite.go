@@ -14,6 +14,10 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 
 	ucmsv2 "github.com/ARUMANDESU/ucms"
 	postgresrepo "github.com/ARUMANDESU/ucms/internal/adapters/repos/postgres"
@@ -37,6 +41,7 @@ type IntegrationTestSuite struct {
 	pgContainer     *postgres.PostgresContainer
 	pgPool          *pgxpool.Pool
 	watermillRouter *message.Router
+	traceProvider   trace.TracerProvider
 
 	// Application
 	app           *Application
@@ -61,6 +66,11 @@ type Application struct {
 
 func (s *IntegrationTestSuite) SetupSuite() {
 	ctx := context.Background()
+
+	rec := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(rec))
+	otel.SetTracerProvider(tp)
+	s.traceProvider = tp
 
 	s.startPostgreSQL(ctx)
 
@@ -125,8 +135,8 @@ func (s *IntegrationTestSuite) initializeWatermill() {
 }
 
 func (s *IntegrationTestSuite) createApplication() {
-	registrationRepo := postgresrepo.NewRegistrationRepo(s.pgPool)
-	userRepo := postgresrepo.NewUserRepo(s.pgPool)
+	registrationRepo := postgresrepo.NewRegistrationRepo(s.pgPool, nil, nil)
+	userRepo := postgresrepo.NewUserRepo(s.pgPool, nil, nil)
 
 	s.MockMailSender = mocks.NewMockMailSender()
 

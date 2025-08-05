@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/exaring/otelpgx"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
@@ -14,10 +15,25 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // Import the stdlib driver for pgx
 
 	"github.com/ARUMANDESU/ucms/pkg/ctxs"
+	"github.com/ARUMANDESU/ucms/pkg/env"
 )
 
-func NewPgxPool(ctx context.Context, pgdsn string) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, pgdsn)
+func NewPgxPool(ctx context.Context, pgdsn string, mode env.Mode) (*pgxpool.Pool, error) {
+	cfg, err := pgxpool.ParseConfig(pgdsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse pgdsn: %w", err)
+	}
+
+	opts := []otelpgx.Option{
+		otelpgx.WithTrimSQLInSpanName(),
+	}
+	if mode == env.Prod {
+		opts = append(opts, otelpgx.WithDisableSQLStatementInAttributes()) // disable SQL statements in attributes to avoid PII/high-cardinality
+	}
+
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer(opts...)
+
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
