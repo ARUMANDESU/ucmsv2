@@ -22,7 +22,8 @@ type RegistrationRepo struct {
 
 func NewRegistrationRepo(pool *pgxpool.Pool) *RegistrationRepo {
 	return &RegistrationRepo{
-		pool: pool,
+		pool:    pool,
+		wlogger: watermill.NewStdLogger(false, false),
 	}
 }
 

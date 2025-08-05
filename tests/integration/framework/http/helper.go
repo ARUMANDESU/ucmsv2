@@ -1,4 +1,4 @@
-package framework
+package http
 
 import (
 	"bytes"
@@ -15,8 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type HTTPHelper struct {
+type Helper struct {
 	handler chi.Router
+}
+
+func NewHelper(handler chi.Router) *Helper {
+	return &Helper{handler: handler}
 }
 
 type Request struct {
@@ -33,7 +37,7 @@ type Response struct {
 	t *testing.T
 }
 
-func (h *HTTPHelper) Do(t *testing.T, req Request) *Response {
+func (h *Helper) Do(t *testing.T, req Request) *Response {
 	t.Helper()
 
 	var body io.Reader
@@ -88,6 +92,22 @@ func (r *Response) AssertSuccess() *Response {
 	r.ParseJSON(resp)
 	assert.True(r.t, resp["success"].(bool), "expected succeeded=true")
 
+	return r
+}
+
+func (r *Response) AssertAccepted() *Response {
+	r.t.Helper()
+	return r.AssertStatus(http.StatusAccepted)
+}
+
+func (r *Response) AssertError(expectedStatus int, expectedMessage string) *Response {
+	r.t.Helper()
+	r.AssertStatus(expectedStatus)
+
+	var resp map[string]any
+	r.ParseJSON(&resp)
+	require.False(r.t, resp["succeeded"].(bool), "expected succeeded=false")
+	require.Contains(r.t, resp["message"].(string), expectedMessage)
 	return r
 }
 

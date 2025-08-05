@@ -6,6 +6,7 @@ require (
 	github.com/ThreeDotsLabs/watermill v1.4.7
 	github.com/ThreeDotsLabs/watermill-sql/v4 v4.0.0-rc.6
 	github.com/go-chi/chi v1.5.5
+	github.com/go-chi/chi/v5 v5.1.0
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.5

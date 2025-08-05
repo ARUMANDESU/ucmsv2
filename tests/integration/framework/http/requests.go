@@ -1,8 +1,8 @@
-package framework
+package http
 
 import "testing"
 
-func (h *HTTPHelper) StartStudentRegistration(t *testing.T, email string) *Response {
+func (h *Helper) StartStudentRegistration(t *testing.T, email string) *Response {
 	return h.Do(t, Request{
 		Method: "POST",
 		Path:   "/v1/registration/start/student",
@@ -10,7 +10,7 @@ func (h *HTTPHelper) StartStudentRegistration(t *testing.T, email string) *Respo
 	})
 }
 
-func (h *HTTPHelper) VerifyRegistrationCode(t *testing.T, email, code string) *Response {
+func (h *Helper) VerifyRegistrationCode(t *testing.T, email, code string) *Response {
 	return h.Do(t, Request{
 		Method: "POST",
 		Path:   "/v1/registration/verify",
@@ -21,7 +21,7 @@ func (h *HTTPHelper) VerifyRegistrationCode(t *testing.T, email, code string) *R
 	})
 }
 
-func (h *HTTPHelper) CompleteStudentRegistration(t *testing.T, req CompleteRegistrationRequest) *Response {
+func (h *Helper) CompleteStudentRegistration(t *testing.T, req CompleteRegistrationRequest) *Response {
 	return h.Do(t, Request{
 		Method: "POST",
 		Path:   "/v1/registration/complete/student",

@@ -141,6 +141,14 @@ func (u *User) LastName() string {
 	return u.lastName
 }
 
+func (u *User) Role() role.Global {
+	if u == nil {
+		return ""
+	}
+
+	return u.role
+}
+
 func (u *User) AvatarUrl() string {
 	if u == nil {
 		return ""
