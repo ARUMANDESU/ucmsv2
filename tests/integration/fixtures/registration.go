@@ -1,8 +1,11 @@
 package fixtures
 
 import (
+	"strings"
+
 	"github.com/google/uuid"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
 )
 
@@ -12,6 +15,13 @@ const (
 	ValidStaffEmail    = "staff@astanait.edu.kz"
 	ValidExternalEmail = "external@gmail.com"
 	InvalidEmail       = "notanemail"
+)
+
+var (
+	InvalidLongFirstName  = strings.Repeat("A", user.MaxFirstNameLen+1)
+	InvalidLongLastName   = strings.Repeat("B", user.MaxLastNameLen+1)
+	InvalidShortFirstName = strings.Repeat("C", user.MinFirstNameLen-1)
+	InvalidShortLastName  = strings.Repeat("D", user.MinLastNameLen-1)
 )
 
 // Test users

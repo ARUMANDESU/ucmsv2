@@ -1,7 +1,7 @@
 package user
 
 type AITUSA struct {
-	Student
+	student Student
 }
 
 type RehydrateAITUSAArgs struct {
@@ -10,6 +10,14 @@ type RehydrateAITUSAArgs struct {
 
 func RehydrateAITUSA(p RehydrateAITUSAArgs) *AITUSA {
 	return &AITUSA{
-		Student: *RehydrateStudent(p.RehydrateStudentArgs),
+		student: *RehydrateStudent(p.RehydrateStudentArgs),
 	}
+}
+
+func (a *AITUSA) Student() *Student {
+	if a == nil {
+		return nil
+	}
+
+	return &a.student
 }

@@ -219,3 +219,82 @@ func (re *RegistrationRepo) UpdateRegistration(
 		return nil
 	})
 }
+
+func (re *RegistrationRepo) UpdateRegistrationByEmail(
+	ctx context.Context,
+	email string,
+	fn func(ctx context.Context, r *registration.Registration) error,
+) error {
+	ctx, span := re.tracer.Start(ctx, "RegistrationRepo.UpdateRegistrationByEmail")
+	defer span.End()
+	if fn == nil {
+		span.RecordError(errors.New("update function cannot be nil"))
+		span.SetStatus(codes.Error, "update function cannot be nil")
+		return errors.New("update function cannot be nil")
+	}
+
+	selectquery := `
+        SELECT id, email, status, verification_code, code_attempts, code_expires_at, resend_timeout, created_at, updated_at
+        FROM registrations
+        WHERE email = $1
+        FOR UPDATE;
+    `
+	updatequery := `
+        UPDATE registrations
+        SET email = $2, status = $3, verification_code = $4,
+            code_attempts = $5, code_expires_at = $6, resend_timeout = $7,
+            updated_at = $8
+        WHERE email = $1;
+    `
+
+	return postgres.WithTx(ctx, re.pool, func(ctx context.Context, tx pgx.Tx) error {
+		var dto RegistrationDTO
+		err := tx.QueryRow(ctx, selectquery, email).Scan(
+			&dto.ID, &dto.Email, &dto.Status,
+			&dto.VerificationCode, &dto.CodeAttempts, &dto.CodeExpiresAt,
+			&dto.ResendTimeout, &dto.CreatedAt, &dto.UpdatedAt,
+		)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "failed to get registration for update")
+			if errors.Is(err, pgx.ErrNoRows) {
+				return repos.ErrNotFound
+			}
+			return err
+		}
+
+		reg := RegistrationToDomain(dto)
+
+		if err := fn(ctx, reg); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "failed to apply update function")
+			return err
+		}
+
+		dto = DomainToRegistrationDTO(reg)
+
+		res, err := tx.Exec(ctx, updatequery,
+			dto.ID, dto.Email, dto.Status,
+			dto.VerificationCode, dto.CodeAttempts, dto.CodeExpiresAt,
+			dto.ResendTimeout, dto.UpdatedAt,
+		)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "failed to update registration")
+			return err
+		}
+		if res.RowsAffected() == 0 {
+			return repos.ErrNoRowsAffected
+		}
+
+		events := reg.GetUncommittedEvents()
+		if len(events) > 0 {
+			if err := watermillx.Publish(ctx, tx, re.wlogger, events...); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "failed to publish events")
+				return err
+			}
+		}
+		return nil
+	})
+}

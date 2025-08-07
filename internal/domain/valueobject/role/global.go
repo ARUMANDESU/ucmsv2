@@ -3,15 +3,15 @@ package role
 type Global string
 
 const (
-	GuestRole   = Global("guest")
-	StudentRole = Global("student")
-	AITUSARole  = Global("aitusa")
-	StaffRole   = Global("staff")
+	Guest   = Global("guest")
+	Student = Global("student")
+	AITUSA  = Global("aitusa")
+	Staff   = Global("staff")
 )
 
 func IsGlobalValid[T Global | string](role T) bool {
 	switch Global(role) {
-	case GuestRole, StudentRole, AITUSARole, StaffRole:
+	case Guest, Student, AITUSA, Staff:
 		return true
 	default:
 		return false

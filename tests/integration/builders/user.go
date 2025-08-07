@@ -3,11 +3,13 @@ package builders
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 )
 
 type UserBuilder struct {
@@ -24,18 +26,18 @@ type UserBuilder struct {
 }
 
 func NewUserBuilder() *UserBuilder {
-	hash, _ := bcrypt.GenerateFromPassword([]byte("Test123!"), 10)
+	hash, _ := bcrypt.GenerateFromPassword([]byte(fixtures.TestStudent.Password), registration.PasswordCostFactor)
 	now := time.Now()
 
 	return &UserBuilder{
-		id:        user.ID("test-user-id"),
-		firstName: "Test",
-		lastName:  "User",
-		email:     "test@example.com",
-		password:  "Test123!",
+		id:        user.ID(fixtures.TestStudentID),
+		firstName: fixtures.TestStudent.FirstName,
+		lastName:  fixtures.TestStudent.LastName,
+		email:     fixtures.ValidStudentEmail,
+		password:  fixtures.TestStudent.Password,
 		passHash:  hash,
 		avatarURL: "",
-		role:      role.StudentRole,
+		role:      role.Student,
 		createdAt: now,
 		updatedAt: now,
 	}
@@ -59,8 +61,13 @@ func (b *UserBuilder) WithEmail(email string) *UserBuilder {
 
 func (b *UserBuilder) WithPassword(password string) *UserBuilder {
 	b.password = password
-	hash, _ := bcrypt.GenerateFromPassword([]byte(password), 10)
+	hash, _ := bcrypt.GenerateFromPassword([]byte(password), registration.PasswordCostFactor)
 	b.passHash = hash
+	return b
+}
+
+func (b *UserBuilder) withPassHash(passHash []byte) *UserBuilder {
+	b.passHash = passHash
 	return b
 }
 
@@ -70,17 +77,17 @@ func (b *UserBuilder) WithRole(role role.Global) *UserBuilder {
 }
 
 func (b *UserBuilder) AsStudent() *UserBuilder {
-	b.role = role.StudentRole
+	b.role = role.Student
 	return b
 }
 
 func (b *UserBuilder) AsStaff() *UserBuilder {
-	b.role = role.StaffRole
+	b.role = role.Staff
 	return b
 }
 
 func (b *UserBuilder) AsAITUSA() *UserBuilder {
-	b.role = role.AITUSARole
+	b.role = role.AITUSA
 	return b
 }
 
@@ -112,46 +119,111 @@ func (b *UserBuilder) RehydrateArgs() user.RehydrateUserArgs {
 	}
 }
 
-func (b *UserBuilder) BuildNew() (*user.User, error) {
-	return user.RegisterUser(user.RegisterUserArgs{
+func (b *UserBuilder) BuildNew() *user.User {
+	return user.RehydrateUser(user.RehydrateUserArgs{
 		ID:        b.id,
 		FirstName: b.firstName,
 		LastName:  b.lastName,
 		AvatarURL: b.avatarURL,
 		Email:     b.email,
-		Password:  b.password,
+		PassHash:  b.passHash,
+		CreatedAt: b.createdAt,
+		UpdatedAt: b.updatedAt,
+		Role:      b.role,
 	})
 }
 
 // StudentBuilder extends UserBuilder for student-specific properties
 type StudentBuilder struct {
 	UserBuilder
-	major major.Major
-	group string
-	year  string
+	groupID uuid.UUID
 }
 
 func NewStudentBuilder() *StudentBuilder {
 	return &StudentBuilder{
 		UserBuilder: *NewUserBuilder().AsStudent(),
-		major:       major.SE,
-		group:       "SE-2301",
-		year:        "2023",
+		groupID:     fixtures.SEGroup.ID,
 	}
 }
 
-func (b *StudentBuilder) WithMajor(m major.Major) *StudentBuilder {
-	b.major = m
+func (b *StudentBuilder) WithGroupID(groupID uuid.UUID) *StudentBuilder {
+	b.groupID = groupID
 	return b
 }
 
-func (b *StudentBuilder) WithGroup(group string) *StudentBuilder {
-	b.group = group
+// Override UserBuilder methods to return *StudentBuilder for proper chaining
+func (b *StudentBuilder) WithID(id string) *StudentBuilder {
+	b.UserBuilder.WithID(id)
 	return b
 }
 
-func (b *StudentBuilder) WithYear(year string) *StudentBuilder {
-	b.year = year
+func (b *StudentBuilder) WithName(firstName, lastName string) *StudentBuilder {
+	b.UserBuilder.WithName(firstName, lastName)
+	return b
+}
+
+func (b *StudentBuilder) WithFirstName(firstName string) *StudentBuilder {
+	b.UserBuilder.firstName = firstName
+	return b
+}
+
+func (b *StudentBuilder) WithLastName(lastName string) *StudentBuilder {
+	b.UserBuilder.lastName = lastName
+	return b
+}
+
+func (b *StudentBuilder) WithEmail(email string) *StudentBuilder {
+	b.UserBuilder.WithEmail(email)
+	return b
+}
+
+func (b *StudentBuilder) WithPassword(password string) *StudentBuilder {
+	b.UserBuilder.WithPassword(password)
+	return b
+}
+
+func (b *StudentBuilder) WithPassHash(passHash []byte) *StudentBuilder {
+	b.UserBuilder.withPassHash(passHash)
+	return b
+}
+
+func (b *StudentBuilder) WithRole(role role.Global) *StudentBuilder {
+	b.UserBuilder.WithRole(role)
+	return b
+}
+
+func (b *StudentBuilder) AsStudent() *StudentBuilder {
+	b.UserBuilder.AsStudent()
+	return b
+}
+
+func (b *StudentBuilder) AsStaff() *StudentBuilder {
+	b.UserBuilder.AsStaff()
+	return b
+}
+
+func (b *StudentBuilder) AsAITUSA() *StudentBuilder {
+	b.UserBuilder.AsAITUSA()
+	return b
+}
+
+func (b *StudentBuilder) WithInvalidLongFirstName() *StudentBuilder {
+	b.UserBuilder.firstName = fixtures.InvalidLongFirstName
+	return b
+}
+
+func (b *StudentBuilder) WithInvalidShortFirstName() *StudentBuilder {
+	b.UserBuilder.firstName = fixtures.InvalidShortFirstName
+	return b
+}
+
+func (b *StudentBuilder) WithInvalidLongLastName() *StudentBuilder {
+	b.UserBuilder.lastName = fixtures.InvalidLongLastName
+	return b
+}
+
+func (b *StudentBuilder) WithInvalidShortLastName() *StudentBuilder {
+	b.UserBuilder.lastName = fixtures.InvalidShortLastName
 	return b
 }
 
@@ -161,40 +233,175 @@ func (b *StudentBuilder) Build() *user.Student {
 			ID:        b.id,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
-			Role:      role.StudentRole,
+			Role:      role.Student,
 			AvatarURL: b.avatarURL,
 			Email:     b.email,
 			PassHash:  b.passHash,
 			CreatedAt: b.createdAt,
 			UpdatedAt: b.updatedAt,
 		},
-		Major: string(b.major),
-		Group: b.group,
-		Year:  b.year,
+		GroupID: b.groupID,
 	})
 }
 
 func (b *StudentBuilder) RehydrateStudentArgs() user.RehydrateStudentArgs {
 	return user.RehydrateStudentArgs{
 		RehydrateUserArgs: b.UserBuilder.RehydrateArgs(),
-		Major:             string(b.major),
-		Group:             b.group,
-		Year:              b.year,
+		GroupID:           b.groupID,
 	}
 }
 
 func (b *StudentBuilder) BuildNew() (*user.Student, error) {
 	return user.RegisterStudent(user.RegisterStudentArgs{
-		RegisterUserArgs: user.RegisterUserArgs{
+		ID:        b.id,
+		FirstName: b.firstName,
+		LastName:  b.lastName,
+		AvatarURL: b.avatarURL,
+		Email:     b.email,
+		PassHash:  b.passHash,
+		GroupID:   b.groupID,
+	})
+}
+
+func (b *StudentBuilder) BuildRegisterArgs() user.RegisterStudentArgs {
+	return user.RegisterStudentArgs{
+		ID:        b.id,
+		FirstName: b.firstName,
+		LastName:  b.lastName,
+		AvatarURL: b.avatarURL,
+		Email:     b.email,
+		PassHash:  b.passHash,
+		GroupID:   b.groupID,
+	}
+}
+
+// StaffBuilder extends UserBuilder for staff-specific properties
+type StaffBuilder struct {
+	UserBuilder
+}
+
+func NewStaffBuilder() *StaffBuilder {
+	return &StaffBuilder{
+		UserBuilder: *NewUserBuilder().AsStaff(),
+	}
+}
+
+// Override UserBuilder methods to return *StaffBuilder for proper chaining
+func (b *StaffBuilder) WithID(id string) *StaffBuilder {
+	b.UserBuilder.WithID(id)
+	return b
+}
+
+func (b *StaffBuilder) WithName(firstName, lastName string) *StaffBuilder {
+	b.UserBuilder.WithName(firstName, lastName)
+	return b
+}
+
+func (b *StaffBuilder) WithFirstName(firstName string) *StaffBuilder {
+	b.UserBuilder.firstName = firstName
+	return b
+}
+
+func (b *StaffBuilder) WithLastName(lastName string) *StaffBuilder {
+	b.UserBuilder.lastName = lastName
+	return b
+}
+
+func (b *StaffBuilder) WithEmail(email string) *StaffBuilder {
+	b.UserBuilder.WithEmail(email)
+	return b
+}
+
+func (b *StaffBuilder) WithPassword(password string) *StaffBuilder {
+	b.UserBuilder.WithPassword(password)
+	return b
+}
+
+func (b *StaffBuilder) WithPassHash(passHash []byte) *StaffBuilder {
+	b.UserBuilder.withPassHash(passHash)
+	return b
+}
+
+func (b *StaffBuilder) WithRole(role role.Global) *StaffBuilder {
+	b.UserBuilder.WithRole(role)
+	return b
+}
+
+func (b *StaffBuilder) AsStudent() *StaffBuilder {
+	b.UserBuilder.AsStudent()
+	return b
+}
+
+func (b *StaffBuilder) AsStaff() *StaffBuilder {
+	b.UserBuilder.AsStaff()
+	return b
+}
+
+func (b *StaffBuilder) AsAITUSA() *StaffBuilder {
+	b.UserBuilder.AsAITUSA()
+	return b
+}
+
+func (b *StaffBuilder) WithInvalidLongFirstName() *StaffBuilder {
+	b.UserBuilder.firstName = fixtures.InvalidLongFirstName
+	return b
+}
+
+func (b *StaffBuilder) WithInvalidShortFirstName() *StaffBuilder {
+	b.UserBuilder.firstName = fixtures.InvalidShortFirstName
+	return b
+}
+
+func (b *StaffBuilder) WithInvalidLongLastName() *StaffBuilder {
+	b.UserBuilder.lastName = fixtures.InvalidLongLastName
+	return b
+}
+
+func (b *StaffBuilder) WithInvalidShortLastName() *StaffBuilder {
+	b.UserBuilder.lastName = fixtures.InvalidShortLastName
+	return b
+}
+
+func (b *StaffBuilder) Build() *user.Staff {
+	return user.RehydrateStaff(user.RehydrateStaffArgs{
+		RehydrateUserArgs: user.RehydrateUserArgs{
 			ID:        b.id,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
+			Role:      role.Staff,
 			AvatarURL: b.avatarURL,
 			Email:     b.email,
-			Password:  b.password,
+			PassHash:  b.passHash,
+			CreatedAt: b.createdAt,
+			UpdatedAt: b.updatedAt,
 		},
-		Major: b.major,
-		Group: b.group,
-		Year:  b.year,
 	})
+}
+
+func (b *StaffBuilder) RehydrateStaffArgs() user.RehydrateStaffArgs {
+	return user.RehydrateStaffArgs{
+		RehydrateUserArgs: b.UserBuilder.RehydrateArgs(),
+	}
+}
+
+func (b *StaffBuilder) BuildNew() (*user.Staff, error) {
+	return user.RegisterStaff(user.RegisterStaffArgs{
+		ID:        b.id,
+		FirstName: b.firstName,
+		LastName:  b.lastName,
+		AvatarURL: b.avatarURL,
+		Email:     b.email,
+		PassHash:  b.passHash,
+	})
+}
+
+func (b *StaffBuilder) BuildRegisterArgs() user.RegisterStaffArgs {
+	return user.RegisterStaffArgs{
+		ID:        b.id,
+		FirstName: b.firstName,
+		LastName:  b.lastName,
+		AvatarURL: b.avatarURL,
+		Email:     b.email,
+		PassHash:  b.passHash,
+	}
 }

@@ -21,7 +21,9 @@ import (
 
 	ucmsv2 "github.com/ARUMANDESU/ucms"
 	postgresrepo "github.com/ARUMANDESU/ucms/internal/adapters/repos/postgres"
+	"github.com/ARUMANDESU/ucms/internal/application/mail"
 	registrationapp "github.com/ARUMANDESU/ucms/internal/application/registration"
+	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
 	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
 	watermillport "github.com/ARUMANDESU/ucms/internal/ports/watermill"
 	"github.com/ARUMANDESU/ucms/pkg/env"
@@ -61,7 +63,9 @@ type IntegrationTestSuite struct {
 }
 
 type Application struct {
-	RegistrationApp *registrationapp.App
+	Registration *registrationapp.App
+	Mail         *mail.App
+	Student      *studentapp.App
 }
 
 func (s *IntegrationTestSuite) SetupSuite() {
@@ -144,11 +148,10 @@ func (s *IntegrationTestSuite) createApplication() {
 		Mode:       env.Test,
 		Repo:       registrationRepo,
 		UserGetter: userRepo,
-		Mailsender: s.MockMailSender,
 	})
 
 	s.app = &Application{
-		RegistrationApp: regApp,
+		Registration: regApp,
 	}
 
 	s.httpHandler = chi.NewRouter()
@@ -167,7 +170,7 @@ func (s *IntegrationTestSuite) createWatermillPort() {
 	s.watermillPort = port
 
 	handlers := watermillport.AppEventHandlers{
-		Registration: s.app.RegistrationApp.Event,
+		Registration: s.app.Registration.Event,
 	}
 
 	err = s.watermillPort.Run(s.Context(), handlers)

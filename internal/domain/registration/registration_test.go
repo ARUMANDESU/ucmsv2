@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ARUMANDESU/ucms/pkg/env"
 )
@@ -97,7 +98,7 @@ func TestNewRegistration(t *testing.T) {
 				assert.Equal(t, tt.email, reg.email)
 				assert.Equal(t, StatusPending, reg.status)
 				assert.NotEmpty(t, reg.verificationCode)
-				assert.Equal(t, 0, reg.codeAttempts)
+				assert.Equal(t, int8(0), reg.codeAttempts)
 				assert.True(t, reg.codeExpiresAt.After(time.Now()))
 				assert.True(t, reg.resendTimeout.After(time.Now()))
 
@@ -138,7 +139,7 @@ func TestRegistration_VerifyCode(t *testing.T) {
 		err = reg.VerifyCode("wrongcode")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid verification code")
-		assert.Equal(t, 1, reg.codeAttempts)
+		assert.Equal(t, int8(1), reg.codeAttempts)
 		assert.Equal(t, StatusPending, reg.status)
 	})
 
@@ -148,12 +149,12 @@ func TestRegistration_VerifyCode(t *testing.T) {
 
 		reg.MarkEventsAsCommitted()
 
-		for i := 0; i < 3; i++ {
+		for range 3 {
 			err = reg.VerifyCode("wrongcode")
 			assert.Error(t, err)
 		}
 
-		assert.Equal(t, 3, reg.codeAttempts)
+		assert.Equal(t, int8(3), reg.codeAttempts)
 		assert.Equal(t, StatusExpired, reg.status)
 
 		events := reg.GetUncommittedEvents()
@@ -195,27 +196,65 @@ func TestRegistration_CompleteStudentRegistration(t *testing.T) {
 		reg.MarkEventsAsCommitted()
 
 		args := StudentArgs{
-			Barcode:   "STU123456",
-			FirstName: "John",
-			LastName:  "Doe",
-			PassHash:  []byte("hashedpassword"),
-			GroupID:   uuid.New(),
+			Barcode:          "STU123456",
+			FirstName:        "John",
+			LastName:         "Doe",
+			Password:         "H4rdP@ssw0rd",
+			GroupID:          uuid.New(),
+			VerificationCode: reg.verificationCode,
 		}
 
 		err = reg.CompleteStudentRegistration(args)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusCompleted, reg.status)
 
 		events := reg.GetUncommittedEvents()
-		assert.Len(t, events, 1)
-		completedEvent, ok := events[0].(*StudentRegistrationCompleted)
-		assert.True(t, ok)
+		assert.Len(t, events, 2)
+		completedEvent, ok := events[1].(*StudentRegistrationCompleted)
+		require.True(t, ok)
 		assert.Equal(t, reg.id, completedEvent.RegistrationID)
 		assert.Equal(t, args.Barcode, completedEvent.Barcode)
 		assert.Equal(t, reg.email, completedEvent.Email)
 		assert.Equal(t, args.FirstName, completedEvent.FirstName)
 		assert.Equal(t, args.LastName, completedEvent.LastName)
-		assert.Equal(t, args.PassHash, completedEvent.PassHash)
+		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
+		assert.NoError(t, err)
+		assert.Equal(t, args.GroupID, completedEvent.GroupID)
+	})
+
+	t.Run("already verified", func(t *testing.T) {
+		reg, err := NewRegistration("test@example.com", env.Test)
+		require.NoError(t, err)
+		reg.MarkEventsAsCommitted()
+
+		err = reg.VerifyCode(reg.verificationCode)
+		require.NoError(t, err)
+		reg.MarkEventsAsCommitted()
+
+		args := StudentArgs{
+			Barcode:          "STU123456",
+			FirstName:        "John",
+			LastName:         "Doe",
+			Password:         "H4rdP@ssw0rd",
+			GroupID:          uuid.New(),
+			VerificationCode: reg.verificationCode,
+		}
+
+		err = reg.CompleteStudentRegistration(args)
+		require.NoError(t, err)
+		assert.Equal(t, StatusCompleted, reg.status)
+
+		events := reg.GetUncommittedEvents()
+		assert.Len(t, events, 1)
+		completedEvent, ok := events[0].(*StudentRegistrationCompleted)
+		require.True(t, ok)
+		assert.Equal(t, reg.id, completedEvent.RegistrationID)
+		assert.Equal(t, args.Barcode, completedEvent.Barcode)
+		assert.Equal(t, reg.email, completedEvent.Email)
+		assert.Equal(t, args.FirstName, completedEvent.FirstName)
+		assert.Equal(t, args.LastName, completedEvent.LastName)
+		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
+		assert.NoError(t, err)
 		assert.Equal(t, args.GroupID, completedEvent.GroupID)
 	})
 
@@ -226,11 +265,12 @@ func TestRegistration_CompleteStudentRegistration(t *testing.T) {
 		reg.status = StatusExpired
 
 		args := StudentArgs{
-			Barcode:   "STU123456",
-			FirstName: "John",
-			LastName:  "Doe",
-			PassHash:  []byte("hashedpassword"),
-			GroupID:   uuid.New(),
+			VerificationCode: reg.verificationCode,
+			Barcode:          "STU123456",
+			FirstName:        "John",
+			LastName:         "Doe",
+			Password:         "H4rdP@ssw0rd",
+			GroupID:          uuid.New(),
 		}
 
 		err = reg.CompleteStudentRegistration(args)
@@ -246,26 +286,64 @@ func TestRegistration_CompleteStaffRegistration(t *testing.T) {
 		reg.MarkEventsAsCommitted()
 
 		args := StaffArgs{
-			Barcode:   "STAFF123",
-			FirstName: "Jane",
-			LastName:  "Smith",
-			PassHash:  []byte("hashedpassword"),
+			VerificationCode: reg.verificationCode,
+			Barcode:          "STAFF123",
+			FirstName:        "Jane",
+			LastName:         "Smith",
+			Password:         "H4rdP@ssw0rd",
 		}
+		require.NoError(t, err)
 
 		err = reg.CompleteStaffRegistration(args)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, StatusCompleted, reg.status)
 
 		events := reg.GetUncommittedEvents()
-		assert.Len(t, events, 1)
-		completedEvent, ok := events[0].(*StaffRegistrationCompleted)
-		assert.True(t, ok)
+		assert.Len(t, events, 2)
+		completedEvent, ok := events[1].(*StaffRegistrationCompleted)
+		require.True(t, ok)
 		assert.Equal(t, reg.id, completedEvent.RegistrationID)
 		assert.Equal(t, args.Barcode, completedEvent.Barcode)
 		assert.Equal(t, reg.email, completedEvent.Email)
 		assert.Equal(t, args.FirstName, completedEvent.FirstName)
 		assert.Equal(t, args.LastName, completedEvent.LastName)
-		assert.Equal(t, args.PassHash, completedEvent.PassHash)
+		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
+		assert.NoError(t, err)
+	})
+
+	t.Run("already verified", func(t *testing.T) {
+		reg, err := NewRegistration("test@example.com", env.Test)
+		require.NoError(t, err)
+		reg.MarkEventsAsCommitted()
+
+		err = reg.VerifyCode(reg.verificationCode)
+		require.NoError(t, err)
+		reg.MarkEventsAsCommitted()
+
+		args := StaffArgs{
+			VerificationCode: reg.verificationCode,
+			Barcode:          "STAFF123",
+			FirstName:        "Jane",
+			LastName:         "Smith",
+			Password:         "H4rdP@ssw0rd",
+		}
+		require.NoError(t, err)
+
+		err = reg.CompleteStaffRegistration(args)
+		require.NoError(t, err)
+		assert.Equal(t, StatusCompleted, reg.status)
+
+		events := reg.GetUncommittedEvents()
+		assert.Len(t, events, 1)
+		completedEvent, ok := events[0].(*StaffRegistrationCompleted)
+		require.True(t, ok)
+		assert.Equal(t, reg.id, completedEvent.RegistrationID)
+		assert.Equal(t, args.Barcode, completedEvent.Barcode)
+		assert.Equal(t, reg.email, completedEvent.Email)
+		assert.Equal(t, args.FirstName, completedEvent.FirstName)
+		assert.Equal(t, args.LastName, completedEvent.LastName)
+		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
+		assert.NoError(t, err)
 	})
 
 	t.Run("not pending status", func(t *testing.T) {
@@ -275,10 +353,11 @@ func TestRegistration_CompleteStaffRegistration(t *testing.T) {
 		reg.status = StatusExpired
 
 		args := StaffArgs{
-			Barcode:   "STAFF123",
-			FirstName: "Jane",
-			LastName:  "Smith",
-			PassHash:  []byte("hashedpassword"),
+			VerificationCode: reg.verificationCode,
+			Barcode:          "STAFF123",
+			FirstName:        "Jane",
+			LastName:         "Smith",
+			Password:         "H4rdP@ssw0rd",
 		}
 
 		err = reg.CompleteStaffRegistration(args)
@@ -299,7 +378,7 @@ func TestRegistration_ResendCode(t *testing.T) {
 		err = reg.ResendCode()
 		assert.NoError(t, err)
 		assert.NotEqual(t, originalCode, reg.verificationCode)
-		assert.Equal(t, 0, reg.codeAttempts)
+		assert.Equal(t, int8(0), reg.codeAttempts)
 		assert.True(t, reg.codeExpiresAt.After(time.Now()))
 
 		events := reg.GetUncommittedEvents()
@@ -451,7 +530,7 @@ func TestRegistrationWorkflow(t *testing.T) {
 			Barcode:   "ST123456",
 			FirstName: "John",
 			LastName:  "Doe",
-			PassHash:  []byte("hashedpassword"),
+			Password:  "H4rdP@ssw0rd",
 			GroupID:   uuid.New(),
 		}
 
@@ -476,7 +555,7 @@ func TestRegistrationWorkflow(t *testing.T) {
 			Barcode:   "STAFF123",
 			FirstName: "Jane",
 			LastName:  "Smith",
-			PassHash:  []byte("hashedpassword"),
+			Password:  "H4rdP@ssw0rd",
 		}
 
 		err = reg.CompleteStaffRegistration(args)

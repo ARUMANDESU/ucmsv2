@@ -10,7 +10,8 @@ import (
 type Repo interface {
 	GetRegistrationByEmail(ctx context.Context, email string) (*registration.Registration, error)
 	SaveRegistration(ctx context.Context, r *registration.Registration) error
-	UpdateRegistration(ctx context.Context, id registration.ID, fn func(ctx context.Context, r *registration.Registration) error) error
+	UpdateRegistration(ctx context.Context, id registration.ID, fn func(context.Context, *registration.Registration) error) error
+	UpdateRegistrationByEmail(ctx context.Context, email string, fn func(context.Context, *registration.Registration) error) error
 }
 
 type UserGetter interface {

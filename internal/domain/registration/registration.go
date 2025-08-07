@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/publicsuffix"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
@@ -22,6 +23,8 @@ var emailRx = regexp.MustCompile(
 		`[A-Za-z]{2,63}$`) // TLD
 
 const (
+	PasswordCostFactor = 12 // Future-proofing; default is 10 in 2025.07.30
+
 	ResendTimeout  = 1 * time.Minute
 	ExpiresAt      = 10 * time.Minute
 	MaxEmailLength = 254 // Maximum length for email addresses as per RFC 5321
@@ -36,6 +39,7 @@ func (s Status) String() string {
 const (
 	StatusPending   Status = "pending"
 	StatusExpired   Status = "expired"
+	StatusVerified  Status = "verified"
 	StatusCompleted Status = "completed"
 )
 
@@ -154,7 +158,7 @@ func (r *Registration) VerifyCode(code string) error {
 	}
 
 	r.updatedAt = time.Now().UTC()
-
+	r.status = StatusVerified
 	r.AddEvent(&EmailVerified{
 		Header:         event.NewEventHeader(),
 		RegistrationID: r.id,
@@ -165,16 +169,24 @@ func (r *Registration) VerifyCode(code string) error {
 }
 
 type StudentArgs struct {
-	Barcode   string
-	FirstName string
-	LastName  string
-	PassHash  []byte
-	GroupID   uuid.UUID
+	VerificationCode string
+	Barcode          string
+	FirstName        string
+	LastName         string
+	Password         string
+	GroupID          uuid.UUID
 }
 
 func (r *Registration) CompleteStudentRegistration(args StudentArgs) error {
-	if r.status != StatusPending {
-		return errors.New("registration is not pending")
+	if !r.IsStatus(StatusVerified) {
+		if err := r.VerifyCode(args.VerificationCode); err != nil {
+			return fmt.Errorf("failed to verify code: %w", err)
+		}
+	}
+
+	passHash, err := bcrypt.GenerateFromPassword([]byte(args.Password), PasswordCostFactor)
+	if err != nil {
+		return fmt.Errorf("failed to generate password hash: %w", err)
 	}
 
 	r.status = StatusCompleted
@@ -185,7 +197,7 @@ func (r *Registration) CompleteStudentRegistration(args StudentArgs) error {
 		Email:          r.email,
 		FirstName:      args.FirstName,
 		LastName:       args.LastName,
-		PassHash:       args.PassHash,
+		PassHash:       passHash,
 		GroupID:        args.GroupID,
 	})
 
@@ -193,15 +205,23 @@ func (r *Registration) CompleteStudentRegistration(args StudentArgs) error {
 }
 
 type StaffArgs struct {
-	Barcode   string
-	FirstName string
-	LastName  string
-	PassHash  []byte
+	VerificationCode string
+	Barcode          string
+	FirstName        string
+	LastName         string
+	Password         string
 }
 
 func (r *Registration) CompleteStaffRegistration(args StaffArgs) error {
-	if r.status != StatusPending {
-		return errors.New("registration is not pending")
+	if !r.IsStatus(StatusVerified) {
+		if err := r.VerifyCode(args.VerificationCode); err != nil {
+			return fmt.Errorf("failed to verify code: %w", err)
+		}
+	}
+
+	passHash, err := bcrypt.GenerateFromPassword([]byte(args.Password), PasswordCostFactor)
+	if err != nil {
+		return fmt.Errorf("failed to generate password hash: %w", err)
 	}
 
 	r.status = StatusCompleted
@@ -212,7 +232,7 @@ func (r *Registration) CompleteStaffRegistration(args StaffArgs) error {
 		Email:          r.email,
 		FirstName:      args.FirstName,
 		LastName:       args.LastName,
-		PassHash:       args.PassHash,
+		PassHash:       passHash,
 	})
 
 	return nil

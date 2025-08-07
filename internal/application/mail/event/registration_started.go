@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	tracer = otel.Tracer("ucms/application/registration/event")
-	logger = otelslog.NewLogger("ucms/application/registration/event")
+	tracer = otel.Tracer("ucms/application/mail/event")
+	logger = otelslog.NewLogger("ucms/application/mail/event")
 )
 
 type MailSender interface {
@@ -53,8 +53,8 @@ func NewRegistrationStartedHandler(args RegistrationStartedHandlerArgs) *Registr
 }
 
 func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration.RegistrationStarted) error {
-	if e == nil {
-		return errors.New("event is nil")
+	if h == nil || e == nil {
+		return nil
 	}
 
 	ctx, span := h.tracer.Start(
