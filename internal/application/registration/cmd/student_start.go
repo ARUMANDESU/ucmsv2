@@ -64,11 +64,16 @@ func NewStartStudentHandler(args StartStudentHandlerArgs) *StartStudentHandler {
 func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) error {
 	ctx, span := h.tracer.Start(ctx, "StartStudentHandler.Handle")
 	defer span.End()
+	if cmd.Email == "" {
+		span.RecordError(apperr.ErrInvalidInput)
+		span.SetStatus(codes.Error, "Email is required")
+		return apperr.ErrInvalidInput
+	}
 
 	redactedEmail := logging.RedactEmail(cmd.Email)
 	span.SetAttributes(attribute.String("student.email", redactedEmail))
 
-	h.logger.DebugContext(ctx, "starting student registration")
+	h.logger.DebugContext(ctx, "starting student registration", "email", cmd.Email)
 
 	user, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
 	if err != nil && !errors.Is(err, repos.ErrNotFound) {

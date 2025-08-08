@@ -159,7 +159,7 @@ func TestRegistration_VerifyCode(t *testing.T) {
 
 		NewRegistrationAssertion(reg).
 			AssertStatus(t, StatusExpired).
-			AssertCodeAttempts(t, 3).
+			AssertCodeAttempts(t, MaxVerificationCodeAttempts).
 			AssertEventsCount(t, 1)
 
 		events := reg.GetUncommittedEvents()
@@ -383,15 +383,6 @@ func TestRegistration_ResendCode(t *testing.T) {
 
 		err := reg.ResendCode()
 		assert.ErrorIs(t, err, ErrWaitUntilResend)
-	})
-
-	t.Run("not pending status", func(t *testing.T) {
-		reg := validRegistration(t)
-
-		reg.status = StatusCompleted
-
-		err := reg.ResendCode()
-		assert.ErrorIs(t, err, ErrInvalidStatus)
 	})
 }
 

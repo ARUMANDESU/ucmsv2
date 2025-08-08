@@ -25,9 +25,10 @@ var emailRx = regexp.MustCompile(
 const (
 	PasswordCostFactor = 12 // Future-proofing; default is 10 in 2025.07.30
 
-	ResendTimeout  = 1 * time.Minute
-	ExpiresAt      = 10 * time.Minute
-	MaxEmailLength = 254 // Maximum length for email addresses as per RFC 5321
+	ResendTimeout               = 1 * time.Minute
+	ExpiresAt                   = 10 * time.Minute
+	MaxEmailLength              = 254 // Maximum length for email addresses as per RFC 5321
+	MaxVerificationCodeAttempts = 3
 )
 
 type Status string
@@ -146,13 +147,14 @@ func (r *Registration) VerifyCode(code string) error {
 
 	if r.verificationCode != code {
 		r.codeAttempts++
-		if r.codeAttempts >= 3 {
+		if r.codeAttempts >= MaxVerificationCodeAttempts {
 			r.status = StatusExpired
 			r.AddEvent(&RegistrationFailed{
 				Header:         event.NewEventHeader(),
 				RegistrationID: r.id,
 				Reason:         "too many failed attempts",
 			})
+			return ErrTooManyAttempts
 		}
 		return ErrInvalidVerificationCode
 	}
@@ -239,9 +241,6 @@ func (r *Registration) CompleteStaffRegistration(args StaffArgs) error {
 }
 
 func (r *Registration) ResendCode() error {
-	if r.status != StatusPending {
-		return fmt.Errorf("%w: %w", ErrInvalidStatus, errors.New("can only resend code for pending registrations"))
-	}
 	if !r.resendTimeout.IsZero() && !time.Now().After(r.resendTimeout) {
 		return fmt.Errorf("%w: time left until next resend: %s", ErrWaitUntilResend, r.resendTimeout.Sub(time.Now()).String())
 	}
@@ -255,6 +254,7 @@ func (r *Registration) ResendCode() error {
 	r.codeExpiresAt = time.Now().UTC().Add(10 * time.Minute)
 	r.codeAttempts = 0
 	r.updatedAt = time.Now().UTC()
+	r.status = StatusPending
 
 	r.AddEvent(&VerificationCodeResent{
 		Header:           event.NewEventHeader(),

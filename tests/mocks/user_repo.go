@@ -3,6 +3,7 @@ package mocks
 import (
 	"context"
 	"sync"
+	"testing"
 
 	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
@@ -41,4 +42,22 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, err
 		return u, nil
 	}
 	return nil, repos.ErrNotFound
+}
+
+func (r *UserRepo) SeedUser(t *testing.T, u *user.User) {
+	t.Helper()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.dbbyID[u.ID()]; exists {
+		t.Fatalf("user with ID %s already exists", u.ID())
+	}
+
+	if _, exists := r.dbbyEmail[u.Email()]; exists {
+		t.Fatalf("user with email %s already exists", u.Email())
+	}
+
+	r.dbbyID[u.ID()] = u
+	r.dbbyEmail[u.Email()] = u
 }

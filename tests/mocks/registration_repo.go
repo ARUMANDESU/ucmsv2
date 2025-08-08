@@ -157,6 +157,36 @@ func (r *RegistrationRepo) UpdateRegistrationByEmail(
 	return nil
 }
 
+func (r *RegistrationRepo) SeedRegistration(t *testing.T, reg *registration.Registration) {
+	t.Helper()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.dbbyEmail[reg.Email()]; exists {
+		t.Fatalf("registration with email %s already exists", reg.Email())
+	}
+
+	if _, exists := r.dbbyID[reg.ID()]; exists {
+		t.Fatalf("registration with ID %s already exists", reg.ID())
+	}
+
+	r.dbbyEmail[reg.Email()] = reg
+	r.dbbyID[reg.ID()] = reg
+	r.dbbyCode[reg.VerificationCode()] = reg
+
+	r.eventsMu.Lock()
+	r.events = append(r.events, reg.GetUncommittedEvents()...)
+	r.eventsMu.Unlock()
+	for _, event := range reg.GetUncommittedEvents() {
+		select {
+		case r.eventCh <- event:
+		default:
+			// If the channel is full, we skip sending the event to avoid blocking.
+		}
+	}
+}
+
 func (r *RegistrationRepo) EventChannel() <-chan event.Event {
 	return r.eventCh
 }

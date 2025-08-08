@@ -1,10 +1,14 @@
 package repos
 
-import "errors"
+import (
+	"net/http"
+
+	"github.com/ARUMANDESU/ucms/pkg/apperr"
+)
 
 var (
-	ErrInvalidInput   = errors.New("invalid input")
-	ErrNotFound       = errors.New("not found")
-	ErrAlreadyExists  = errors.New("already exists")
-	ErrNoRowsAffected = errors.New("no rows affected")
+	ErrInvalidInput   = apperr.ErrInvalidInput
+	ErrNotFound       = apperr.ErrNotFound
+	ErrAlreadyExists  = apperr.New(apperr.CodeAlreadyProcessed, "resource already exists", http.StatusConflict)
+	ErrNoRowsAffected = apperr.New(apperr.CodeNotFound, "no rows affected", http.StatusNotFound)
 )

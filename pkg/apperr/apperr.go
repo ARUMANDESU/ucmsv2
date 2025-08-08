@@ -17,6 +17,16 @@ const (
 	CodeAlreadyProcessed Code = "ALREADY_PROCESSED"
 )
 
+var (
+	ErrNotFound         = NewNotFound("not found")
+	ErrInvalidInput     = NewInvalid("invalid input")
+	ErrInternal         = NewInternal("internal server error")
+	ErrConflict         = NewConflict("conflict")
+	ErrUnauthorized     = NewUnauthorized("unauthorized")
+	ErrForbidden        = NewForbidden("forbidden")
+	ErrAlreadyProcessed = NewAlreadyProcessed("already processed")
+)
+
 type Error struct {
 	Code     Code
 	Message  string
