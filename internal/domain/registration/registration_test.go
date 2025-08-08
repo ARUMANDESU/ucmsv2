@@ -1,6 +1,7 @@
 package registration
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -95,12 +96,15 @@ func TestNewRegistration(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, reg)
-				assert.Equal(t, tt.email, reg.email)
-				assert.Equal(t, StatusPending, reg.status)
-				assert.NotEmpty(t, reg.verificationCode)
-				assert.Equal(t, int8(0), reg.codeAttempts)
-				assert.True(t, reg.codeExpiresAt.After(time.Now()))
-				assert.True(t, reg.resendTimeout.After(time.Now()))
+
+				NewRegistrationAssertion(reg).
+					AssertStatus(t, StatusPending).
+					AssertEmail(t, tt.email).
+					AssertVerificationCodeNotEmpty(t).
+					AssertCodeAttempts(t, 0).
+					AssertCodeExpiresAt(t, time.Now().Add(ExpiresAt)).
+					AssertResendTimeout(t, time.Now().Add(ResendTimeout)).
+					AssertEventsCount(t, 1)
 
 				events := reg.GetUncommittedEvents()
 				assert.Len(t, events, 1)
@@ -116,13 +120,15 @@ func TestNewRegistration(t *testing.T) {
 
 func TestRegistration_VerifyCode(t *testing.T) {
 	t.Run("successful verification", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
+		reg := validRegistration(t)
 
-		reg.MarkEventsAsCommitted()
-
-		err = reg.VerifyCode(reg.verificationCode)
+		err := reg.VerifyCode(reg.verificationCode)
 		assert.NoError(t, err)
+
+		NewRegistrationAssertion(reg).
+			AssertStatus(t, StatusVerified).
+			AssertCodeAttempts(t, 0).
+			AssertEventsCount(t, 1)
 
 		events := reg.GetUncommittedEvents()
 		assert.Len(t, events, 1)
@@ -133,29 +139,29 @@ func TestRegistration_VerifyCode(t *testing.T) {
 	})
 
 	t.Run("invalid code", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
+		reg := validRegistration(t)
 
-		err = reg.VerifyCode("wrongcode")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid verification code")
-		assert.Equal(t, int8(1), reg.codeAttempts)
-		assert.Equal(t, StatusPending, reg.status)
+		err := reg.VerifyCode("wrongcode")
+		require.ErrorIs(t, err, ErrInvalidVerificationCode)
+
+		NewRegistrationAssertion(reg).
+			AssertStatus(t, StatusPending).
+			AssertCodeAttempts(t, 1).
+			AssertEventsCount(t, 0)
 	})
 
 	t.Run("too many failed attempts", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
-
-		reg.MarkEventsAsCommitted()
+		reg := validRegistration(t)
 
 		for range 3 {
-			err = reg.VerifyCode("wrongcode")
+			err := reg.VerifyCode("wrongcode")
 			assert.Error(t, err)
 		}
 
-		assert.Equal(t, int8(3), reg.codeAttempts)
-		assert.Equal(t, StatusExpired, reg.status)
+		NewRegistrationAssertion(reg).
+			AssertStatus(t, StatusExpired).
+			AssertCodeAttempts(t, 3).
+			AssertEventsCount(t, 1)
 
 		events := reg.GetUncommittedEvents()
 		assert.Len(t, events, 1)
@@ -166,34 +172,28 @@ func TestRegistration_VerifyCode(t *testing.T) {
 	})
 
 	t.Run("expired code", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
+		reg := validRegistration(t)
 
 		reg.codeExpiresAt = time.Now().Add(-1 * time.Minute)
 
-		err = reg.VerifyCode(reg.verificationCode)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "verification code expired")
+		err := reg.VerifyCode(reg.verificationCode)
+		assert.ErrorIs(t, err, ErrCodeExpired)
 		assert.Equal(t, StatusExpired, reg.status)
 	})
 
 	t.Run("not pending status", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
+		reg := validRegistration(t)
 
 		reg.status = StatusCompleted
 
-		err = reg.VerifyCode(reg.verificationCode)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "registration is not pending")
+		err := reg.VerifyCode(reg.verificationCode)
+		assert.ErrorIs(t, err, ErrInvalidStatus)
 	})
 }
 
 func TestRegistration_CompleteStudentRegistration(t *testing.T) {
 	t.Run("successful completion", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
-		reg.MarkEventsAsCommitted()
+		reg := validRegistration(t)
 
 		args := StudentArgs{
 			Barcode:          "STU123456",
@@ -204,7 +204,7 @@ func TestRegistration_CompleteStudentRegistration(t *testing.T) {
 			VerificationCode: reg.verificationCode,
 		}
 
-		err = reg.CompleteStudentRegistration(args)
+		err := reg.CompleteStudentRegistration(args)
 		require.NoError(t, err)
 		assert.Equal(t, StatusCompleted, reg.status)
 
@@ -223,11 +223,9 @@ func TestRegistration_CompleteStudentRegistration(t *testing.T) {
 	})
 
 	t.Run("already verified", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
-		reg.MarkEventsAsCommitted()
+		reg := validRegistration(t)
 
-		err = reg.VerifyCode(reg.verificationCode)
+		err := reg.VerifyCode(reg.verificationCode)
 		require.NoError(t, err)
 		reg.MarkEventsAsCommitted()
 
@@ -259,8 +257,7 @@ func TestRegistration_CompleteStudentRegistration(t *testing.T) {
 	})
 
 	t.Run("not pending status", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
+		reg := validRegistration(t)
 
 		reg.status = StatusExpired
 
@@ -273,17 +270,14 @@ func TestRegistration_CompleteStudentRegistration(t *testing.T) {
 			GroupID:          uuid.New(),
 		}
 
-		err = reg.CompleteStudentRegistration(args)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "registration is not pending")
+		err := reg.CompleteStudentRegistration(args)
+		assert.ErrorIs(t, err, ErrInvalidStatus)
 	})
 }
 
 func TestRegistration_CompleteStaffRegistration(t *testing.T) {
 	t.Run("successful completion", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
-		reg.MarkEventsAsCommitted()
+		reg := validRegistration(t)
 
 		args := StaffArgs{
 			VerificationCode: reg.verificationCode,
@@ -292,9 +286,8 @@ func TestRegistration_CompleteStaffRegistration(t *testing.T) {
 			LastName:         "Smith",
 			Password:         "H4rdP@ssw0rd",
 		}
-		require.NoError(t, err)
 
-		err = reg.CompleteStaffRegistration(args)
+		err := reg.CompleteStaffRegistration(args)
 		require.NoError(t, err)
 		assert.Equal(t, StatusCompleted, reg.status)
 
@@ -312,11 +305,9 @@ func TestRegistration_CompleteStaffRegistration(t *testing.T) {
 	})
 
 	t.Run("already verified", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
-		reg.MarkEventsAsCommitted()
+		reg := validRegistration(t)
 
-		err = reg.VerifyCode(reg.verificationCode)
+		err := reg.VerifyCode(reg.verificationCode)
 		require.NoError(t, err)
 		reg.MarkEventsAsCommitted()
 
@@ -347,8 +338,7 @@ func TestRegistration_CompleteStaffRegistration(t *testing.T) {
 	})
 
 	t.Run("not pending status", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
+		reg := validRegistration(t)
 
 		reg.status = StatusExpired
 
@@ -360,26 +350,25 @@ func TestRegistration_CompleteStaffRegistration(t *testing.T) {
 			Password:         "H4rdP@ssw0rd",
 		}
 
-		err = reg.CompleteStaffRegistration(args)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "registration is not pending")
+		err := reg.CompleteStaffRegistration(args)
+		assert.ErrorIs(t, err, ErrInvalidStatus)
 	})
 }
 
 func TestRegistration_ResendCode(t *testing.T) {
 	t.Run("successful resend after timeout", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
-
+		reg := validRegistration(t)
 		reg.resendTimeout = time.Now().Add(-1 * time.Minute)
 		originalCode := reg.verificationCode
-		reg.MarkEventsAsCommitted()
 
-		err = reg.ResendCode()
-		assert.NoError(t, err)
-		assert.NotEqual(t, originalCode, reg.verificationCode)
-		assert.Equal(t, int8(0), reg.codeAttempts)
-		assert.True(t, reg.codeExpiresAt.After(time.Now()))
+		err := reg.ResendCode()
+		require.NoError(t, err)
+		NewRegistrationAssertion(reg).
+			AssertStatus(t, StatusPending).
+			AssertEmail(t, reg.email).
+			AssertVerificationCodeIsNot(t, originalCode).
+			AssertCodeAttempts(t, 0).
+			AssertEventsCount(t, 1)
 
 		events := reg.GetUncommittedEvents()
 		assert.Len(t, events, 1)
@@ -391,29 +380,24 @@ func TestRegistration_ResendCode(t *testing.T) {
 	})
 
 	t.Run("resend too early", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
+		reg := validRegistration(t)
 
-		err = reg.ResendCode()
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot resend code yet")
+		err := reg.ResendCode()
+		assert.ErrorIs(t, err, ErrWaitUntilResend)
 	})
 
 	t.Run("not pending status", func(t *testing.T) {
-		reg, err := NewRegistration("test@example.com", env.Test)
-		require.NoError(t, err)
+		reg := validRegistration(t)
 
 		reg.status = StatusCompleted
 
-		err = reg.ResendCode()
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "can only resend for pending registrations")
+		err := reg.ResendCode()
+		assert.ErrorIs(t, err, ErrInvalidStatus)
 	})
 }
 
 func TestRegistration_IsStatus(t *testing.T) {
-	reg, err := NewRegistration("test@example.com", env.Test)
-	require.NoError(t, err)
+	reg := validRegistration(t)
 
 	assert.True(t, reg.IsStatus(StatusPending))
 	assert.False(t, reg.IsStatus(StatusCompleted))
@@ -424,8 +408,7 @@ func TestRegistration_IsStatus(t *testing.T) {
 }
 
 func TestRegistration_IsCompleted(t *testing.T) {
-	reg, err := NewRegistration("test@example.com", env.Test)
-	require.NoError(t, err)
+	reg := validRegistration(t)
 
 	assert.False(t, reg.IsCompleted())
 
@@ -519,11 +502,19 @@ func TestRegistrationWorkflow(t *testing.T) {
 		// 1. Create registration
 		reg, err := NewRegistration("student@example.com", env.Test)
 		require.NoError(t, err)
-		assert.Equal(t, StatusPending, reg.status)
+		reg.MarkEventsAsCommitted()
+
+		regAss := NewRegistrationAssertion(reg).
+			AssertStatus(t, StatusPending)
 
 		// 2. Verify email
 		err = reg.VerifyCode(reg.verificationCode)
 		require.NoError(t, err)
+		regAss.
+			AssertStatus(t, StatusVerified).
+			AssertEmail(t, reg.email).
+			AssertVerificationCode(t, reg.verificationCode).
+			AssertCodeAttempts(t, 0)
 
 		// 3. Complete student registration
 		args := StudentArgs{
@@ -536,8 +527,27 @@ func TestRegistrationWorkflow(t *testing.T) {
 
 		err = reg.CompleteStudentRegistration(args)
 		require.NoError(t, err)
-		assert.Equal(t, StatusCompleted, reg.status)
-		assert.True(t, reg.IsCompleted())
+		regAss.
+			AssertStatus(t, StatusCompleted).
+			AssertEmail(t, reg.email).
+			AssertVerificationCodeNotEmpty(t).
+			AssertCodeAttempts(t, 0).
+			AssertCodeExpiresAt(t, time.Now().Add(ExpiresAt)).
+			AssertResendTimeout(t, time.Now().Add(ResendTimeout)).
+			AssertEventsCount(t, 2)
+
+		events := reg.GetUncommittedEvents()
+		assert.Len(t, events, 2)
+		completedEvent, ok := events[1].(*StudentRegistrationCompleted)
+		require.True(t, ok)
+		assert.Equal(t, reg.id, completedEvent.RegistrationID)
+		assert.Equal(t, args.Barcode, completedEvent.Barcode)
+		assert.Equal(t, reg.email, completedEvent.Email)
+		assert.Equal(t, args.FirstName, completedEvent.FirstName)
+		assert.Equal(t, args.LastName, completedEvent.LastName)
+		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
+		assert.NoError(t, err)
+		assert.Equal(t, args.GroupID, completedEvent.GroupID)
 	})
 
 	t.Run("complete staff registration workflow", func(t *testing.T) {
@@ -563,4 +573,130 @@ func TestRegistrationWorkflow(t *testing.T) {
 		assert.Equal(t, StatusCompleted, reg.status)
 		assert.True(t, reg.IsCompleted())
 	})
+}
+
+func validRegistration(t *testing.T) *Registration {
+	reg, err := NewRegistration("test@example.com", env.Test)
+	require.NoError(t, err, "Failed to create valid registration")
+	reg.MarkEventsAsCommitted()
+	return reg
+}
+
+type RegistrationAssertion struct {
+	registration *Registration
+}
+
+func NewRegistrationAssertion(reg *Registration) *RegistrationAssertion {
+	return &RegistrationAssertion{registration: reg}
+}
+
+func (ra *RegistrationAssertion) AssertStatus(t *testing.T, expected Status) *RegistrationAssertion {
+	t.Helper()
+	assert.Equal(t, expected, ra.registration.status, "Expected registration status to be %s, got %s", expected, ra.registration.status)
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertEmail(t *testing.T, expected string) *RegistrationAssertion {
+	t.Helper()
+	assert.Equal(t, expected, ra.registration.email, "Expected registration email to be %s, got %s", expected, ra.registration.email)
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertVerificationCode(t *testing.T, expected string) *RegistrationAssertion {
+	t.Helper()
+	assert.Equal(
+		t,
+		expected,
+		ra.registration.verificationCode,
+		"Expected registration verification code to be %s, got %s",
+		expected,
+		ra.registration.verificationCode,
+	)
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertVerificationCodeNotEmpty(t *testing.T) *RegistrationAssertion {
+	t.Helper()
+	assert.NotEmpty(t, ra.registration.verificationCode, "Expected registration verification code to not be empty")
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertVerificationCodeIsNot(t *testing.T, expected string) *RegistrationAssertion {
+	t.Helper()
+	assert.NotEqual(
+		t,
+		expected,
+		ra.registration.verificationCode,
+		"Expected registration verification code to not be %s, got %s",
+		expected,
+		ra.registration.verificationCode,
+	)
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertCodeAttempts(t *testing.T, expected int8) *RegistrationAssertion {
+	t.Helper()
+	assert.Equal(
+		t,
+		expected,
+		ra.registration.codeAttempts,
+		"Expected registration code attempts to be %d, got %d",
+		expected,
+		ra.registration.codeAttempts,
+	)
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertCodeExpiresAt(t *testing.T, expected time.Time) *RegistrationAssertion {
+	t.Helper()
+	assert.WithinDuration(
+		t,
+		expected,
+		ra.registration.codeExpiresAt,
+		1*time.Second,
+		"Expected registration code expires at to be within 1 second of %s, got %s",
+		expected,
+		ra.registration.codeExpiresAt,
+	)
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertResendTimeout(t *testing.T, expected time.Time) *RegistrationAssertion {
+	t.Helper()
+	assert.WithinDuration(
+		t,
+		expected,
+		ra.registration.resendTimeout,
+		1*time.Second,
+		"Expected registration resend timeout to be within 1 second of %s, got %s",
+		expected,
+		ra.registration.resendTimeout,
+	)
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertEventsCount(t *testing.T, expected int) *RegistrationAssertion {
+	t.Helper()
+	events := ra.registration.GetUncommittedEvents()
+	assert.Len(t, events, expected, "Expected %d uncommitted events, got %d", expected, len(events))
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertNoEvents(t *testing.T) *RegistrationAssertion {
+	t.Helper()
+	events := ra.registration.GetUncommittedEvents()
+	assert.Empty(t, events, "Expected no uncommitted events, got %d", len(events))
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertEventExists(t *testing.T, eventType string) *RegistrationAssertion {
+	t.Helper()
+	events := ra.registration.GetUncommittedEvents()
+	for _, ev := range events {
+		if fmt.Sprintf("%T", ev) == eventType {
+			return ra
+		}
+	}
+	t.Errorf("Expected event of type %s to exist, but it does not", eventType)
+	return ra
 }

@@ -136,12 +136,12 @@ func Rehydrate(args RehydrateArgs) *Registration {
 
 func (r *Registration) VerifyCode(code string) error {
 	if r.status != StatusPending {
-		return errors.New("registration is not pending")
+		return fmt.Errorf("%w: %w", ErrInvalidStatus, errors.New("can only verify pending registrations"))
 	}
 
 	if time.Now().After(r.codeExpiresAt) {
 		r.status = StatusExpired
-		return errors.New("verification code expired")
+		return ErrCodeExpired
 	}
 
 	if r.verificationCode != code {
@@ -154,7 +154,7 @@ func (r *Registration) VerifyCode(code string) error {
 				Reason:         "too many failed attempts",
 			})
 		}
-		return errors.New("invalid verification code")
+		return ErrInvalidVerificationCode
 	}
 
 	r.updatedAt = time.Now().UTC()
@@ -240,10 +240,10 @@ func (r *Registration) CompleteStaffRegistration(args StaffArgs) error {
 
 func (r *Registration) ResendCode() error {
 	if r.status != StatusPending {
-		return errors.New("can only resend for pending registrations")
+		return fmt.Errorf("%w: %w", ErrInvalidStatus, errors.New("can only resend code for pending registrations"))
 	}
 	if !r.resendTimeout.IsZero() && !time.Now().After(r.resendTimeout) {
-		return fmt.Errorf("cannot resend code yet, please wait until %s", r.resendTimeout)
+		return fmt.Errorf("%w: time left until next resend: %s", ErrWaitUntilResend, r.resendTimeout.Sub(time.Now()).String())
 	}
 
 	code, err := generateCode()
