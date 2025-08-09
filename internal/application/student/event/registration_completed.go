@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -12,8 +14,13 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 )
 
+var (
+	tracer = otel.Tracer("ucms/internal/application/student/event")
+	logger = otelslog.NewLogger("ucms/internal/application/student/event")
+)
+
 type Repo interface {
-	SaveStudent(ctx context.Context, student user.Student) error
+	SaveStudent(ctx context.Context, student *user.Student) error
 }
 
 type StudentRegistrationCompletedHandler struct {
@@ -29,6 +36,13 @@ type StudentRegistrationCompletedHandlerArgs struct {
 }
 
 func NewStudentRegistrationCompletedHandler(args StudentRegistrationCompletedHandlerArgs) *StudentRegistrationCompletedHandler {
+	if args.Tracer == nil {
+		args.Tracer = tracer
+	}
+	if args.Logger == nil {
+		args.Logger = logger
+	}
+
 	return &StudentRegistrationCompletedHandler{
 		tracer:      args.Tracer,
 		logger:      args.Logger,
@@ -66,7 +80,7 @@ func (h *StudentRegistrationCompletedHandler) Handle(ctx context.Context, e *reg
 		return err
 	}
 
-	if err := h.studentrepo.SaveStudent(ctx, *student); err != nil {
+	if err := h.studentrepo.SaveStudent(ctx, student); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to save student")
 		h.logger.ErrorContext(ctx, "failed to save student", slog.Any("student", student))

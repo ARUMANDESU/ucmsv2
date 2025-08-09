@@ -508,6 +508,7 @@ func TestRegistrationWorkflow(t *testing.T) {
 
 		// 3. Complete student registration
 		args := StudentArgs{
+            VerificationCode: reg.verificationCode,
 			Barcode:   "ST123456",
 			FirstName: "John",
 			LastName:  "Doe",
@@ -552,6 +553,7 @@ func TestRegistrationWorkflow(t *testing.T) {
 
 		// 3. Complete staff registration
 		args := StaffArgs{
+            VerificationCode: reg.verificationCode,
 			Barcode:   "STAFF123",
 			FirstName: "Jane",
 			LastName:  "Smith",

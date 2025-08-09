@@ -67,7 +67,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 			AssertVerificationCode(t, reg.VerificationCode())
 
 		s.MockRegistration.AssertEventCount(t, 1)
-		e := mocks.RequireEventExists(t, s.MockRegistration, &registration.StudentRegistrationCompleted{})
+		e := mocks.RequireEventExists(t, s.MockRegistration.EventRepo, &registration.StudentRegistrationCompleted{})
 		assert.Equal(t, reg.ID(), e.RegistrationID)
 		assert.Equal(t, fixtures.TestStudent.ID, e.Barcode)
 		assert.Equal(t, fixtures.TestStudent.Email, e.Email)
@@ -103,11 +103,11 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 
 		s.MockRegistration.AssertEventCount(t, 2)
 
-		eventVerified := mocks.RequireEventExists(t, s.MockRegistration, &registration.EmailVerified{})
+		eventVerified := mocks.RequireEventExists(t, s.MockRegistration.EventRepo, &registration.EmailVerified{})
 		assert.Equal(t, reg.ID(), eventVerified.RegistrationID)
 		assert.Equal(t, fixtures.TestStudent.Email, eventVerified.Email)
 
-		eventCompleted := mocks.RequireEventExists(t, s.MockRegistration, &registration.StudentRegistrationCompleted{})
+		eventCompleted := mocks.RequireEventExists(t, s.MockRegistration.EventRepo, &registration.StudentRegistrationCompleted{})
 		assert.Equal(t, reg.ID(), eventCompleted.RegistrationID)
 		assert.Equal(t, fixtures.TestStudent.ID, eventCompleted.Barcode)
 		assert.Equal(t, fixtures.TestStudent.Email, eventCompleted.Email)

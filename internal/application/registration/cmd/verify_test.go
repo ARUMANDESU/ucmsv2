@@ -48,7 +48,7 @@ func TestVerifyHandler_HappyPath(t *testing.T) {
 		AssertStatus(t, registration.StatusVerified)
 
 	s.MockRepo.AssertEventCount(t, 1)
-	e := mocks.RequireEventExists(t, s.MockRepo, &registration.EmailVerified{})
+	e := mocks.RequireEventExists(t, s.MockRepo.EventRepo, &registration.EmailVerified{})
 	require.NotNil(t, e)
 	assert.Equal(t, reg.ID(), e.RegistrationID)
 	assert.Equal(t, reg.Email(), e.Email)

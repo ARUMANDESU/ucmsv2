@@ -53,7 +53,7 @@ func TestStartStudentHandler_HappyPath(t *testing.T) {
 		AssertVerificationCodeNotEmpty(t)
 
 	s.MockRepo.AssertEventCount(t, 1)
-	e := mocks.RequireEventExists(t, s.MockRepo, &registration.RegistrationStarted{})
+	e := mocks.RequireEventExists(t, s.MockRepo.EventRepo, &registration.RegistrationStarted{})
 	require.NotNil(t, e)
 
 	reg, err := s.MockRepo.GetRegistrationByEmail(t.Context(), email)
@@ -154,7 +154,7 @@ func TestStartStudentHandler_RegistrationAlreadyExists(t *testing.T) {
 					AssertVerificationCodeNotEmpty(t)
 				s.MockRepo.AssertEventCount(t, 1)
 
-				e := mocks.RequireEventExists(t, s.MockRepo, &registration.VerificationCodeResent{})
+				e := mocks.RequireEventExists(t, s.MockRepo.EventRepo, &registration.VerificationCodeResent{})
 				require.NotNil(t, e)
 
 				reg, err = s.MockRepo.GetRegistrationByEmail(t.Context(), email)
