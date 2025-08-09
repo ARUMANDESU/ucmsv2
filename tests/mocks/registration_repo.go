@@ -191,6 +191,15 @@ func (r *RegistrationRepo) EventChannel() <-chan event.Event {
 	return r.eventCh
 }
 
+func (r *RegistrationRepo) Events() []event.Event {
+	r.eventsMu.Lock()
+	defer r.eventsMu.Unlock()
+
+	eventsCopy := make([]event.Event, len(r.events))
+	copy(eventsCopy, r.events)
+	return eventsCopy
+}
+
 func (r *RegistrationRepo) AssertRegistrationExistsByEmail(t *testing.T, email string) *registration.RegistrationAssertion {
 	r.mu.Lock()
 	defer r.mu.Unlock()

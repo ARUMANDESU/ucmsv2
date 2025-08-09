@@ -180,6 +180,9 @@ type StudentArgs struct {
 }
 
 func (r *Registration) CompleteStudentRegistration(args StudentArgs) error {
+	if r.verificationCode != args.VerificationCode {
+		return ErrInvalidVerificationCode
+	}
 	if !r.IsStatus(StatusVerified) {
 		if err := r.VerifyCode(args.VerificationCode); err != nil {
 			return fmt.Errorf("failed to verify code: %w", err)
@@ -215,6 +218,9 @@ type StaffArgs struct {
 }
 
 func (r *Registration) CompleteStaffRegistration(args StaffArgs) error {
+	if r.verificationCode != args.VerificationCode {
+		return ErrInvalidVerificationCode
+	}
 	if !r.IsStatus(StatusVerified) {
 		if err := r.VerifyCode(args.VerificationCode); err != nil {
 			return fmt.Errorf("failed to verify code: %w", err)
