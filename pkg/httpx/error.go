@@ -38,10 +38,9 @@ func HandleError(w http.ResponseWriter, r *http.Request, err error) {
 func Error(w http.ResponseWriter, r *http.Request, status int, errStr string, message string) {
 	slog.Error("error", "status", status, "error", errStr, "message", message)
 	response := map[string]any{
-		"error":      errStr,
-		"message":    message,
-		"request_id": "todo", // TODO: implement request id
-		"succeeded":  false,
+		"code":    errStr,
+		"message": message,
+		"success": false,
 	}
 
 	err := WriteJSON(w, status, response, nil)

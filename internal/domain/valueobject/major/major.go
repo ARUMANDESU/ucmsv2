@@ -19,6 +19,10 @@ const (
 	MCs     = Major("Master of Computer Science")
 )
 
+func (m Major) String() string {
+	return string(m)
+}
+
 func IsValid[T Major | string](major T) bool {
 	switch Major(major) {
 	case IT, SE, MT, CS, BDA, BDH, ITM, ITE, EE, IoT, ST, DJ, MCs:

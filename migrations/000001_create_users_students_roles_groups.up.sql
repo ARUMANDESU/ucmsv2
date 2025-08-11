@@ -5,10 +5,10 @@ create table global_roles (
 );
 
 insert into global_roles (name) values
-    ('Guest'),
-    ('Student'),
-    ('AITUSA'),
-    ('Staff');
+    ('guest'),
+    ('student'),
+    ('aitusa'),
+    ('staff');
 
 create table users (
     id text primary key,

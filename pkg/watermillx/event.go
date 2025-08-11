@@ -3,6 +3,7 @@ package watermillx
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillSQL "github.com/ThreeDotsLabs/watermill-sql/v4/pkg/sql"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 )
 
 func NewEventProcessor(router *message.Router, conn *pgxpool.Pool, logger watermill.LoggerAdapter) (*cqrs.EventProcessor, error) {
@@ -28,6 +30,7 @@ func NewEventProcessor(router *message.Router, conn *pgxpool.Pool, logger waterm
 			return watermillSQL.NewSubscriber(
 				watermillSQL.BeginnerFromPgx(conn),
 				watermillSQL.SubscriberConfig{
+					ConsumerGroup:    params.EventHandler.HandlerName(),
 					SchemaAdapter:    watermillSQL.DefaultPostgreSQLSchema{},
 					OffsetsAdapter:   watermillSQL.DefaultPostgreSQLOffsetsAdapter{},
 					InitializeSchema: true,
@@ -56,6 +59,7 @@ func NewEventGroupProcessor(router *message.Router, conn *pgxpool.Pool, logger w
 			return watermillSQL.NewSubscriber(
 				watermillSQL.BeginnerFromPgx(conn),
 				watermillSQL.SubscriberConfig{
+					ConsumerGroup:    params.EventGroupName,
 					SchemaAdapter:    watermillSQL.DefaultPostgreSQLSchema{},
 					OffsetsAdapter:   watermillSQL.DefaultPostgreSQLOffsetsAdapter{},
 					InitializeSchema: true,
@@ -67,6 +71,69 @@ func NewEventGroupProcessor(router *message.Router, conn *pgxpool.Pool, logger w
 		AckOnUnknownEvent: true,
 		Marshaler:         cqrs.JSONMarshaler{},
 		Logger:            logger,
+	})
+}
+
+func NewEventGroupProcessorForTests(router *message.Router, conn *pgxpool.Pool, logger watermill.LoggerAdapter) (*cqrs.EventGroupProcessor, error) {
+	return cqrs.NewEventGroupProcessorWithConfig(router, cqrs.EventGroupProcessorConfig{
+		GenerateSubscribeTopic: func(params cqrs.EventGroupProcessorGenerateSubscribeTopicParams) (string, error) {
+			evt, ok := params.EventGroupHandlers[0].NewEvent().(event.Event) // all handlers' events' stream names have to be the same
+			if !ok {
+				return "", fmt.Errorf("event %T does not implement event.Event", params.EventGroupHandlers[0].NewEvent())
+			}
+
+			return MessageTopic(evt)
+		},
+		SubscriberConstructor: func(params cqrs.EventGroupProcessorSubscriberConstructorParams) (message.Subscriber, error) {
+			return watermillSQL.NewSubscriber(
+				watermillSQL.BeginnerFromPgx(conn),
+				watermillSQL.SubscriberConfig{
+					ConsumerGroup:    params.EventGroupName,
+					SchemaAdapter:    watermillSQL.DefaultPostgreSQLSchema{},
+					OffsetsAdapter:   watermillSQL.DefaultPostgreSQLOffsetsAdapter{},
+					InitializeSchema: false,
+					PollInterval:     time.Millisecond * 10,
+					ResendInterval:   0,
+					RetryInterval:    0,
+				},
+				logger,
+			)
+		},
+		OnHandle:          nil,
+		AckOnUnknownEvent: true,
+		Marshaler:         cqrs.JSONMarshaler{},
+		Logger:            logger,
+	})
+}
+
+func NewEventProcessorForTests(router *message.Router, conn *pgxpool.Pool, logger watermill.LoggerAdapter) (*cqrs.EventProcessor, error) {
+	return cqrs.NewEventProcessorWithConfig(router, cqrs.EventProcessorConfig{
+		GenerateSubscribeTopic: func(params cqrs.EventProcessorGenerateSubscribeTopicParams) (string, error) {
+			evt, ok := params.EventHandler.NewEvent().(event.Event)
+			if !ok {
+				return "", fmt.Errorf("event handler %T does not implement event.Event", params.EventHandler.NewEvent())
+			}
+			return MessageTopic(evt)
+		},
+		SubscriberConstructor: func(params cqrs.EventProcessorSubscriberConstructorParams) (message.Subscriber, error) {
+			return watermillSQL.NewSubscriber(
+				watermillSQL.BeginnerFromPgx(conn),
+				watermillSQL.SubscriberConfig{
+					ConsumerGroup:    params.EventHandler.HandlerName(),
+					SchemaAdapter:    watermillSQL.DefaultPostgreSQLSchema{},
+					OffsetsAdapter:   watermillSQL.DefaultPostgreSQLOffsetsAdapter{},
+					InitializeSchema: false,
+					PollInterval:     time.Millisecond * 10,
+					ResendInterval:   0,
+					RetryInterval:    0,
+				},
+				logger,
+			)
+		},
+		Marshaler:         cqrs.JSONMarshaler{},
+		Logger:            logger,
+		OnHandle:          nil,
+		AckOnUnknownEvent: true,
 	})
 }
 
@@ -146,7 +213,8 @@ func InitializeEventSchema(ctx context.Context, conn *pgxpool.Pool, logger water
 
 	events := []string{
 		registration.EventStreamName,
-		// user.EventStreamName,
+		user.StudentEventStreamName,
+		user.StaffEventStreamName,
 	}
 
 	for _, eventStream := range events {

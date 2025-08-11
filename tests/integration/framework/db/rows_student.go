@@ -23,6 +23,12 @@ type StudentAssertion struct {
 	row StudentRow
 }
 
+func (a *StudentAssertion) InGroupID(groupID uuid.UUID) *StudentAssertion {
+	a.t.Helper()
+	assert.Equal(a.t, groupID, a.row.GroupID, "unexpected group ID")
+	return a
+}
+
 func (a *StudentAssertion) InGroup(groupName string) *StudentAssertion {
 	a.t.Helper()
 	assert.Equal(a.t, groupName, a.row.GroupName, "unexpected group name")

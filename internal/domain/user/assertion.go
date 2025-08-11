@@ -56,7 +56,7 @@ func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterSt
 	return s
 }
 
-func (s *StaffAssertions) AssertID(t *testing.T, expected string) *StaffAssertions {
+func (s *StaffAssertions) AssertID(t *testing.T, expected ID) *StaffAssertions {
 	assert.Equal(t, expected, s.ID, "ID mismatch")
 	return s
 }
@@ -140,7 +140,7 @@ func (s *StudentAssertions) AssertByRegistrationArgs(t *testing.T, args Register
 	return s
 }
 
-func (s *StudentAssertions) AssertID(t *testing.T, expected string) *StudentAssertions {
+func (s *StudentAssertions) AssertID(t *testing.T, expected ID) *StudentAssertions {
 	assert.Equal(t, expected, s.ID, "ID mismatch")
 	return s
 }

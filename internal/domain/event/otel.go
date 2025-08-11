@@ -7,32 +7,32 @@ import (
 )
 
 type Otel struct {
-	carrier map[string]string
+	Carrier map[string]string `json:"carrier,omitempty"`
 }
 
 func (o *Otel) Propagate(ctx context.Context) {
-	if o.carrier == nil {
-		o.carrier = make(map[string]string)
+	if o.Carrier == nil {
+		o.Carrier = make(map[string]string)
 	}
 
 	tcPropagator := propagation.TraceContext{}
 	bgPropagator := propagation.Baggage{}
 
-	tcPropagator.Inject(ctx, propagation.MapCarrier(o.carrier))
-	bgPropagator.Inject(ctx, propagation.MapCarrier(o.carrier))
+	tcPropagator.Inject(ctx, propagation.MapCarrier(o.Carrier))
+	bgPropagator.Inject(ctx, propagation.MapCarrier(o.Carrier))
 }
 
 func (o *Otel) Extract() context.Context {
-	if o.carrier == nil {
-		o.carrier = make(map[string]string)
+	if o.Carrier == nil {
+		o.Carrier = make(map[string]string)
 	}
 
 	tcPropagator := propagation.TraceContext{}
 	bgPropagator := propagation.Baggage{}
 
 	ctx := context.Background()
-	ctx = tcPropagator.Extract(ctx, propagation.MapCarrier(o.carrier))
-	ctx = bgPropagator.Extract(ctx, propagation.MapCarrier(o.carrier))
+	ctx = tcPropagator.Extract(ctx, propagation.MapCarrier(o.Carrier))
+	ctx = bgPropagator.Extract(ctx, propagation.MapCarrier(o.Carrier))
 
 	return ctx
 }

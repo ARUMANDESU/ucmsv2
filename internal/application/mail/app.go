@@ -1,6 +1,12 @@
 package mail
 
-import "github.com/ARUMANDESU/ucms/internal/application/mail/event"
+import (
+	"log/slog"
+
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/ARUMANDESU/ucms/internal/application/mail/event"
+)
 
 type App struct {
 	Event Event
@@ -12,6 +18,8 @@ type Event struct {
 
 type Args struct {
 	Mailsender event.MailSender
+	Tracer     trace.Tracer
+	Logger     *slog.Logger
 }
 
 func NewApp(args Args) *App {
@@ -19,6 +27,8 @@ func NewApp(args Args) *App {
 		Event: Event{
 			RegistrationStarted: event.NewRegistrationStartedHandler(event.RegistrationStartedHandlerArgs{
 				Mailsender: args.Mailsender,
+				Tracer:     args.Tracer,
+				Logger:     args.Logger,
 			}),
 		},
 	}

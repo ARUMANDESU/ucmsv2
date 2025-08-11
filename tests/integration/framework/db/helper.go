@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
 )
 
 type Helper struct {
@@ -41,7 +43,7 @@ func (h *Helper) TruncateAll(t *testing.T) {
 	}
 }
 
-func (h *Helper) AssertRegistrationExists(t *testing.T, email string) *RegistrationAssertion {
+func (h *Helper) RequireRegistrationExists(t *testing.T, email string) *RegistrationAssertion {
 	t.Helper()
 
 	var r RegistrationRow
@@ -61,7 +63,7 @@ func (h *Helper) AssertRegistrationExists(t *testing.T, email string) *Registrat
 	return &RegistrationAssertion{t: t, row: r, db: h}
 }
 
-func (h *Helper) AssertRegistrationNotExists(t *testing.T, email string) {
+func (h *Helper) RequireRegistrationNotExists(t *testing.T, email string) {
 	t.Helper()
 
 	var count int
@@ -72,7 +74,7 @@ func (h *Helper) AssertRegistrationNotExists(t *testing.T, email string) {
 	assert.Equal(t, 0, count, "expected no registration for email %s, but found %d", email, count)
 }
 
-func (h *Helper) AssertRegistrationCount(t *testing.T, expected int) {
+func (h *Helper) RequireRegistrationCount(t *testing.T, expected int) {
 	t.Helper()
 
 	var count int
@@ -83,7 +85,33 @@ func (h *Helper) AssertRegistrationCount(t *testing.T, expected int) {
 	assert.Equal(t, expected, count, "unexpected registration count")
 }
 
-func (h *Helper) AssertUserExists(t *testing.T, email string) *UserAssertion {
+func (h *Helper) CheckUserExists(t *testing.T, email string) bool {
+	t.Helper()
+
+	var exists bool
+	err := h.pool.QueryRow(context.Background(),
+		"SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", email).Scan(&exists)
+
+	rows, err := h.pool.Query(t.Context(), "SELECT id, email, first_name, last_name, role_id FROM users")
+	assert.NoError(t, err)
+	defer rows.Close()
+
+	for rows.Next() {
+		var id, email, firstName, lastName string
+		var roleID int16
+		err := rows.Scan(&id, &email, &firstName, &lastName, &roleID)
+		require.NoError(t, err)
+		slog.Info("user:", slog.String("id", id), slog.String("email", email),
+			slog.String("first_name", firstName), slog.String("last_name", lastName),
+			slog.Int("role_id", int(roleID)),
+		)
+	}
+
+	require.NoError(t, err)
+	return exists
+}
+
+func (h *Helper) RequireUserExists(t *testing.T, email string) *UserAssertion {
 	t.Helper()
 
 	var u UserRow
@@ -104,7 +132,7 @@ func (h *Helper) AssertUserExists(t *testing.T, email string) *UserAssertion {
 	return &UserAssertion{t: t, row: u, db: h}
 }
 
-func (h *Helper) AssertUserNotExists(t *testing.T, email string) {
+func (h *Helper) RequireUserNotExists(t *testing.T, email string) {
 	t.Helper()
 
 	var count int
@@ -115,7 +143,7 @@ func (h *Helper) AssertUserNotExists(t *testing.T, email string) {
 	assert.Equal(t, 0, count, "expected no user for email %s", email)
 }
 
-func (h *Helper) AssertStudentExists(t *testing.T, userID string) *StudentAssertion {
+func (h *Helper) RequireStudentExists(t *testing.T, userID string) *StudentAssertion {
 	t.Helper()
 
 	var s StudentRow
@@ -187,6 +215,28 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `, string(u.ID()), u.Email(), roleID, u.FirstName(), u.LastName(),
 		u.AvatarUrl(), u.PassHash(), u.CreatedAt(), u.UpdatedAt())
+
+	require.NoError(t, err)
+}
+
+func (h *Helper) SeedStudent(t *testing.T, userID string, groupID uuid.UUID) {
+	t.Helper()
+
+	_, err := h.pool.Exec(context.Background(), `
+        INSERT INTO students (user_id, group_id, created_at, updated_at)
+        VALUES ($1, $2, NOW(), NOW())
+    `, userID, groupID)
+
+	require.NoError(t, err)
+}
+
+func (h *Helper) SeedGroup(t *testing.T, groupID uuid.UUID, name string, year string, major major.Major) {
+	t.Helper()
+
+	_, err := h.pool.Exec(context.Background(), `
+        INSERT INTO groups (id, name, year, major, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, NOW(), NOW())
+    `, groupID, name, year, major)
 
 	require.NoError(t, err)
 }

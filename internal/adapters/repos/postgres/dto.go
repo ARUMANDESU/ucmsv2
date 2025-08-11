@@ -53,6 +53,20 @@ func DomainToRegistrationDTO(r *registration.Registration) RegistrationDTO {
 	}
 }
 
+func DomainToUserDTO(u *user.User, roleID int) UserDTO {
+	return UserDTO{
+		ID:        string(u.ID()),
+		RoleID:    roleID,
+		FirstName: u.FirstName(),
+		LastName:  u.LastName(),
+		Email:     u.Email(),
+		AvatarURL: u.AvatarUrl(),
+		Passhash:  u.PassHash(),
+		CreatedAt: u.CreatedAt(),
+		UpdatedAt: u.UpdatedAt(),
+	}
+}
+
 func UserToDomain(dto UserDTO, roleDTO GlobalRoleDTO) *user.User {
 	return user.RehydrateUser(user.RehydrateUserArgs{
 		ID:        user.ID(dto.ID),

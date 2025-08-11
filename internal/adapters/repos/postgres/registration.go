@@ -43,7 +43,7 @@ func NewRegistrationRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *Re
 		tracer:  t,
 		logger:  l,
 		pool:    pool,
-		wlogger: watermill.NewStdLogger(false, false),
+		wlogger: watermill.NewSlogLogger(l),
 	}
 }
 
@@ -244,7 +244,7 @@ func (re *RegistrationRepo) UpdateRegistrationByEmail(
         SET email = $2, status = $3, verification_code = $4,
             code_attempts = $5, code_expires_at = $6, resend_timeout = $7,
             updated_at = $8
-        WHERE email = $1;
+        WHERE id = $1;
     `
 
 	return postgres.WithTx(ctx, re.pool, func(ctx context.Context, tx pgx.Tx) error {

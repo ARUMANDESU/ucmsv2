@@ -2,8 +2,11 @@ package framework
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -44,6 +47,9 @@ type IntegrationTestSuite struct {
 	pgPool          *pgxpool.Pool
 	watermillRouter *message.Router
 	traceProvider   trace.TracerProvider
+	logger          *slog.Logger
+
+	routerRunning atomic.Bool
 
 	// Application
 	app           *Application
@@ -75,18 +81,16 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(rec))
 	otel.SetTracerProvider(tp)
 	s.traceProvider = tp
+	s.logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	s.startPostgreSQL(ctx)
-
 	s.runMigrations()
-
 	s.initializeWatermill()
-
 	s.createApplication()
-
 	s.createWatermillPort()
-
 	s.initializeHelpers()
+
+	s.startWatermillRouter()
 
 	s.T().Log("Test suite setup completed")
 }
@@ -128,7 +132,6 @@ func (s *IntegrationTestSuite) initializeWatermill() {
 		func(h message.HandlerFunc) message.HandlerFunc {
 			return func(msg *message.Message) ([]*message.Message, error) {
 				s.T().Logf("Received message: %s; metadata: %v", msg.UUID, msg.Metadata)
-
 				return h(msg)
 			}
 		},
@@ -141,17 +144,32 @@ func (s *IntegrationTestSuite) initializeWatermill() {
 func (s *IntegrationTestSuite) createApplication() {
 	registrationRepo := postgresrepo.NewRegistrationRepo(s.pgPool, nil, nil)
 	userRepo := postgresrepo.NewUserRepo(s.pgPool, nil, nil)
+	studentRepo := postgresrepo.NewStudentRepo(s.pgPool, nil, nil)
 
 	s.MockMailSender = mocks.NewMockMailSender()
+	s.Require().NotNil(s.MockMailSender, "MockMailSender should be initialized")
 
 	regApp := registrationapp.NewApp(registrationapp.Args{
 		Mode:       env.Test,
 		Repo:       registrationRepo,
 		UserGetter: userRepo,
 	})
+	mailApp := mail.NewApp(mail.Args{
+		Tracer:     nil,
+		Logger:     s.logger,
+		Mailsender: s.MockMailSender,
+	})
+
+	studentApp := studentapp.NewApp(studentapp.Args{
+		Tracer:      nil,
+		Logger:      s.logger,
+		StudentRepo: studentRepo,
+	})
 
 	s.app = &Application{
 		Registration: regApp,
+		Mail:         mailApp,
+		Student:      studentApp,
 	}
 
 	s.httpHandler = chi.NewRouter()
@@ -162,27 +180,48 @@ func (s *IntegrationTestSuite) createApplication() {
 }
 
 func (s *IntegrationTestSuite) createWatermillPort() {
-	logger := watermill.NewStdLogger(false, false)
+	logger := watermill.NewStdLogger(true, false)
 
-	port, err := watermillport.NewPort(s.watermillRouter, s.pgPool, logger)
+	port, err := watermillport.NewPortForTest(s.watermillRouter, s.pgPool, logger)
 	s.Require().NoError(err)
 
 	s.watermillPort = port
 
 	handlers := watermillport.AppEventHandlers{
 		Registration: s.app.Registration.Event,
+		Mail:         s.app.Mail.Event,
+		Student:      s.app.Student.Event,
 	}
 
-	err = s.watermillPort.Run(s.Context(), handlers)
+	err = s.watermillPort.Run(context.Background(), handlers)
 	s.Require().NoError(err)
+}
+
+func (s *IntegrationTestSuite) startWatermillRouter() {
+	routerStarted := make(chan struct{})
 
 	go func() {
 		s.T().Log("Starting Watermill router")
-		if err := s.watermillRouter.Run(s.Context()); err != nil {
+		s.routerRunning.Store(true)
+		close(routerStarted)
+
+		if err := s.watermillRouter.Run(context.Background()); err != nil {
 			s.T().Logf("Watermill router failed: %v", err)
 		}
 		s.T().Log("Watermill router stopped")
+		s.routerRunning.Store(false)
 	}()
+
+	select {
+	case <-routerStarted:
+		s.T().Log("Router started, waiting for handlers to be ready...")
+	case <-time.After(5 * time.Second):
+		s.T().Fatal("Router failed to start within timeout")
+	}
+
+	s.Require().True(s.routerRunning.Load(), "Router should be running")
+
+	s.T().Log("Watermill router and handlers are ready")
 }
 
 func (s *IntegrationTestSuite) initializeHelpers() {
@@ -213,22 +252,22 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 // SetupTest prepares each test
 func (s *IntegrationTestSuite) SetupTest() {
 	s.T().Log("Setting up test environment")
+
+	if !s.routerRunning.Load() {
+		s.T().Fatal("Router is not running, cannot proceed with test")
+	}
 }
 
 func (s *IntegrationTestSuite) BeforeTest(suiteName, testName string) {
-	s.T().Logf("Starting test: %s.%s", suiteName, testName)
 }
 
 func (s *IntegrationTestSuite) AfterTest(suiteName, testName string) {
-	s.T().Logf("Completed test: %s.%s", suiteName, testName)
 	s.DB.TruncateAll(s.T())
-	s.MockMailSender.Reset()
 	// s.Event.ClearAllEvents(s.T())
+	s.MockMailSender.Reset()
 }
 
 // Context returns a test context with timeout
 func (s *IntegrationTestSuite) Context() context.Context {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	s.T().Cleanup(cancel)
-	return ctx
+	return s.T().Context()
 }

@@ -1,6 +1,7 @@
 package registration
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/mail"
@@ -23,7 +24,8 @@ var emailRx = regexp.MustCompile(
 		`[A-Za-z]{2,63}$`) // TLD
 
 const (
-	PasswordCostFactor = 12 // Future-proofing; default is 10 in 2025.07.30
+	PasswordCostFactor     = 12 // Future-proofing; default is 10 in 2025.07.30
+	VerificationCodeLength = 6
 
 	ResendTimeout               = 1 * time.Minute
 	ExpiresAt                   = 10 * time.Minute
@@ -52,6 +54,25 @@ func NewID() ID {
 
 func (id ID) String() string {
 	return uuid.UUID(id).String()
+}
+
+func (id ID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(uuid.UUID(id).String())
+}
+
+func (id *ID) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	uid, err := uuid.Parse(s)
+	if err != nil {
+		return err
+	}
+
+	*id = ID(uid)
+	return nil
 }
 
 type Registration struct {
@@ -357,7 +378,7 @@ func (r *Registration) UpdatedAt() time.Time {
 }
 
 func generateCode() (string, error) {
-	code, err := randcode.GenerateAlphaNumericCode(6)
+	code, err := randcode.GenerateAlphaNumericCode(VerificationCodeLength)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate new verification code: %w", err)
 	}

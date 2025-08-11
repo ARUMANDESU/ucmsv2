@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 )
 
 type UserRow struct {
@@ -26,9 +28,9 @@ type UserAssertion struct {
 	db  *Helper
 }
 
-func (a *UserAssertion) HasRole(expected string) *UserAssertion {
+func (a *UserAssertion) HasRole(expected role.Global) *UserAssertion {
 	a.t.Helper()
-	assert.Equal(a.t, expected, a.row.RoleName, "unexpected user role")
+	assert.Equal(a.t, expected.String(), a.row.RoleName, "unexpected user role")
 	return a
 }
 
@@ -41,5 +43,5 @@ func (a *UserAssertion) HasFullName(firstName, lastName string) *UserAssertion {
 
 func (a *UserAssertion) IsStudent() *StudentAssertion {
 	a.t.Helper()
-	return a.db.AssertStudentExists(a.t, a.row.ID)
+	return a.db.RequireStudentExists(a.t, a.row.ID)
 }

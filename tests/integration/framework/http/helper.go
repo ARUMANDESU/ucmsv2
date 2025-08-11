@@ -80,7 +80,14 @@ func (h *Helper) Do(t *testing.T, req Request) *Response {
 func (r *Response) AssertStatus(expected int) *Response {
 	r.t.Helper()
 
-	assert.Equal(r.t, expected, r.Result().StatusCode, "unexpected status code")
+	var resp map[string]any
+	r.ParseJSON(&resp)
+	message, ok := resp["message"].(string)
+	if !ok {
+		message = "no message in response"
+	}
+
+	assert.Equal(r.t, expected, r.Result().StatusCode, "unexpected status code, message: %s", message)
 	return r
 }
 
@@ -89,7 +96,7 @@ func (r *Response) AssertSuccess() *Response {
 	r.AssertStatus(http.StatusOK)
 
 	var resp map[string]any
-	r.ParseJSON(resp)
+	r.ParseJSON(&resp)
 	assert.True(r.t, resp["success"].(bool), "expected succeeded=true")
 
 	return r

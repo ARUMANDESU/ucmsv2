@@ -84,7 +84,7 @@ func Success(w http.ResponseWriter, r *http.Request, status int, message Envelop
 	if message == nil {
 		message = make(Envelope, 1)
 	}
-	message["succeeded"] = true
+	message["success"] = true
 
 	err := WriteJSON(w, status, message, nil)
 	if err != nil {

@@ -7,10 +7,55 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// PostV1RegistrationStartStudentJSONBody defines parameters for PostV1RegistrationStartStudent.
-type PostV1RegistrationStartStudentJSONBody struct {
+// Barcode defines model for Barcode.
+type Barcode = string
+
+// GroupID defines model for GroupID.
+type GroupID = openapi_types.UUID
+
+// Password defines model for Password.
+type Password = string
+
+// RegistrationEmailVerificationcode defines model for RegistrationEmailVerificationcode.
+type RegistrationEmailVerificationcode = string
+
+// PostV1RegistrationsStudentsCompleteJSONBody defines parameters for PostV1RegistrationsStudentsComplete.
+type PostV1RegistrationsStudentsCompleteJSONBody struct {
+	Barcode          Barcode                           `json:"barcode"`
+	Email            openapi_types.Email               `json:"email"`
+	FirstName        string                            `json:"first_name"`
+	GroupId          GroupID                           `json:"group_id"`
+	LastName         string                            `json:"last_name"`
+	Password         Password                          `json:"password"`
+	VerificationCode RegistrationEmailVerificationcode `json:"verification_code"`
+}
+
+// PostV1RegistrationsStudentsStartJSONBody defines parameters for PostV1RegistrationsStudentsStart.
+type PostV1RegistrationsStudentsStartJSONBody struct {
 	Email openapi_types.Email `json:"email"`
 }
 
-// PostV1RegistrationStartStudentJSONRequestBody defines body for PostV1RegistrationStartStudent for application/json ContentType.
-type PostV1RegistrationStartStudentJSONRequestBody PostV1RegistrationStartStudentJSONBody
+// PostV1RegistrationsStudentsStartParams defines parameters for PostV1RegistrationsStudentsStart.
+type PostV1RegistrationsStudentsStartParams struct {
+	IdempotencyKey openapi_types.UUID `json:"Idempotency-Key"`
+}
+
+// PostV1RegistrationsVerifyJSONBody defines parameters for PostV1RegistrationsVerify.
+type PostV1RegistrationsVerifyJSONBody struct {
+	Email            openapi_types.Email               `json:"email"`
+	VerificationCode RegistrationEmailVerificationcode `json:"verification_code"`
+}
+
+// PostV1RegistrationsVerifyParams defines parameters for PostV1RegistrationsVerify.
+type PostV1RegistrationsVerifyParams struct {
+	IdempotencyKey openapi_types.UUID `json:"Idempotency-Key"`
+}
+
+// PostV1RegistrationsStudentsCompleteJSONRequestBody defines body for PostV1RegistrationsStudentsComplete for application/json ContentType.
+type PostV1RegistrationsStudentsCompleteJSONRequestBody PostV1RegistrationsStudentsCompleteJSONBody
+
+// PostV1RegistrationsStudentsStartJSONRequestBody defines body for PostV1RegistrationsStudentsStart for application/json ContentType.
+type PostV1RegistrationsStudentsStartJSONRequestBody PostV1RegistrationsStudentsStartJSONBody
+
+// PostV1RegistrationsVerifyJSONRequestBody defines body for PostV1RegistrationsVerify for application/json ContentType.
+type PostV1RegistrationsVerifyJSONRequestBody PostV1RegistrationsVerifyJSONBody

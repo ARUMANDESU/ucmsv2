@@ -11,6 +11,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 	"github.com/ARUMANDESU/ucms/tests/mocks"
 )
@@ -52,9 +53,12 @@ func TestStudentRegistrationCompletedHandler_HappyPath(t *testing.T) {
 
 	student := s.MockStudentRepo.RequireStudentByID(t, user.ID(fixtures.TestStudent.ID))
 	student.
+		AssertID(t, user.ID(fixtures.TestStudent.ID)).
 		AssertEmail(t, fixtures.TestStudent.Email).
 		AssertFirstName(t, fixtures.TestStudent.FirstName).
 		AssertLastName(t, fixtures.TestStudent.LastName).
+		AssertPassHash(t, []byte("hashedpassword")).
+		AssertRole(t, role.Student).
 		AssertGroupID(t, fixtures.TestStudent.GroupID)
 }
 

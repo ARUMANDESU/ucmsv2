@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 )
 
@@ -23,7 +24,7 @@ func NewHelper(pool *pgxpool.Pool) *Helper {
 }
 
 // WaitForEvent waits for an event to appear in the database
-func (h *Helper) WaitForEvent(t *testing.T, eventType string, timeout time.Duration) {
+func (h *Helper) WaitForEvent(t *testing.T, eventType, streamName string, timeout time.Duration) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -37,29 +38,29 @@ func (h *Helper) WaitForEvent(t *testing.T, eventType string, timeout time.Durat
 		case <-ctx.Done():
 			t.Fatalf("timeout waiting for event %s", eventType)
 		case <-ticker.C:
-			if h.eventExists(eventType) {
+			if h.eventExists(eventType, streamName) {
 				return
 			}
 		}
 	}
 }
 
-func (h *Helper) eventExists(eventType string) bool {
+func (h *Helper) eventExists(eventType, streamName string) bool {
 	var count int
 	query := fmt.Sprintf(`
-        SELECT COUNT(*) FROM watermill_events_registration 
+        SELECT COUNT(*) FROM watermill_%s
         WHERE metadata->>'name' = $1
-    `)
+    `, streamName)
 
 	_ = h.pool.QueryRow(context.Background(), query, eventType).Scan(&count)
 	return count > 0
 }
 
 // AssertEvent retrieves and asserts on a specific event
-func (h *Helper) AssertEvent(t *testing.T, eventType string) *EventAssertion {
+func (h *Helper) AssertEvent(t *testing.T, eventType, streamName string) *EventAssertion {
 	t.Helper()
 
-	h.WaitForEvent(t, eventType, 5*time.Second)
+	h.WaitForEvent(t, eventType, streamName, 5*time.Second)
 
 	var payload json.RawMessage
 	var metadata json.RawMessage
@@ -67,11 +68,11 @@ func (h *Helper) AssertEvent(t *testing.T, eventType string) *EventAssertion {
 
 	query := fmt.Sprintf(`
         SELECT payload, metadata, "offset"
-        FROM watermill_events_registration
+        FROM watermill_%s
         WHERE metadata->>'name' = $1
         ORDER BY "offset" DESC
         LIMIT 1
-    `)
+    `, streamName)
 
 	err := h.pool.QueryRow(context.Background(), query, eventType).Scan(&payload, &metadata, &offset)
 	require.NoError(t, err, "event %s not found", eventType)
@@ -86,14 +87,14 @@ func (h *Helper) AssertEvent(t *testing.T, eventType string) *EventAssertion {
 }
 
 // AssertNoEvent ensures no event of the given type exists
-func (h *Helper) AssertNoEvent(t *testing.T, eventType string) {
+func (h *Helper) AssertNoEvent(t *testing.T, eventType, streamName string) {
 	t.Helper()
 
 	var count int
 	query := fmt.Sprintf(`
-        SELECT COUNT(*) FROM watermill_events_registration 
+        SELECT COUNT(*) FROM watermill_%s
         WHERE metadata->>'name' = $1
-    `)
+    `, streamName)
 
 	err := h.pool.QueryRow(context.Background(), query, eventType).Scan(&count)
 	require.NoError(t, err)
@@ -101,14 +102,14 @@ func (h *Helper) AssertNoEvent(t *testing.T, eventType string) {
 }
 
 // AssertEventCount verifies the number of events of a specific type
-func (h *Helper) AssertEventCount(t *testing.T, eventType string, expected int) {
+func (h *Helper) AssertEventCount(t *testing.T, eventType, streamName string, expected int) {
 	t.Helper()
 
 	var count int
 	query := fmt.Sprintf(`
-        SELECT COUNT(*) FROM watermill_events_registration 
+        SELECT COUNT(*) FROM watermill_%s
         WHERE metadata->>'name' = $1
-    `)
+    `, streamName)
 
 	err := h.pool.QueryRow(context.Background(), query, eventType).Scan(&count)
 	require.NoError(t, err)
@@ -119,7 +120,7 @@ func (h *Helper) AssertEventCount(t *testing.T, eventType string, expected int) 
 func (h *Helper) AssertRegistrationStartedEvent(t *testing.T, email string) *RegistrationStartedAssertion {
 	t.Helper()
 
-	assertion := h.AssertEvent(t, "registration.RegistrationStarted")
+	assertion := h.AssertEvent(t, "registration.RegistrationStarted", "events_registration")
 
 	var event registration.RegistrationStarted
 	err := json.Unmarshal(assertion.payload, &event)
@@ -129,6 +130,20 @@ func (h *Helper) AssertRegistrationStartedEvent(t *testing.T, email string) *Reg
 		EventAssertion: assertion,
 		event:          event,
 	}
+}
+
+func RequireEvent[T event.Event](t *testing.T, h *Helper, e T) T {
+	t.Helper()
+
+	eventType := fmt.Sprintf("%T", e)
+	// remove * from the type name
+	eventType = eventType[1:]
+
+	assertion := h.AssertEvent(t, eventType, e.GetStreamName())
+	var event T
+	err := json.Unmarshal(assertion.GetPayload(), &event)
+	require.NoError(t, err, "failed to parse event payload for %s", eventType)
+	return event
 }
 
 type EventAssertion struct {
@@ -227,6 +242,8 @@ func (h *Helper) ClearAllEvents(t *testing.T) {
 	tables := []string{
 		"watermill_events_registration",
 		"watermill_offsets_events_registration",
+		"watermill_events_student",
+		"watermill_offsets_events_student",
 	}
 
 	for _, table := range tables {
