@@ -84,17 +84,17 @@ func TestVerifyHandler_InvalidArgs_ShouldReturnError(t *testing.T) {
 		{
 			name:    "Empty Email",
 			arg:     Verify{Email: "", Code: "valid-code"},
-			wantErr: errorx.ErrInvalidInput,
+			wantErr: ErrMissingEmailCode,
 		},
 		{
 			name:    "Empty Code",
 			arg:     Verify{Email: fixtures.ValidStudentEmail, Code: ""},
-			wantErr: errorx.ErrInvalidInput,
+			wantErr: ErrMissingEmailCode,
 		},
 		{
 			name:    "Both Empty",
 			arg:     Verify{Email: "", Code: ""},
-			wantErr: errorx.ErrInvalidInput,
+			wantErr: ErrMissingEmailCode,
 		},
 	}
 
@@ -126,7 +126,7 @@ func TestVerifyHandler_InvalidEmail_ShouldReturnError(t *testing.T) {
 		Code:  reg.VerificationCode(),
 	})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errorx.ErrNotFound)
+	assert.True(t, errorx.IsNotFound(err), "expected not found error, got: %v", err)
 }
 
 func TestVerifyHandler_InvalidCode_ShouldReturnError(t *testing.T) {
@@ -172,5 +172,9 @@ func TestVerifyHandler_InvalidCode_TooManyAttempts_ShouldReturnError(t *testing.
 		AssertStatus(t, registration.StatusExpired).
 		AssertCodeAttempts(t, registration.MaxVerificationCodeAttempts+1).
 		AssertVerificationCodeNotEmpty(t)
-	s.MockRepo.AssertEventCount(t, 0)
+	s.MockRepo.AssertEventCount(t, 1)
+	e := mocks.RequireEventExists(t, s.MockRepo.EventRepo, &registration.RegistrationFailed{})
+	require.NotNil(t, e)
+	assert.Equal(t, reg.ID(), e.RegistrationID)
+	assert.NotEmpty(t, e.Reason)
 }

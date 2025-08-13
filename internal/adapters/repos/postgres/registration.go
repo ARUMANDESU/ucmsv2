@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/postgres"
@@ -27,6 +26,7 @@ type RegistrationRepo struct {
 }
 
 // NewRegistrationRepo creates a new instance of RegistrationRepo.
+// It also sets default tracer and logger if they are nil.
 //
 //	WARNING; panics if pool is nil
 func NewRegistrationRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *RegistrationRepo {
@@ -68,7 +68,7 @@ func (r *RegistrationRepo) GetRegistrationByEmail(ctx context.Context, email str
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to get registration by email")
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, repos.ErrNotFound
+			return nil, errorx.NewNotFound().WithCause(err)
 		}
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (re *RegistrationRepo) GetRegistrationByID(ctx context.Context, id registra
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to get registration by ID")
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, repos.ErrNotFound
+			return nil, errorx.NewNotFound().WithCause(err)
 		}
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (re *RegistrationRepo) SaveRegistration(ctx context.Context, r *registratio
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			return repos.ErrNoRowsAffected
+			return errorx.NewNoRowsAffected()
 		}
 
 		if len(events) > 0 {
@@ -180,7 +180,7 @@ func (re *RegistrationRepo) UpdateRegistration(
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "failed to get registration for update")
 			if errors.Is(err, pgx.ErrNoRows) {
-				return repos.ErrNotFound
+				return errorx.NewNotFound().WithCause(err)
 			}
 			return err
 		}
@@ -207,7 +207,7 @@ func (re *RegistrationRepo) UpdateRegistration(
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			return repos.ErrNoRowsAffected
+			return errorx.NewNoRowsAffected()
 		}
 
 		events := reg.GetUncommittedEvents()
@@ -222,7 +222,6 @@ func (re *RegistrationRepo) UpdateRegistration(
 		if fnerr != nil && errorx.IsPersistable(fnerr) {
 			span.RecordError(fnerr)
 			span.SetStatus(codes.Error, "update function returned an error but is allowed to continue")
-			slog.Warn("Update function returned an error but is allowed to continue", "error", fnerr.Error())
 			return fnerr
 		}
 		return nil
@@ -267,17 +266,18 @@ func (re *RegistrationRepo) UpdateRegistrationByEmail(
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "failed to get registration for update")
 			if errors.Is(err, pgx.ErrNoRows) {
-				return repos.ErrNotFound
+				return errorx.NewNotFound().WithCause(err)
 			}
 			return err
 		}
 
 		reg := RegistrationToDomain(dto)
 
-		if err := fn(ctx, reg); err != nil {
-			span.RecordError(err)
+		fnerr := fn(ctx, reg)
+		if fnerr != nil && !errorx.IsPersistable(fnerr) {
+			span.RecordError(fnerr)
 			span.SetStatus(codes.Error, "failed to apply update function")
-			return err
+			return fnerr
 		}
 
 		dto = DomainToRegistrationDTO(reg)
@@ -293,7 +293,7 @@ func (re *RegistrationRepo) UpdateRegistrationByEmail(
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			return repos.ErrNoRowsAffected
+			return errorx.NewNoRowsAffected()
 		}
 
 		events := reg.GetUncommittedEvents()
@@ -303,6 +303,12 @@ func (re *RegistrationRepo) UpdateRegistrationByEmail(
 				span.SetStatus(codes.Error, "failed to publish events")
 				return err
 			}
+		}
+
+		if fnerr != nil && errorx.IsPersistable(fnerr) {
+			span.RecordError(fnerr)
+			span.SetStatus(codes.Error, "update function returned an error but is allowed to continue")
+			return fnerr
 		}
 		return nil
 	})

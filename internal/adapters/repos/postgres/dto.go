@@ -5,8 +5,10 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 )
 
@@ -37,6 +39,15 @@ type RegistrationDTO struct {
 	ResendTimeout    time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+}
+
+type GroupDTO struct {
+	ID        uuid.UUID
+	Name      string
+	Major     string
+	Year      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func DomainToRegistrationDTO(r *registration.Registration) RegistrationDTO {
@@ -92,5 +103,14 @@ func RegistrationToDomain(dto RegistrationDTO) *registration.Registration {
 		ResendTimeout:    dto.ResendTimeout,
 		CreatedAt:        dto.CreatedAt,
 		UpdatedAt:        dto.UpdatedAt,
+	})
+}
+
+func GroupToDomain(dto GroupDTO) *group.Group {
+	return group.Rehydrate(group.RehydrateArgs{
+		ID:    group.ID(dto.ID),
+		Name:  dto.Name,
+		Major: major.Major(dto.Major),
+		Year:  dto.Year,
 	})
 }

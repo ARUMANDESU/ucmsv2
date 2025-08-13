@@ -5,9 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
 type UserRepo struct {
@@ -31,7 +31,7 @@ func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*user.User
 	if u, ok := r.dbbyEmail[email]; ok {
 		return u, nil
 	}
-	return nil, repos.ErrNotFound
+	return nil, errorx.NewNotFound()
 }
 
 func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, error) {
@@ -41,7 +41,7 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, err
 	if u, ok := r.dbbyID[id]; ok {
 		return u, nil
 	}
-	return nil, repos.ErrNotFound
+	return nil, errorx.NewNotFound()
 }
 
 func (r *UserRepo) SeedUser(t *testing.T, u *user.User) {

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 )
@@ -16,6 +17,11 @@ type Repo interface {
 
 type UserGetter interface {
 	GetUserByEmail(ctx context.Context, email string) (*user.User, error)
+	GetUserByID(ctx context.Context, id user.ID) (*user.User, error)
+}
+
+type GroupGetter interface {
+	GetGroupByID(ctx context.Context, id group.ID) (*group.Group, error)
 }
 
 // type StaffSignUpTokenGetter interface {

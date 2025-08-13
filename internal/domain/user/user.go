@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
@@ -168,4 +169,31 @@ func (u *User) UpdatedAt() time.Time {
 	}
 
 	return u.updatedAt
+}
+
+func ValidatePasswordManual(password string) bool {
+	if len(password) < 8 {
+		return false
+	}
+
+	var hasLower, hasUpper, hasDigit, hasSpecial bool
+	allowedSpecial := "@$!%*?&"
+
+	for _, char := range password {
+		switch {
+		case char >= 'a' && char <= 'z':
+			hasLower = true
+		case char >= 'A' && char <= 'Z':
+			hasUpper = true
+		case char >= '0' && char <= '9':
+			hasDigit = true
+		case strings.ContainsRune(allowedSpecial, char):
+			hasSpecial = true
+		default:
+			// Invalid character found
+			return false
+		}
+	}
+
+	return hasLower && hasUpper && hasDigit && hasSpecial
 }

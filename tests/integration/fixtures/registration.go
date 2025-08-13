@@ -12,6 +12,7 @@ import (
 // Test emails
 const (
 	ValidStudentEmail  = "student@astanait.edu.kz"
+	ValidStudent2Email = "student2@astanait.edu.kz"
 	ValidStaffEmail    = "staff@astanait.edu.kz"
 	ValidExternalEmail = "external@gmail.com"
 	InvalidEmail       = "notanemail"
@@ -26,8 +27,9 @@ var (
 
 // Test users
 var (
-	TestStudentID = "210107"
-	TestStaffID   = "STAFF001"
+	TestStudentID  = "210107"
+	TestStudent2ID = "210108"
+	TestStaffID    = "STAFF001"
 
 	TestStudent = struct {
 		ID        string
@@ -45,6 +47,24 @@ var (
 		Password:  "SecurePass123!",
 		GroupID:   uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
 		Major:     major.SE,
+	}
+
+	TestStudent2 = struct {
+		ID        string
+		Email     string
+		FirstName string
+		LastName  string
+		Password  string
+		GroupID   uuid.UUID
+		Major     major.Major
+	}{
+		ID:        TestStudent2ID,
+		Email:     ValidStudent2Email,
+		FirstName: "Test",
+		LastName:  "Student2",
+		Password:  "SecurePass123!",
+		GroupID:   uuid.MustParse("660e8400-e29b-41d4-a716-446655440001"),
+		Major:     major.IT,
 	}
 
 	TestStaff = struct {
@@ -82,7 +102,7 @@ var (
 		Major: major.SE,
 	}
 
-	CSGroup = struct {
+	ITGroup = struct {
 		ID    uuid.UUID
 		Name  string
 		Year  string
@@ -92,5 +112,17 @@ var (
 		Name:  "CS-2301",
 		Year:  "2023",
 		Major: major.IT,
+	}
+
+	CSGroup = struct {
+		ID    uuid.UUID
+		Name  string
+		Year  string
+		Major major.Major
+	}{
+		ID:    uuid.MustParse("770e8400-e29b-41d4-a716-446655440002"),
+		Name:  "CS-2301",
+		Year:  "2023",
+		Major: major.CS,
 	}
 )

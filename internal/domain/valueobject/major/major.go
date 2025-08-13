@@ -1,5 +1,9 @@
 package major
 
+import "github.com/ARUMANDESU/ucms/pkg/errorx"
+
+var ErrInvalidMajor = errorx.NewValidationFieldFailed("major")
+
 type Major string
 
 const (

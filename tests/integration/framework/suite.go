@@ -145,14 +145,16 @@ func (s *IntegrationTestSuite) createApplication() {
 	registrationRepo := postgresrepo.NewRegistrationRepo(s.pgPool, nil, nil)
 	userRepo := postgresrepo.NewUserRepo(s.pgPool, nil, nil)
 	studentRepo := postgresrepo.NewStudentRepo(s.pgPool, nil, nil)
+	groupRepo := postgresrepo.NewGroupRepo(s.pgPool, nil, nil)
 
 	s.MockMailSender = mocks.NewMockMailSender()
 	s.Require().NotNil(s.MockMailSender, "MockMailSender should be initialized")
 
 	regApp := registrationapp.NewApp(registrationapp.Args{
-		Mode:       env.Test,
-		Repo:       registrationRepo,
-		UserGetter: userRepo,
+		Mode:        env.Test,
+		Repo:        registrationRepo,
+		UserGetter:  userRepo,
+		GroupGetter: groupRepo,
 	})
 	mailApp := mail.NewApp(mail.Args{
 		Tracer:     nil,
@@ -262,6 +264,20 @@ func (s *IntegrationTestSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (s *IntegrationTestSuite) AfterTest(suiteName, testName string) {
+	// s.T().Logf("Cleaning up after test: %s.%s", suiteName, testName)
+	// spans := s.traceRecorder.Ended()
+	// s.T().Logf("Total spans recorded: %d", len(spans))
+	// for _, span := range spans {
+	// 	s.T().Logf("Span: %s, Name: %s, Status: %s", span.SpanContext().TraceID(), span.Name(), span.Status().Code.String())
+	// 	attrs := span.Attributes()
+	// 	attrjsonbytes, _ := json.MarshalIndent(attrs, "", "  ")
+	// 	s.T().Logf("Attributes: %s", string(attrjsonbytes))
+	// 	events := span.Events()
+	// 	eventjsonbytes, _ := json.MarshalIndent(events, "", "  ")
+	// 	s.T().Logf("Events: %s", string(eventjsonbytes))
+	// 	fmt.Println("")
+	// }
+	s.T().Logf("Cleaning up after test: %s.%s", suiteName, testName)
 	s.traceRecorder.Reset()
 	s.DB.TruncateAll(s.T())
 	// s.Event.ClearAllEvents(s.T())

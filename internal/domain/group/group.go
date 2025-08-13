@@ -1,0 +1,190 @@
+package group
+
+import (
+	"encoding/json"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
+)
+
+var (
+	ErrMissingName  = errorx.NewValidationFieldFailed("name")
+	ErrMissingMajor = errorx.NewValidationFieldFailed("major")
+	ErrMissingYear  = errorx.NewValidationFieldFailed("year")
+)
+
+type ID uuid.UUID
+
+func NewID() ID {
+	return ID(uuid.New())
+}
+
+func (id ID) String() string {
+	return uuid.UUID(id).String()
+}
+
+func (id ID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(uuid.UUID(id).String())
+}
+
+func (id *ID) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	uid, err := uuid.Parse(s)
+	if err != nil {
+		return err
+	}
+
+	*id = ID(uid)
+	return nil
+}
+
+type Group struct {
+	id        ID
+	name      string
+	major     major.Major
+	year      string
+	createdAt time.Time
+	updatedAt time.Time
+}
+
+func NewGroup(name, year string, m major.Major) (*Group, error) {
+	if name == "" {
+		return nil, ErrMissingName
+	}
+	if year == "" {
+		return nil, ErrMissingYear
+	}
+	if m == "" {
+		return nil, ErrMissingMajor
+	}
+	if !major.IsValid(m) {
+		return nil, major.ErrInvalidMajor
+	}
+
+	now := time.Now().UTC()
+
+	return &Group{
+		id:        NewID(),
+		name:      name,
+		major:     m,
+		year:      year,
+		createdAt: now,
+		updatedAt: now,
+	}, nil
+}
+
+type RehydrateArgs struct {
+	ID        ID
+	Name      string
+	Major     major.Major
+	Year      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func Rehydrate(args RehydrateArgs) *Group {
+	return &Group{
+		id:        args.ID,
+		name:      args.Name,
+		major:     args.Major,
+		year:      args.Year,
+		createdAt: args.CreatedAt,
+		updatedAt: args.UpdatedAt,
+	}
+}
+
+func (g *Group) ID() ID {
+	return g.id
+}
+
+func (g *Group) Name() string {
+	return g.name
+}
+
+func (g *Group) Major() major.Major {
+	return g.major
+}
+
+func (g *Group) Year() string {
+	return g.year
+}
+
+func (g *Group) CreatedAt() time.Time {
+	return g.createdAt
+}
+
+func (g *Group) UpdatedAt() time.Time {
+	return g.updatedAt
+}
+
+type GroupAssertion struct {
+	group *Group
+}
+
+func NewGroupAssertion(g *Group) *GroupAssertion {
+	if g == nil {
+		return nil
+	}
+	return &GroupAssertion{group: g}
+}
+
+func (a *GroupAssertion) AssertID(t *testing.T, expected ID) *GroupAssertion {
+	t.Helper()
+	assert.Equal(t, expected, a.group.ID(), "Expected group ID to be %s, got %s", expected, a.group.ID())
+	return a
+}
+
+func (a *GroupAssertion) AssertName(t *testing.T, expected string) *GroupAssertion {
+	t.Helper()
+	assert.Equal(t, expected, a.group.Name(), "Expected group name to be %s, got %s", expected, a.group.Name())
+	return a
+}
+
+func (a *GroupAssertion) AssertMajor(t *testing.T, expected major.Major) *GroupAssertion {
+	t.Helper()
+	assert.Equal(t, expected, a.group.Major(), "Expected group major to be %s, got %s", expected, a.group.Major())
+	return a
+}
+
+func (a *GroupAssertion) AssertYear(t *testing.T, expected string) *GroupAssertion {
+	t.Helper()
+	assert.Equal(t, expected, a.group.Year(), "Expected group year to be %s, got %s", expected, a.group.Year())
+	return a
+}
+
+func (a *GroupAssertion) AssertCreatedAt(t *testing.T, expected time.Time) *GroupAssertion {
+	t.Helper()
+	assert.WithinDuration(
+		t,
+		expected,
+		a.group.CreatedAt(),
+		time.Second,
+		"Expected group created at to be within 1 second of %s, got %s",
+		expected,
+		a.group.CreatedAt(),
+	)
+	return a
+}
+
+func (a *GroupAssertion) AssertUpdatedAt(t *testing.T, expected time.Time) *GroupAssertion {
+	t.Helper()
+	assert.WithinDuration(
+		t,
+		expected,
+		a.group.UpdatedAt(),
+		time.Second,
+		"Expected group updated at to be within 1 second of %s, got %s",
+		expected,
+		a.group.UpdatedAt(),
+	)
+	return a
+}

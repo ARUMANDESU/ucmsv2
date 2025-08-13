@@ -53,7 +53,7 @@ func NewRegistrationStartedHandler(args RegistrationStartedHandlerArgs) *Registr
 }
 
 func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration.RegistrationStarted) error {
-	if h == nil || e == nil {
+	if e == nil {
 		return nil
 	}
 

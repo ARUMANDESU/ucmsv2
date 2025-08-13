@@ -2,12 +2,12 @@ package mocks
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 
-	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
 type StudentRepo struct {
@@ -33,7 +33,7 @@ func (r *StudentRepo) GetStudentByEmail(ctx context.Context, email string) (*use
 	if student, exists := r.dbByEmail[email]; exists {
 		return student, nil
 	}
-	return nil, repos.ErrNotFound
+	return nil, errorx.NewNotFound()
 }
 
 func (r *StudentRepo) GetStudentByID(ctx context.Context, id user.ID) (*user.Student, error) {
@@ -43,7 +43,7 @@ func (r *StudentRepo) GetStudentByID(ctx context.Context, id user.ID) (*user.Stu
 	if student, exists := r.dbByID[id]; exists {
 		return student, nil
 	}
-	return nil, repos.ErrNotFound
+	return nil, errorx.NewNotFound()
 }
 
 func (r *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) error {
@@ -51,15 +51,15 @@ func (r *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) er
 	defer r.mu.Unlock()
 
 	if student == nil {
-		return repos.ErrInvalidInput
+		return errors.New("student cannot be nil")
 	}
 
 	if _, exists := r.dbByEmail[student.User().Email()]; exists {
-		return repos.ErrAlreadyExists
+		return errorx.NewDuplicateEntry()
 	}
 
 	if _, exists := r.dbByID[student.User().ID()]; exists {
-		return repos.ErrAlreadyExists
+		return errorx.NewDuplicateEntry()
 	}
 
 	r.dbByEmail[student.User().Email()] = student
@@ -87,19 +87,6 @@ func (r *StudentRepo) SeedStudent(t *testing.T, student *user.Student) {
 	r.dbByID[student.User().ID()] = student
 	r.dbByEmail[student.User().Email()] = student
 	r.EventRepo.appendEvents(student.GetUncommittedEvents()...)
-}
-
-func (r *StudentRepo) EventChannel() <-chan event.Event {
-	return r.eventCh
-}
-
-func (r *StudentRepo) Events() []event.Event {
-	r.eventsMu.Lock()
-	defer r.eventsMu.Unlock()
-
-	eventsCopy := make([]event.Event, len(r.events))
-	copy(eventsCopy, r.events)
-	return eventsCopy
 }
 
 func (r *StudentRepo) RequireStudentByID(t *testing.T, id user.ID) *user.StudentAssertions {

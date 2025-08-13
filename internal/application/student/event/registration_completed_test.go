@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 	"github.com/ARUMANDESU/ucms/tests/mocks"
 )
@@ -191,6 +191,6 @@ func TestStudentRegistrationCompletedHandler_SaveStudentError(t *testing.T) {
 
 		err = s.Handler.Handle(context.Background(), event)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, repos.ErrAlreadyExists)
+		assert.True(t, errorx.IsDuplicateEntry(err), "expected duplicate entry error, got: %v", err)
 	})
 }

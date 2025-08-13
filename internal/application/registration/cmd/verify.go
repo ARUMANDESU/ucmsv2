@@ -12,7 +12,10 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
-var ErrOKAlreadyVerified = errorx.NewAlreadyProcessed().WithHTTPCode(http.StatusOK)
+var (
+	ErrOKAlreadyVerified = errorx.NewAlreadyProcessed().WithHTTPCode(http.StatusOK)
+	ErrMissingEmailCode  = errorx.NewValidationFieldFailed("email,code")
+)
 
 type Verify struct {
 	Email string
@@ -53,9 +56,10 @@ func (h *VerifyHandler) Handle(ctx context.Context, cmd Verify) error {
 	h.logger.Debug("VerifyHandler.Handle called", "email", cmd.Email, "code", cmd.Code)
 
 	if cmd.Email == "" || cmd.Code == "" {
-		span.RecordError(errorx.ErrInvalidInput)
+		err := ErrMissingEmailCode
+		span.RecordError(err)
 		span.SetStatus(codes.Error, "email or code is empty")
-		return errorx.ErrInvalidInput
+		return err
 	}
 
 	return h.repo.UpdateRegistrationByEmail(ctx, cmd.Email, func(ctx context.Context, r *registration.Registration) error {

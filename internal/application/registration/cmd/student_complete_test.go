@@ -20,21 +20,29 @@ type StudentCompleteSuite struct {
 	Handler          *StudentCompleteHandler
 	MockUser         *mocks.UserRepo
 	MockRegistration *mocks.RegistrationRepo
+	MockGroup        *mocks.GroupRepo
 }
 
-func NewStudentCompleteSuite() *StudentCompleteSuite {
+func NewStudentCompleteSuite(t *testing.T) *StudentCompleteSuite {
 	mockUser := mocks.NewUserRepo()
 	mockRegistration := mocks.NewRegistrationRepo()
+	mockGroup := mocks.NewGroupRepo()
+
+	// Seed a group for the test
+	group := builders.NewGroupBuilder().Build()
+	mockGroup.SeedGroup(t.Context(), group)
 
 	handler := NewStudentCompleteHandler(StudentCompleteHandlerArgs{
 		UserGetter:       mockUser,
 		RegistrationRepo: mockRegistration,
+		GroupGetter:      mockGroup,
 	})
 
 	return &StudentCompleteSuite{
 		Handler:          handler,
 		MockUser:         mockUser,
 		MockRegistration: mockRegistration,
+		MockGroup:        mockGroup,
 	}
 }
 
@@ -42,7 +50,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	t.Run("already verified registration", func(t *testing.T) {
-		s := NewStudentCompleteSuite()
+		s := NewStudentCompleteSuite(t)
 		reg := builders.NewRegistrationBuilder().
 			WithEmail(fixtures.ValidStudentEmail).
 			WithStatus(registration.StatusVerified).
@@ -78,7 +86,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 	})
 
 	t.Run("not verified yet, complete registration", func(t *testing.T) {
-		s := NewStudentCompleteSuite()
+		s := NewStudentCompleteSuite(t)
 		reg := builders.NewRegistrationBuilder().
 			WithEmail(fixtures.ValidStudentEmail).
 			WithStatus(registration.StatusPending).
@@ -121,7 +129,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 func TestStudentCompleteHandler_ArgsValidation(t *testing.T) {
 	t.Parallel()
 
-	s := NewStudentCompleteSuite()
+	s := NewStudentCompleteSuite(t)
 
 	tests := []struct {
 		name    string
@@ -219,6 +227,19 @@ func TestStudentCompleteHandler_ArgsValidation(t *testing.T) {
 			},
 			wantErr: user.ErrMissingGroupID,
 		},
+		{
+			name: "password not strong enough",
+			args: StudentComplete{
+				Email:            fixtures.ValidStudentEmail,
+				VerificationCode: fixtures.ValidVerificationCode,
+				Barcode:          fixtures.TestStudent.ID,
+				FirstName:        fixtures.TestStudent.FirstName,
+				LastName:         fixtures.TestStudent.LastName,
+				Password:         "weak",
+				GroupID:          fixtures.TestStudent.GroupID,
+			},
+			wantErr: user.ErrPasswordNotStrongEnough,
+		},
 	}
 
 	for _, tt := range tests {
@@ -236,28 +257,85 @@ func TestStudentCompleteHandler_ArgsValidation(t *testing.T) {
 func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 	t.Parallel()
 
-	s := NewStudentCompleteSuite()
-	u := builders.NewStudentBuilder().Build().User()
-	s.MockUser.SeedUser(t, u)
+	t.Run("user by email already exists", func(t *testing.T) {
+		s := NewStudentCompleteSuite(t)
+		u := builders.NewStudentBuilder().Build().User()
+		s.MockUser.SeedUser(t, u)
 
-	err := s.Handler.Handle(t.Context(), StudentComplete{
-		Email:            u.Email(),
-		VerificationCode: fixtures.ValidVerificationCode,
-		Barcode:          string(u.ID()),
-		FirstName:        u.FirstName(),
-		LastName:         u.LastName(),
-		Password:         fixtures.TestStudent.Password,
-		GroupID:          fixtures.TestStudent.GroupID,
+		err := s.Handler.Handle(t.Context(), StudentComplete{
+			Email:            u.Email(),
+			VerificationCode: fixtures.ValidVerificationCode,
+			Barcode:          string(u.ID()),
+			FirstName:        u.FirstName(),
+			LastName:         u.LastName(),
+			Password:         fixtures.TestStudent.Password,
+			GroupID:          fixtures.TestStudent.GroupID,
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrUserAlreadyExists)
 	})
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrUserAlreadyExists)
+
+	t.Run("user by barcode already exists", func(t *testing.T) {
+		s := NewStudentCompleteSuite(t)
+		u := builders.NewStudentBuilder().WithEmail(fixtures.TestStudent2.Email).Build().User()
+		s.MockUser.SeedUser(t, u)
+
+		err := s.Handler.Handle(t.Context(), StudentComplete{
+			Email:            fixtures.TestStudent.Email,
+			VerificationCode: fixtures.ValidVerificationCode,
+			Barcode:          string(u.ID()),
+			FirstName:        fixtures.TestStudent.FirstName,
+			LastName:         fixtures.TestStudent.LastName,
+			Password:         fixtures.TestStudent.Password,
+			GroupID:          fixtures.TestStudent.GroupID,
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrUserAlreadyExistsByBarcode)
+	})
+	t.Run("user by email and barcode already exists", func(t *testing.T) {
+		s := NewStudentCompleteSuite(t)
+		u := builders.NewStudentBuilder().Build().User()
+		s.MockUser.SeedUser(t, u)
+
+		err := s.Handler.Handle(t.Context(), StudentComplete{
+			Email:            u.Email(),
+			VerificationCode: fixtures.ValidVerificationCode,
+			Barcode:          string(u.ID()),
+			FirstName:        fixtures.TestStudent.FirstName,
+			LastName:         fixtures.TestStudent.LastName,
+			Password:         fixtures.TestStudent.Password,
+			GroupID:          fixtures.TestStudent.GroupID,
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrUserAlreadyExists)
+	})
+
+	t.Run("group not found", func(t *testing.T) {
+		s := NewStudentCompleteSuite(t)
+		reg := builders.NewRegistrationBuilder().
+			WithEmail(fixtures.ValidStudentEmail).
+			WithStatus(registration.StatusPending).
+			Build()
+		s.MockRegistration.SeedRegistration(t, reg)
+		err := s.Handler.Handle(t.Context(), StudentComplete{
+			Email:            fixtures.TestStudent.Email,
+			VerificationCode: reg.VerificationCode(),
+			Barcode:          fixtures.TestStudent.ID,
+			FirstName:        fixtures.TestStudent.FirstName,
+			LastName:         fixtures.TestStudent.LastName,
+			Password:         fixtures.TestStudent.Password,
+			GroupID:          uuid.New(), // Use a non-existing group ID
+		})
+		require.Error(t, err)
+		assert.True(t, errorx.IsNotFound(err), "expected not found error, got: %v", err)
+	})
 }
 
 func TestStudentCompleteHandler_Verified(t *testing.T) {
 	t.Parallel()
 
 	t.Run("with invalid verification code", func(t *testing.T) {
-		s := NewStudentCompleteSuite()
+		s := NewStudentCompleteSuite(t)
 		reg := builders.NewRegistrationBuilder().
 			WithEmail(fixtures.TestStudent.Email).
 			WithVerificationCode(fixtures.ValidVerificationCode).
@@ -282,7 +360,7 @@ func TestStudentCompleteHandler_Verified(t *testing.T) {
 func TestStudentCompleteHandler_AlreadyCompleted_ShouldFail(t *testing.T) {
 	t.Parallel()
 
-	s := NewStudentCompleteSuite()
+	s := NewStudentCompleteSuite(t)
 	reg := builders.NewRegistrationBuilder().
 		WithEmail(fixtures.ValidStudentEmail).
 		WithStatus(registration.StatusCompleted).
@@ -305,7 +383,7 @@ func TestStudentCompleteHandler_AlreadyCompleted_ShouldFail(t *testing.T) {
 func TestStudentCompleteHandler_Pending_InvalidVerificationCode_ShouldFail(t *testing.T) {
 	t.Parallel()
 
-	s := NewStudentCompleteSuite()
+	s := NewStudentCompleteSuite(t)
 	reg := builders.NewRegistrationBuilder().
 		WithEmail(fixtures.ValidStudentEmail).
 		WithStatus(registration.StatusPending).
@@ -328,7 +406,7 @@ func TestStudentCompleteHandler_Pending_InvalidVerificationCode_ShouldFail(t *te
 func TestStudentCompleteHandler_RegistrationNotFound_ShouldFail(t *testing.T) {
 	t.Parallel()
 
-	s := NewStudentCompleteSuite()
+	s := NewStudentCompleteSuite(t)
 
 	err := s.Handler.Handle(t.Context(), StudentComplete{
 		Email:            fixtures.TestStudent.Email,
@@ -340,5 +418,5 @@ func TestStudentCompleteHandler_RegistrationNotFound_ShouldFail(t *testing.T) {
 		GroupID:          fixtures.TestStudent.GroupID,
 	})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errorx.ErrNotFound)
+	assert.True(t, errorx.IsNotFound(err), "expected not found error, got: %v", err)
 }

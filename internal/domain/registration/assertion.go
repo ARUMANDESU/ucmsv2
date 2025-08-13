@@ -126,3 +126,48 @@ func (ra *RegistrationAssertion) AssertEventExists(t *testing.T, eventType strin
 	t.Errorf("Expected event of type %s to exist, but it does not", eventType)
 	return ra
 }
+
+type RegistrationStartedAssertion struct {
+	event *RegistrationStarted
+}
+
+func NewRegistrationStartedAssertion(event *RegistrationStarted) *RegistrationStartedAssertion {
+	return &RegistrationStartedAssertion{event: event}
+}
+
+func (rsa *RegistrationStartedAssertion) AssertRegistrationID(t *testing.T, expected ID) *RegistrationStartedAssertion {
+	t.Helper()
+	assert.Equal(t, expected, rsa.event.RegistrationID, "Expected registration ID to be %s, got %s", expected, rsa.event.RegistrationID)
+	return rsa
+}
+
+func (rsa *RegistrationStartedAssertion) AssertEmail(t *testing.T, expected string) *RegistrationStartedAssertion {
+	t.Helper()
+	assert.Equal(t, expected, rsa.event.Email, "Expected registration email to be %s, got %s", expected, rsa.event.Email)
+	return rsa
+}
+
+func (rsa *RegistrationStartedAssertion) AssertVerificationCode(t *testing.T, expected string) *RegistrationStartedAssertion {
+	t.Helper()
+	assert.Equal(
+		t,
+		expected,
+		rsa.event.VerificationCode,
+		"Expected registration verification code to be %s, got %s",
+		expected,
+		rsa.event.VerificationCode,
+	)
+	return rsa
+}
+
+func (rsa *RegistrationStartedAssertion) AssertRegistrationIDNotEmpty(t *testing.T) *RegistrationStartedAssertion {
+	t.Helper()
+	assert.NotEmpty(t, rsa.event.RegistrationID, "Expected registration ID to not be empty")
+	return rsa
+}
+
+func (rsa *RegistrationStartedAssertion) AssertVerificationCodeNotEmpty(t *testing.T) *RegistrationStartedAssertion {
+	t.Helper()
+	assert.NotEmpty(t, rsa.event.VerificationCode, "Expected registration verification code to not be empty")
+	return rsa
+}

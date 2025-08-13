@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
 type RegistrationRepo struct {
@@ -37,7 +37,7 @@ func (r *RegistrationRepo) GetRegistrationByEmail(ctx context.Context, email str
 	if reg, exists := r.dbbyEmail[email]; exists {
 		return reg, nil
 	}
-	return nil, repos.ErrNotFound
+	return nil, errorx.NewNotFound()
 }
 
 func (r *RegistrationRepo) SaveRegistration(ctx context.Context, reg *registration.Registration) error {
@@ -45,15 +45,15 @@ func (r *RegistrationRepo) SaveRegistration(ctx context.Context, reg *registrati
 	defer r.mu.Unlock()
 
 	if reg == nil {
-		return fmt.Errorf("%w: %w", repos.ErrInvalidInput, errors.New("registration cannot be nil"))
+		return errors.New("registration cannot be nil")
 	}
 
 	if _, exists := r.dbbyEmail[reg.Email()]; exists {
-		return repos.ErrAlreadyExists
+		return errorx.NewDuplicateEntry()
 	}
 
 	if _, exists := r.dbbyID[reg.ID()]; exists {
-		return repos.ErrAlreadyExists
+		return errorx.NewDuplicateEntry()
 	}
 
 	r.dbbyEmail[reg.Email()] = reg
@@ -71,7 +71,7 @@ func (r *RegistrationRepo) UpdateRegistration(
 	fn func(context.Context, *registration.Registration) error,
 ) error {
 	if fn == nil {
-		return fmt.Errorf("%w: %w", repos.ErrInvalidInput, errors.New("update function cannot be nil"))
+		return errors.New("update function cannot be nil")
 	}
 
 	r.mu.Lock()
@@ -79,11 +79,12 @@ func (r *RegistrationRepo) UpdateRegistration(
 
 	reg, exists := r.dbbyID[id]
 	if !exists {
-		return repos.ErrNotFound
+		return errorx.NewNotFound()
 	}
 
-	if err := fn(ctx, reg); err != nil {
-		return fmt.Errorf("failed to apply update function: %w", err)
+	fnerr := fn(ctx, reg)
+	if fnerr != nil && !errorx.IsPersistable(fnerr) {
+		return fmt.Errorf("failed to apply update function: %w", fnerr)
 	}
 
 	r.dbbyID[id] = reg
@@ -92,6 +93,9 @@ func (r *RegistrationRepo) UpdateRegistration(
 
 	r.EventRepo.appendEvents(reg.GetUncommittedEvents()...)
 
+	if fnerr != nil && errorx.IsPersistable(fnerr) {
+		return fmt.Errorf("failed to apply update function: %w", fnerr)
+	}
 	return nil
 }
 
@@ -101,7 +105,7 @@ func (r *RegistrationRepo) UpdateRegistrationByEmail(
 	fn func(context.Context, *registration.Registration) error,
 ) error {
 	if fn == nil {
-		return fmt.Errorf("%w: %w", repos.ErrInvalidInput, errors.New("update function cannot be nil"))
+		return errors.New("update function cannot be nil")
 	}
 
 	r.mu.Lock()
@@ -109,11 +113,12 @@ func (r *RegistrationRepo) UpdateRegistrationByEmail(
 
 	reg, exists := r.dbbyEmail[email]
 	if !exists {
-		return repos.ErrNotFound
+		return errorx.NewNotFound()
 	}
 
-	if err := fn(ctx, reg); err != nil {
-		return fmt.Errorf("failed to apply update function: %w", err)
+	fnerr := fn(ctx, reg)
+	if fnerr != nil && !errorx.IsPersistable(fnerr) {
+		return fmt.Errorf("failed to apply update function: %w", fnerr)
 	}
 
 	r.dbbyEmail[email] = reg
@@ -122,6 +127,9 @@ func (r *RegistrationRepo) UpdateRegistrationByEmail(
 
 	r.EventRepo.appendEvents(reg.GetUncommittedEvents()...)
 
+	if fnerr != nil && errorx.IsPersistable(fnerr) {
+		return fmt.Errorf("failed to apply update function: %w", fnerr)
+	}
 	return nil
 }
 

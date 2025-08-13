@@ -1,6 +1,8 @@
 package registration
 
 import (
+	"net/http"
+
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
@@ -12,10 +14,12 @@ var (
 	ErrInvalidEmailFormat                 = errorx.NewValidationFieldFailed("email")
 	ErrEmptyEmail                         = errorx.NewValidationFieldFailed("email")
 	ErrEmailDomainNotAllowed              = errorx.NewValidationFieldFailed("email")
-	ErrInvalidVerificationCode            = errorx.NewValidationFieldFailed("verification_code").WithHTTPCode(422)
+	ErrInvalidVerificationCode            = errorx.NewValidationFieldFailed("verification_code").WithHTTPCode(http.StatusUnprocessableEntity)
 	ErrCodeExpired                        = errorx.NewValidationFieldFailed("verification_code")
-	ErrInvalidStatus                      = errorx.NewValidationFieldFailed("status")
+	ErrInvalidStatus                      = errorx.NewValidationFieldFailed("status").WithHTTPCode(http.StatusUnprocessableEntity)
 	ErrWaitUntilResend                    = errorx.NewRateLimitExceeded()
 	ErrPersistentTooManyAttempts          = errorx.NewPersistable(errorx.NewRateLimitExceeded())
-	ErrPersistentVerificationCodeMismatch = errorx.NewPersistable(errorx.NewValidationFieldFailed("verification_code"))
+	ErrPersistentVerificationCodeMismatch = errorx.NewPersistable(
+		errorx.NewValidationFieldFailed("verification_code").WithHTTPCode(http.StatusUnprocessableEntity),
+	)
 )

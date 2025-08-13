@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -12,8 +11,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/env"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
@@ -65,9 +64,10 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 	ctx, span := h.tracer.Start(ctx, "StartStudentHandler.Handle")
 	defer span.End()
 	if cmd.Email == "" {
-		span.RecordError(errorx.ErrInvalidInput)
+		err := user.ErrMissingEmail
+		span.RecordError(err)
 		span.SetStatus(codes.Error, "Email is required")
-		return errorx.ErrInvalidInput
+		return err
 	}
 
 	redactedEmail := logging.RedactEmail(cmd.Email)
@@ -76,7 +76,7 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 	h.logger.DebugContext(ctx, "starting student registration", "email", cmd.Email)
 
 	user, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
-	if err != nil && !errors.Is(err, repos.ErrNotFound) {
+	if err != nil && !errorx.IsNotFound(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get user by email")
 		return fmt.Errorf("failed to get user by email: %w", err)
@@ -89,12 +89,12 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 	span.AddEvent("User not found, proceeding with registration")
 
 	reg, err := h.repo.GetRegistrationByEmail(ctx, cmd.Email)
-	if err != nil && !errors.Is(err, repos.ErrNotFound) {
+	if err != nil && !errorx.IsNotFound(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get registration by email")
 		return fmt.Errorf("failed to get registration by email: %w", err)
 	}
-	if errors.Is(err, repos.ErrNotFound) {
+	if errorx.IsNotFound(err) {
 		reg, err = registration.NewRegistration(cmd.Email, h.mode)
 		if err != nil {
 			span.RecordError(err)

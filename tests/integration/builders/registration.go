@@ -8,6 +8,36 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/randcode"
 )
 
+// Factory for common registration scenarios
+type RegistrationFactory struct{}
+
+func (f *RegistrationFactory) PendingRegistration(email string) *registration.Registration {
+	return NewRegistrationBuilder().
+		WithEmail(email).
+		Build()
+}
+
+func (f *RegistrationFactory) ExpiredRegistration(email string) *registration.Registration {
+	return NewRegistrationBuilder().
+		WithEmail(email).
+		Expired().
+		Build()
+}
+
+func (f *RegistrationFactory) CompletedRegistration(email string) *registration.Registration {
+	return NewRegistrationBuilder().
+		WithEmail(email).
+		Completed().
+		Build()
+}
+
+func (f *RegistrationFactory) RegistrationWithFailedAttempts(email string, attempts int8) *registration.Registration {
+	return NewRegistrationBuilder().
+		WithEmail(email).
+		WithCodeAttempts(attempts).
+		Build()
+}
+
 type RegistrationBuilder struct {
 	id               registration.ID
 	email            string
@@ -99,34 +129,4 @@ func (b *RegistrationBuilder) Build() *registration.Registration {
 
 func (b *RegistrationBuilder) BuildNew() (*registration.Registration, error) {
 	return registration.NewRegistration(b.email, env.Test)
-}
-
-// Factory for common registration scenarios
-type RegistrationFactory struct{}
-
-func (f *RegistrationFactory) PendingRegistration(email string) *registration.Registration {
-	return NewRegistrationBuilder().
-		WithEmail(email).
-		Build()
-}
-
-func (f *RegistrationFactory) ExpiredRegistration(email string) *registration.Registration {
-	return NewRegistrationBuilder().
-		WithEmail(email).
-		Expired().
-		Build()
-}
-
-func (f *RegistrationFactory) CompletedRegistration(email string) *registration.Registration {
-	return NewRegistrationBuilder().
-		WithEmail(email).
-		Completed().
-		Build()
-}
-
-func (f *RegistrationFactory) RegistrationWithFailedAttempts(email string, attempts int8) *registration.Registration {
-	return NewRegistrationBuilder().
-		WithEmail(email).
-		WithCodeAttempts(attempts).
-		Build()
 }

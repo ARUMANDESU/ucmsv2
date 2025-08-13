@@ -1,21 +1,12 @@
 package errorx
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-)
-
-var (
-	ErrNotFound         = NewNotFound()
-	ErrInvalidInput     = NewInvalidRequest()
-	ErrInternal         = NewInternalError()
-	ErrConflict         = NewConflict()
-	ErrUnauthorized     = NewUnauthorized()
-	ErrForbidden        = NewForbidden()
-	ErrAlreadyProcessed = NewAlreadyProcessed()
 )
 
 type I18nError struct {
@@ -101,29 +92,29 @@ func HTTPStatusCode(code Code) int {
 	}
 }
 
-// Success constructors (though these might not be errors)
-func NewSuccess() *I18nError {
-	return &I18nError{
-		MessageKey: "success",
-		Code:       CodeSuccess,
-		HTTPCode:   200,
+func IsCode(err error, code Code) bool {
+	if err == nil {
+		return false
 	}
+
+	var i18nErr *I18nError
+	if errors.As(err, &i18nErr) {
+		return i18nErr.Code == code || i18nErr.HTTPCode == HTTPStatusCode(code)
+	}
+
+	return false
 }
 
-func NewResourceCreated() *I18nError {
-	return &I18nError{
-		MessageKey: "resource_created",
-		Code:       CodeCreated,
-		HTTPCode:   201,
-	}
+func IsNotFound(err error) bool {
+	return IsCode(err, CodeNotFound)
 }
 
-func NewResourceDeleted() *I18nError {
-	return &I18nError{
-		MessageKey: "resource_deleted",
-		Code:       CodeDeleted,
-		HTTPCode:   200,
-	}
+func IsConflict(err error) bool {
+	return IsCode(err, CodeConflict)
+}
+
+func IsDuplicateEntry(err error) bool {
+	return IsCode(err, CodeDuplicateEntry)
 }
 
 // Client Errors (4xx)
@@ -131,7 +122,7 @@ func NewInvalidRequest() *I18nError {
 	return &I18nError{
 		MessageKey: "invalid",
 		Code:       CodeInvalid,
-		HTTPCode:   400,
+		HTTPCode:   http.StatusBadRequest,
 	}
 }
 
@@ -139,7 +130,7 @@ func NewValidationFailed() *I18nError {
 	return &I18nError{
 		MessageKey: "validation_failed",
 		Code:       CodeValidationFailed,
-		HTTPCode:   400,
+		HTTPCode:   http.StatusBadRequest,
 	}
 }
 
@@ -148,7 +139,7 @@ func NewValidationFieldFailed(field string) *I18nError {
 		MessageKey:  "validation_failed_field",
 		MessageArgs: map[string]any{"Field": field},
 		Code:        CodeValidationFailed,
-		HTTPCode:    400,
+		HTTPCode:    http.StatusBadRequest,
 	}
 }
 
@@ -156,7 +147,7 @@ func NewMalformedJSON() *I18nError {
 	return &I18nError{
 		MessageKey: "malformed_json",
 		Code:       CodeMalformedJSON,
-		HTTPCode:   400,
+		HTTPCode:   http.StatusBadRequest,
 	}
 }
 
@@ -164,7 +155,7 @@ func NewUnauthorized() *I18nError {
 	return &I18nError{
 		MessageKey: "unauthorized",
 		Code:       CodeUnauthorized,
-		HTTPCode:   401,
+		HTTPCode:   http.StatusUnauthorized,
 	}
 }
 
@@ -172,7 +163,7 @@ func NewInvalidCredentials() *I18nError {
 	return &I18nError{
 		MessageKey: "invalid_credentials",
 		Code:       CodeInvalidCredentials,
-		HTTPCode:   401,
+		HTTPCode:   http.StatusUnauthorized,
 	}
 }
 
@@ -180,7 +171,7 @@ func NewTokenExpired() *I18nError {
 	return &I18nError{
 		MessageKey: "token_expired",
 		Code:       CodeTokenExpired,
-		HTTPCode:   401,
+		HTTPCode:   http.StatusUnauthorized,
 	}
 }
 
@@ -188,7 +179,7 @@ func NewForbidden() *I18nError {
 	return &I18nError{
 		MessageKey: "forbidden",
 		Code:       CodeForbidden,
-		HTTPCode:   403,
+		HTTPCode:   http.StatusForbidden,
 	}
 }
 
@@ -196,7 +187,7 @@ func NewAccessDenied() *I18nError {
 	return &I18nError{
 		MessageKey: "access_denied",
 		Code:       CodeAccessDenied,
-		HTTPCode:   403,
+		HTTPCode:   http.StatusForbidden,
 	}
 }
 
@@ -204,7 +195,7 @@ func NewNotFound() *I18nError {
 	return &I18nError{
 		MessageKey: "not_found",
 		Code:       CodeNotFound,
-		HTTPCode:   404,
+		HTTPCode:   http.StatusNotFound,
 	}
 }
 
@@ -213,7 +204,7 @@ func NewResourceNotFound(resourceType string) *I18nError {
 		MessageKey:  "not_found_with_type",
 		MessageArgs: map[string]any{"ResourceType": resourceType},
 		Code:        CodeNotFound,
-		HTTPCode:    404,
+		HTTPCode:    http.StatusNotFound,
 	}
 }
 
@@ -221,7 +212,7 @@ func NewMethodNotAllowed() *I18nError {
 	return &I18nError{
 		MessageKey: "method_not_allowed",
 		Code:       CodeMethodNotAllowed,
-		HTTPCode:   405,
+		HTTPCode:   http.StatusMethodNotAllowed,
 	}
 }
 
@@ -229,7 +220,7 @@ func NewConflict() *I18nError {
 	return &I18nError{
 		MessageKey: "conflict",
 		Code:       CodeConflict,
-		HTTPCode:   409,
+		HTTPCode:   http.StatusConflict,
 	}
 }
 
@@ -237,7 +228,7 @@ func NewDuplicateEntry() *I18nError {
 	return &I18nError{
 		MessageKey: "duplicate_entry",
 		Code:       CodeDuplicateEntry,
-		HTTPCode:   409,
+		HTTPCode:   http.StatusConflict,
 	}
 }
 
@@ -249,7 +240,7 @@ func NewDuplicateEntryWithField(resourceType, field string) *I18nError {
 			"Field":        field,
 		},
 		Code:     CodeDuplicateEntry,
-		HTTPCode: 409,
+		HTTPCode: http.StatusConflict,
 	}
 }
 
@@ -257,7 +248,7 @@ func NewRateLimitExceeded() *I18nError {
 	return &I18nError{
 		MessageKey: "rate_limit_exceeded",
 		Code:       CodeRateLimitExceeded,
-		HTTPCode:   429,
+		HTTPCode:   http.StatusTooManyRequests,
 	}
 }
 
@@ -266,7 +257,7 @@ func NewRateLimitExceededWithRetry(retryAfter int) *I18nError {
 		MessageKey:  "rate_limit_exceeded_with_time",
 		MessageArgs: map[string]any{"RetryAfter": retryAfter},
 		Code:        CodeRateLimitExceeded,
-		HTTPCode:    429,
+		HTTPCode:    http.StatusTooManyRequests,
 	}
 }
 
@@ -275,7 +266,7 @@ func NewIdempotencyKeyMissing() *I18nError {
 	return &I18nError{
 		MessageKey: "idempotency_key_missing",
 		Code:       CodeIdempotencyKeyMissing,
-		HTTPCode:   400,
+		HTTPCode:   http.StatusBadRequest,
 	}
 }
 
@@ -283,7 +274,7 @@ func NewIdempotencyKeyMismatch() *I18nError {
 	return &I18nError{
 		MessageKey: "idempotency_key_payload_mismatch",
 		Code:       CodeIdempotencyKeyMismatch,
-		HTTPCode:   422,
+		HTTPCode:   http.StatusUnprocessableEntity,
 	}
 }
 
@@ -291,7 +282,7 @@ func NewIdempotencyKeyInProgress() *I18nError {
 	return &I18nError{
 		MessageKey: "idempotency_key_in_progress",
 		Code:       CodeIdempotencyKeyInProgress,
-		HTTPCode:   409,
+		HTTPCode:   http.StatusConflict,
 	}
 }
 
@@ -300,7 +291,7 @@ func NewPasswordTooWeak() *I18nError {
 	return &I18nError{
 		MessageKey: "password_too_weak",
 		Code:       CodePasswordTooWeak,
-		HTTPCode:   400,
+		HTTPCode:   http.StatusBadRequest,
 	}
 }
 
@@ -308,7 +299,7 @@ func NewPasswordFormatInvalid() *I18nError {
 	return &I18nError{
 		MessageKey: "password_format_invalid",
 		Code:       CodePasswordFormatInvalid,
-		HTTPCode:   400,
+		HTTPCode:   http.StatusBadRequest,
 	}
 }
 
@@ -317,7 +308,7 @@ func NewAlreadyProcessed() *I18nError {
 	return &I18nError{
 		MessageKey: "already_processed",
 		Code:       CodeAlreadyProcessed,
-		HTTPCode:   409,
+		HTTPCode:   http.StatusConflict,
 	}
 }
 
@@ -325,7 +316,7 @@ func NewBusinessRuleViolation() *I18nError {
 	return &I18nError{
 		MessageKey: "business_rule_violation",
 		Code:       CodeBusinessRuleViolation,
-		HTTPCode:   422,
+		HTTPCode:   http.StatusUnprocessableEntity,
 	}
 }
 
@@ -333,7 +324,7 @@ func NewInsufficientPermissions() *I18nError {
 	return &I18nError{
 		MessageKey: "insufficient_permissions",
 		Code:       CodeInsufficientPermissions,
-		HTTPCode:   403,
+		HTTPCode:   http.StatusForbidden,
 	}
 }
 
@@ -342,7 +333,7 @@ func NewInternalError() *I18nError {
 	return &I18nError{
 		MessageKey: "internal_error",
 		Code:       CodeInternal,
-		HTTPCode:   500,
+		HTTPCode:   http.StatusInternalServerError,
 	}
 }
 
@@ -350,7 +341,7 @@ func NewServiceUnavailable() *I18nError {
 	return &I18nError{
 		MessageKey: "service_unavailable",
 		Code:       CodeServiceUnavailable,
-		HTTPCode:   503,
+		HTTPCode:   http.StatusServiceUnavailable,
 	}
 }
 
@@ -358,7 +349,7 @@ func NewUpstreamServiceError() *I18nError {
 	return &I18nError{
 		MessageKey: "upstream_service_error",
 		Code:       CodeUpstreamError,
-		HTTPCode:   502,
+		HTTPCode:   http.StatusBadGateway,
 	}
 }
 
@@ -366,7 +357,7 @@ func NewUpstreamTimeout() *I18nError {
 	return &I18nError{
 		MessageKey: "upstream_timeout",
 		Code:       CodeUpstreamTimeout,
-		HTTPCode:   504,
+		HTTPCode:   http.StatusGatewayTimeout,
 	}
 }
 
@@ -374,6 +365,15 @@ func NewMaintenanceMode() *I18nError {
 	return &I18nError{
 		MessageKey: "maintenance_mode",
 		Code:       CodeMaintenanceMode,
-		HTTPCode:   503,
+		HTTPCode:   http.StatusServiceUnavailable,
+	}
+}
+
+// DB
+func NewNoRowsAffected() *I18nError {
+	return &I18nError{
+		MessageKey: "not_found",
+		Code:       CodeNotFound,
+		HTTPCode:   http.StatusNotFound,
 	}
 }

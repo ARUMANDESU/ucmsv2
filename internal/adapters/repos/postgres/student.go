@@ -10,8 +10,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/postgres"
 	"github.com/ARUMANDESU/ucms/pkg/watermillx"
 )
@@ -69,7 +69,7 @@ func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) e
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			err := repos.ErrNoRowsAffected
+			err := errorx.NewNoRowsAffected()
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "No rows affected while inserting user")
 			return err
@@ -91,7 +91,7 @@ func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) e
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			err := repos.ErrNoRowsAffected
+			err := errorx.NewNoRowsAffected()
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "No rows affected while inserting student")
 			return err

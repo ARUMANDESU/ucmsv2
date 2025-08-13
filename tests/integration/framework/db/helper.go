@@ -26,6 +26,29 @@ func NewHelper(pool *pgxpool.Pool) *Helper {
 	return &Helper{pool: pool}
 }
 
+func (h *Helper) QueryOne(t *testing.T, query string, args ...any) pgx.Row {
+	t.Helper()
+	return h.pool.QueryRow(context.Background(), query, args...)
+}
+
+func (h *Helper) Query(t *testing.T, query string, args ...any) (pgx.Rows, func()) {
+	t.Helper()
+
+	rows, err := h.pool.Query(context.Background(), query, args...)
+	require.NoError(t, err)
+
+	return rows, func() { rows.Close() }
+}
+
+func (h *Helper) Exec(t *testing.T, query string, args ...any) pgconn.CommandTag {
+	t.Helper()
+
+	tag, err := h.pool.Exec(context.Background(), query, args...)
+	require.NoError(t, err)
+
+	return tag
+}
+
 func (h *Helper) TruncateAll(t *testing.T) {
 	t.Helper()
 
@@ -163,27 +186,15 @@ func (h *Helper) RequireStudentExists(t *testing.T, userID string) *StudentAsser
 	return &StudentAssertion{t: t, row: s}
 }
 
-func (h *Helper) QueryOne(t *testing.T, query string, args ...any) pgx.Row {
-	t.Helper()
-	return h.pool.QueryRow(context.Background(), query, args...)
-}
-
-func (h *Helper) Query(t *testing.T, query string, args ...any) (pgx.Rows, func()) {
+func (h *Helper) CheckGroupExists(t *testing.T, groupID uuid.UUID) bool {
 	t.Helper()
 
-	rows, err := h.pool.Query(context.Background(), query, args...)
+	var exists bool
+	err := h.pool.QueryRow(context.Background(),
+		"SELECT EXISTS(SELECT 1 FROM groups WHERE id = $1)", groupID).Scan(&exists)
+
 	require.NoError(t, err)
-
-	return rows, func() { rows.Close() }
-}
-
-func (h *Helper) Exec(t *testing.T, query string, args ...any) pgconn.CommandTag {
-	t.Helper()
-
-	tag, err := h.pool.Exec(context.Background(), query, args...)
-	require.NoError(t, err)
-
-	return tag
+	return exists
 }
 
 func (h *Helper) SeedRegistration(t *testing.T, r *registration.Registration) {
@@ -219,7 +230,7 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
 	require.NoError(t, err)
 }
 
-func (h *Helper) SeedStudent(t *testing.T, userID string, groupID uuid.UUID) {
+func (h *Helper) SeedStudent(t *testing.T, userID user.ID, groupID uuid.UUID) {
 	t.Helper()
 
 	_, err := h.pool.Exec(context.Background(), `

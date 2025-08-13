@@ -19,9 +19,10 @@ type Command struct {
 type Event struct{}
 
 type Args struct {
-	Mode       env.Mode
-	Repo       cmd.Repo
-	UserGetter cmd.UserGetter
+	Mode        env.Mode
+	Repo        cmd.Repo
+	UserGetter  cmd.UserGetter
+	GroupGetter cmd.GroupGetter
 }
 
 func NewApp(args Args) *App {
@@ -38,6 +39,7 @@ func NewApp(args Args) *App {
 			StudentComplete: cmd.NewStudentCompleteHandler(cmd.StudentCompleteHandlerArgs{
 				UserGetter:       args.UserGetter,
 				RegistrationRepo: args.Repo,
+				GroupGetter:      args.GroupGetter,
 			}),
 		},
 		Event: Event{},

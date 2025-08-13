@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -11,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
@@ -19,10 +18,11 @@ import (
 )
 
 var (
-	ErrMissingVerificationCode = errorx.NewValidationFieldFailed("verification_code").WithArgs(map[string]any{"Field": "verification_code"})
-	ErrMissingBarcode          = errorx.NewValidationFieldFailed("barcode").WithArgs(map[string]any{"Field": "barcode"})
-	ErrMissingPassword         = errorx.NewValidationFieldFailed("password").WithArgs(map[string]any{"Field": "password"})
-	ErrUserAlreadyExists       = errorx.NewDuplicateEntryWithField("user", "email")
+	ErrMissingVerificationCode    = errorx.NewValidationFieldFailed("verification_code").WithArgs(map[string]any{"Field": "verification_code"})
+	ErrMissingBarcode             = errorx.NewValidationFieldFailed("barcode").WithArgs(map[string]any{"Field": "barcode"})
+	ErrMissingPassword            = errorx.NewValidationFieldFailed("password").WithArgs(map[string]any{"Field": "password"})
+	ErrUserAlreadyExists          = errorx.NewDuplicateEntryWithField("user", "email")
+	ErrUserAlreadyExistsByBarcode = errorx.NewDuplicateEntryWithField("user", "barcode")
 )
 
 type StudentComplete struct {
@@ -54,6 +54,9 @@ func (c StudentComplete) Validate() error {
 	if c.Password == "" {
 		return ErrMissingPassword
 	}
+	if !user.ValidatePasswordManual(c.Password) {
+		return user.ErrPasswordNotStrongEnough
+	}
 	if c.GroupID == uuid.Nil {
 		return user.ErrMissingGroupID
 	}
@@ -62,16 +65,18 @@ func (c StudentComplete) Validate() error {
 }
 
 type StudentCompleteHandler struct {
-	tracer     trace.Tracer
-	logger     *slog.Logger
-	usergetter UserGetter
-	regRepo    Repo
+	tracer      trace.Tracer
+	logger      *slog.Logger
+	usergetter  UserGetter
+	groupgetter GroupGetter
+	regRepo     Repo
 }
 
 type StudentCompleteHandlerArgs struct {
 	Trace            trace.Tracer
 	Logger           *slog.Logger
 	UserGetter       UserGetter
+	GroupGetter      GroupGetter
 	RegistrationRepo Repo
 }
 
@@ -84,10 +89,11 @@ func NewStudentCompleteHandler(args StudentCompleteHandlerArgs) *StudentComplete
 	}
 
 	return &StudentCompleteHandler{
-		tracer:     args.Trace,
-		logger:     args.Logger,
-		usergetter: args.UserGetter,
-		regRepo:    args.RegistrationRepo,
+		tracer:      args.Trace,
+		logger:      args.Logger,
+		usergetter:  args.UserGetter,
+		groupgetter: args.GroupGetter,
+		regRepo:     args.RegistrationRepo,
 	}
 }
 
@@ -101,16 +107,35 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 		return fmt.Errorf("invalid command parameters: %w", err)
 	}
 
-	user, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
-	if err != nil && !errors.Is(err, repos.ErrNotFound) {
+	u, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
+	if err != nil && !errorx.IsNotFound(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get user by email")
 		return fmt.Errorf("failed to get user by email: %w", err)
 	}
-	if user != nil {
+	if u != nil {
 		span.RecordError(ErrUserAlreadyExists)
-		span.SetStatus(codes.Error, "User already exists")
+		span.SetStatus(codes.Error, "User already exists by email")
 		return ErrUserAlreadyExists
+	}
+
+	u, err = h.usergetter.GetUserByID(ctx, user.ID(cmd.Barcode))
+	if err != nil && !errorx.IsNotFound(err) {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to get user by barcode")
+		return fmt.Errorf("failed to get user by barcode: %w", err)
+	}
+	if u != nil {
+		span.RecordError(ErrUserAlreadyExistsByBarcode)
+		span.SetStatus(codes.Error, "User already exists by barcode")
+		return ErrUserAlreadyExistsByBarcode
+	}
+
+	_, err = h.groupgetter.GetGroupByID(ctx, group.ID(cmd.GroupID))
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to get group by ID")
+		return fmt.Errorf("failed to get group by ID: %w", err)
 	}
 
 	err = h.regRepo.UpdateRegistrationByEmail(ctx, cmd.Email, func(ctx context.Context, r *registration.Registration) error {

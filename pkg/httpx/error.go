@@ -72,7 +72,7 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, err e
 	}
 
 	slog.ErrorContext(r.Context(), "Unhandled error", "error", err)
-	internalErr := errorx.ErrInternal.WithCause(err)
+	internalErr := errorx.NewInternalError().WithCause(err)
 	response := map[string]any{
 		"code":    internalErr.Code.String(),
 		"message": internalErr.Localize(localizer),

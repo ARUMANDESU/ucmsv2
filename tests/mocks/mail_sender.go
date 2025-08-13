@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -29,6 +30,8 @@ func (m *MockMailSender) SendMail(ctx context.Context, payload mail.Payload) err
 		Subject: payload.Subject,
 		Body:    payload.Body,
 	})
+	fmt.Printf("Mock mail sent to %s with subject: %s\n", payload.To, payload.Subject)
+	fmt.Printf("Mail body: %s\n", payload.Body)
 	return nil
 }
 

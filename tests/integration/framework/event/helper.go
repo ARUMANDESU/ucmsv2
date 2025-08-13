@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 )
 
 type Helper struct {
@@ -116,19 +115,49 @@ func (h *Helper) AssertEventCount(t *testing.T, eventType, streamName string, ex
 	assert.Equal(t, expected, count, "unexpected %s event count", eventType)
 }
 
-// AssertRegistrationStartedEvent is a convenience method
-func (h *Helper) AssertRegistrationStartedEvent(t *testing.T, email string) *RegistrationStartedAssertion {
+type EventRecord struct {
+	Offset   int64
+	Payload  json.RawMessage
+	Metadata json.RawMessage
+}
+
+func (h *Helper) GetEventStream(t *testing.T, streamName string) []EventRecord {
 	t.Helper()
 
-	assertion := h.AssertEvent(t, "registration.RegistrationStarted", "events_registration")
+	query := fmt.Sprintf(`
+        SELECT "offset", payload, metadata
+        FROM watermill_%s
+        ORDER BY "offset"
+    `, streamName)
 
-	var event registration.RegistrationStarted
-	err := json.Unmarshal(assertion.payload, &event)
+	rows, err := h.pool.Query(context.Background(), query)
 	require.NoError(t, err)
+	defer rows.Close()
 
-	return &RegistrationStartedAssertion{
-		EventAssertion: assertion,
-		event:          event,
+	var events []EventRecord
+	for rows.Next() {
+		var e EventRecord
+		err := rows.Scan(&e.Offset, &e.Payload, &e.Metadata)
+		require.NoError(t, err)
+		events = append(events, e)
+	}
+
+	return events
+}
+
+func (h *Helper) ClearAllEvents(t *testing.T) {
+	t.Helper()
+
+	tables := []string{
+		"watermill_events_registration",
+		"watermill_offsets_events_registration",
+		"watermill_events_student",
+		"watermill_offsets_events_student",
+	}
+
+	for _, table := range tables {
+		_, err := h.pool.Exec(context.Background(), fmt.Sprintf("TRUNCATE TABLE %s", table))
+		require.NoError(t, err)
 	}
 }
 
@@ -140,10 +169,8 @@ func RequireEvent[T event.Event](t *testing.T, h *Helper, e T) T {
 	eventType = eventType[1:]
 
 	assertion := h.AssertEvent(t, eventType, e.GetStreamName())
-	var event T
-	err := json.Unmarshal(assertion.GetPayload(), &event)
-	require.NoError(t, err, "failed to parse event payload for %s", eventType)
-	return event
+	assertion.Parse(&e)
+	return e
 }
 
 type EventAssertion struct {
@@ -177,77 +204,4 @@ func (a *EventAssertion) HasField(field string, expected any) *EventAssertion {
 
 func (a *EventAssertion) GetPayload() json.RawMessage {
 	return a.payload
-}
-
-type RegistrationStartedAssertion struct {
-	*EventAssertion
-	event registration.RegistrationStarted
-}
-
-func (a *RegistrationStartedAssertion) HasEmail(expected string) *RegistrationStartedAssertion {
-	a.t.Helper()
-	assert.Equal(a.t, expected, a.event.Email, "unexpected email in event")
-	return a
-}
-
-func (a *RegistrationStartedAssertion) HasVerificationCode() *RegistrationStartedAssertion {
-	a.t.Helper()
-	assert.NotEmpty(a.t, a.event.VerificationCode, "verification code should not be empty")
-	return a
-}
-
-func (a *RegistrationStartedAssertion) HasRegistrationID(expected registration.ID) *RegistrationStartedAssertion {
-	a.t.Helper()
-	assert.Equal(a.t, expected, a.event.RegistrationID, "unexpected registration ID")
-	return a
-}
-
-func (a *RegistrationStartedAssertion) GetVerificationCode() string {
-	return a.event.VerificationCode
-}
-
-func (h *Helper) GetEventStream(t *testing.T, streamName string) []EventRecord {
-	t.Helper()
-
-	query := fmt.Sprintf(`
-        SELECT "offset", payload, metadata
-        FROM watermill_%s
-        ORDER BY "offset"
-    `, streamName)
-
-	rows, err := h.pool.Query(context.Background(), query)
-	require.NoError(t, err)
-	defer rows.Close()
-
-	var events []EventRecord
-	for rows.Next() {
-		var e EventRecord
-		err := rows.Scan(&e.Offset, &e.Payload, &e.Metadata)
-		require.NoError(t, err)
-		events = append(events, e)
-	}
-
-	return events
-}
-
-type EventRecord struct {
-	Offset   int64
-	Payload  json.RawMessage
-	Metadata json.RawMessage
-}
-
-func (h *Helper) ClearAllEvents(t *testing.T) {
-	t.Helper()
-
-	tables := []string{
-		"watermill_events_registration",
-		"watermill_offsets_events_registration",
-		"watermill_events_student",
-		"watermill_offsets_events_student",
-	}
-
-	for _, table := range tables {
-		_, err := h.pool.Exec(context.Background(), fmt.Sprintf("TRUNCATE TABLE %s", table))
-		require.NoError(t, err)
-	}
 }
