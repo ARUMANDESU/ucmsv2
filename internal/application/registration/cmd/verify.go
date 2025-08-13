@@ -9,10 +9,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/pkg/apperr"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
-var ErrOKAlreadyVerified = apperr.New(apperr.CodeAlreadyProcessed, "registration already verified", http.StatusOK)
+var ErrOKAlreadyVerified = errorx.NewAlreadyProcessed().WithHTTPCode(http.StatusOK)
 
 type Verify struct {
 	Email string
@@ -53,9 +53,9 @@ func (h *VerifyHandler) Handle(ctx context.Context, cmd Verify) error {
 	h.logger.Debug("VerifyHandler.Handle called", "email", cmd.Email, "code", cmd.Code)
 
 	if cmd.Email == "" || cmd.Code == "" {
-		span.RecordError(apperr.ErrInvalidInput)
+		span.RecordError(errorx.ErrInvalidInput)
 		span.SetStatus(codes.Error, "email or code is empty")
-		return apperr.ErrInvalidInput
+		return errorx.ErrInvalidInput
 	}
 
 	return h.repo.UpdateRegistrationByEmail(ctx, cmd.Email, func(ctx context.Context, r *registration.Registration) error {

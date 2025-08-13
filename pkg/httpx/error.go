@@ -5,70 +5,98 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ARUMANDESU/ucms/pkg/apperr"
+	"github.com/BurntSushi/toml"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
+
+	ucmsv2 "github.com/ARUMANDESU/ucms"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
-func HandleError(w http.ResponseWriter, r *http.Request, err error) {
-	slog.Error("error handling request", "error", err)
-	var appErr *apperr.Error
+type ErrorHandler struct {
+	bundle *i18n.Bundle
+	enloc  *i18n.Localizer
+	kkloc  *i18n.Localizer
+	ruloc  *i18n.Localizer
+}
+
+func NewErrorHandler() *ErrorHandler {
+	bundle := i18n.NewBundle(language.English)
+	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
+
+	// Load translation files
+	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/en.toml")
+	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/kk.toml")
+	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/ru.toml")
+
+	return &ErrorHandler{
+		bundle: bundle,
+		enloc:  i18n.NewLocalizer(bundle, "en"),
+		kkloc:  i18n.NewLocalizer(bundle, "kk"),
+		ruloc:  i18n.NewLocalizer(bundle, "ru"),
+	}
+}
+
+func (h *ErrorHandler) Localizer(lang string) *i18n.Localizer {
+	switch lang {
+	case "kk":
+		return h.kkloc
+	case "ru":
+		return h.ruloc
+	default:
+		return h.enloc
+	}
+}
+
+func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, err error) {
+	slog.ErrorContext(r.Context(), "HTTP error response", "error", err.Error())
+
+	lang := r.Header.Get("Accept-Language")
+	localizer := h.Localizer(lang)
+
+	var appErr *errorx.I18nError
 	if errors.As(err, &appErr) {
-		switch appErr.HTTPStatusCode() {
-		case http.StatusUnauthorized:
-			Unauthorized(w, r, appErr.Message)
-		case http.StatusBadRequest:
-			BadRequest(w, r, appErr.Message)
-		case http.StatusNotFound:
-			NotFound(w, r, appErr.Message)
-		case http.StatusForbidden:
-			Forbidden(w, r, appErr.Message)
-		case http.StatusConflict:
-			Conflict(w, r, appErr.Message)
-		case http.StatusInternalServerError:
-			InternalServerError(w, r)
-		default:
-			InternalServerError(w, r)
+		response := map[string]any{
+			"code":    appErr.Code.String(),
+			"message": appErr.Localize(localizer),
+			"success": false,
 		}
 
+		err = WriteJSON(w, appErr.HTTPStatusCode(), response, nil)
+		if err != nil {
+			slog.ErrorContext(r.Context(), "Failed to write error response", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
-	InternalServerError(w, r)
-}
-
-func Error(w http.ResponseWriter, r *http.Request, status int, errStr string, message string) {
-	slog.Error("error", "status", status, "error", errStr, "message", message)
+	slog.ErrorContext(r.Context(), "Unhandled error", "error", err)
+	internalErr := errorx.ErrInternal.WithCause(err)
 	response := map[string]any{
-		"code":    errStr,
-		"message": message,
+		"code":    internalErr.Code.String(),
+		"message": internalErr.Localize(localizer),
 		"success": false,
 	}
-
-	err := WriteJSON(w, status, response, nil)
+	err = WriteJSON(w, internalErr.HTTPStatusCode(), response, nil)
 	if err != nil {
-		// log.Error("failed to write error response", zap.Error(err))
+		slog.ErrorContext(r.Context(), "Failed to write internal error response", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
-}
-
-func Unauthorized(w http.ResponseWriter, r *http.Request, message string) {
-	Error(w, r, http.StatusUnauthorized, "unauthorized", message)
 }
 
 func BadRequest(w http.ResponseWriter, r *http.Request, message string) {
-	Error(w, r, http.StatusBadRequest, "bad-request", message)
-}
-
-func NotFound(w http.ResponseWriter, r *http.Request, message string) {
-	Error(w, r, http.StatusNotFound, "not-found", message)
-}
-
-func Conflict(w http.ResponseWriter, r *http.Request, message string) {
-	Error(w, r, http.StatusConflict, "conflict", message)
-}
-
-func Forbidden(w http.ResponseWriter, r *http.Request, message string) {
-	Error(w, r, http.StatusForbidden, "forbidden", message)
-}
-
-func InternalServerError(w http.ResponseWriter, r *http.Request) {
-	Error(w, r, http.StatusInternalServerError, "internal-server-error", "internal server error")
+	slog.ErrorContext(r.Context(), "Bad request", "message", message)
+	response := map[string]any{
+		"code":    errorx.CodeInvalid,
+		"message": message,
+		"success": false,
+	}
+	err := WriteJSON(w, http.StatusBadRequest, response, nil)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "Failed to write bad request response", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 }

@@ -1,0 +1,131 @@
+# Success messages
+[success]
+other = "Операция сәтті аяқталды"
+
+[resource_created]
+other = "Ресурс сәтті жасалды"
+
+[resource_deleted]
+other = "Ресурс сәтті жойылды"
+
+# Client errors with templates
+[invalid]
+other = "Жарамсыз сұрау"
+
+[validation_failed]
+other = "Тексеру сәтсіз аяқталды"
+[validation_failed_field]
+other = "{{.Field}} өрісінің тексерілуі сәтсіз аяқталды"
+
+[malformed_json]
+other = "JSON форматы дұрыс емес"
+
+[unauthorized]
+other = "Аутентификация қажет"
+
+[invalid_credentials]
+other = "Пайдаланушы аты немесе құпия сөз дұрыс емес"
+
+[token_expired]
+other = "Кіру токенінің мерзімі өтті"
+
+[forbidden]
+other = "Кіруге тыйым салынған"
+
+[access_denied]
+other = "Рұқсат жеткіліксіз"
+
+[not_found]
+other = "Ресурс табылмады"
+[not_found_with_type]
+other = "{{.ResourceType}} табылмады"
+
+[method_not_allowed]
+other = "HTTP әдісіне рұқсат берілмеген"
+
+[conflict]
+other = "Ресурс қақтығысы"
+
+[duplicate_entry]
+other = "Ресурс әлдеқашан бар"
+[duplicate_entry_with_field]
+other = "Осындай {{.Field}} бар {{.ResourceType}} әлдеқашан бар"
+
+[rate_limit_exceeded]
+other = "Тым көп сұрау. Кейінірек қайталап көріңіз"
+[rate_limit_exceeded_with_time]
+other = "Сұрау шегі асып кетті. {{.RetryAfter}} секундтан кейін қайталап көріңіз"
+
+# Idempotency
+[idempotency_key_missing]
+other = "Бұл операция үшін идемпотенттілік кілті қажет"
+
+[idempotency_key_payload_mismatch]
+other = "Осы кілтпен сұраудың басқа мазмұны бар"
+
+[idempotency_key_in_progress]
+other = "Осы кілтпен сұрау әлдеқашан өңделуде"
+
+# Password validation
+[password_too_weak]
+other = "Құпия сөз тым әлсіз"
+
+[password_format_invalid]
+other = "Құпия сөз кемінде 8 таңбадан тұруы керек: бас әріп, кіші әріп, сан және арнайы таңба"
+
+# Business logic
+[already_processed]
+other = "Сұрау әлдеқашан өңделген"
+
+[business_rule_violation]
+other = "Бизнес ережесін бұзу"
+
+[insufficient_permissions]
+other = "Бұл әрекетті орындауға рұқсатыңыз жоқ"
+
+# Server errors
+[internal_error]
+other = "Сервердің ішкі қатесі. Кейінірек қайталап көріңіз"
+
+[service_unavailable]
+other = "Қызмет уақытша қол жетімді емес"
+
+[upstream_service_error]
+other = "Сыртқы қызмет қатесі"
+
+[upstream_timeout]
+other = "Сыртқы қызметтің уақыты өтті"
+
+[maintenance_mode]
+other = "Қызмет техникалық қызмет көрсету режимінде"
+
+# Pluralization (Kazakh typically doesn't distinguish plural forms)
+[items_count]
+other = "{{.Count}} элемент"
+
+[users_online]
+zero = "Онлайн пайдаланушы жоқ"
+other = "{{.Count}} пайдаланушы онлайн"
+
+[clubs_found]
+zero = "Клуб табылмады"
+other = "{{.Count}} клуб табылды"
+
+# Active/Inactive states
+[user_status_active]
+other = "Пайдаланушы белсенді"
+
+[user_status_inactive]
+other = "Пайдаланушы белсенді емес"
+
+[club_status_active]
+other = "Клуб белсенді"
+
+[club_status_inactive]
+other = "Клуб белсенді емес"
+
+[account_activated]
+other = "Тіркелгі белсендірілді"
+
+[account_deactivated]
+other = "Тіркелгі өшірілді"

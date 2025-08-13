@@ -175,9 +175,9 @@ func (r *Registration) VerifyCode(code string) error {
 				RegistrationID: r.id,
 				Reason:         "too many failed attempts",
 			})
-			return ErrTooManyAttempts
+			return ErrPersistentTooManyAttempts
 		}
-		return ErrInvalidVerificationCode
+		return ErrPersistentVerificationCodeMismatch
 	}
 
 	r.updatedAt = time.Now().UTC()
@@ -269,7 +269,7 @@ func (r *Registration) CompleteStaffRegistration(args StaffArgs) error {
 
 func (r *Registration) ResendCode() error {
 	if !r.resendTimeout.IsZero() && !time.Now().After(r.resendTimeout) {
-		return fmt.Errorf("%w: time left until next resend: %s", ErrWaitUntilResend, r.resendTimeout.Sub(time.Now()).String())
+		return fmt.Errorf("%w: time left until next resend: %s", ErrWaitUntilResend, time.Until(r.resendTimeout).String())
 	}
 
 	code, err := generateCode()

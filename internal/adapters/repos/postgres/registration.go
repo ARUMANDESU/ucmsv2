@@ -14,6 +14,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/postgres"
 	"github.com/ARUMANDESU/ucms/pkg/watermillx"
 )
@@ -186,10 +187,11 @@ func (re *RegistrationRepo) UpdateRegistration(
 
 		reg := RegistrationToDomain(dto)
 
-		if err := fn(ctx, reg); err != nil {
-			span.RecordError(err)
+		fnerr := fn(ctx, reg)
+		if fnerr != nil && !errorx.IsPersistable(fnerr) {
+			span.RecordError(fnerr)
 			span.SetStatus(codes.Error, "failed to apply update function")
-			return err
+			return fnerr
 		}
 
 		dto = DomainToRegistrationDTO(reg)
@@ -215,6 +217,13 @@ func (re *RegistrationRepo) UpdateRegistration(
 				span.SetStatus(codes.Error, "failed to publish events")
 				return err
 			}
+		}
+
+		if fnerr != nil && errorx.IsPersistable(fnerr) {
+			span.RecordError(fnerr)
+			span.SetStatus(codes.Error, "update function returned an error but is allowed to continue")
+			slog.Warn("Update function returned an error but is allowed to continue", "error", fnerr.Error())
+			return fnerr
 		}
 		return nil
 	})

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/pkg/apperr"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 	"github.com/ARUMANDESU/ucms/tests/mocks"
@@ -84,17 +84,17 @@ func TestVerifyHandler_InvalidArgs_ShouldReturnError(t *testing.T) {
 		{
 			name:    "Empty Email",
 			arg:     Verify{Email: "", Code: "valid-code"},
-			wantErr: apperr.ErrInvalidInput,
+			wantErr: errorx.ErrInvalidInput,
 		},
 		{
 			name:    "Empty Code",
 			arg:     Verify{Email: fixtures.ValidStudentEmail, Code: ""},
-			wantErr: apperr.ErrInvalidInput,
+			wantErr: errorx.ErrInvalidInput,
 		},
 		{
 			name:    "Both Empty",
 			arg:     Verify{Email: "", Code: ""},
-			wantErr: apperr.ErrInvalidInput,
+			wantErr: errorx.ErrInvalidInput,
 		},
 	}
 
@@ -126,7 +126,7 @@ func TestVerifyHandler_InvalidEmail_ShouldReturnError(t *testing.T) {
 		Code:  reg.VerificationCode(),
 	})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, apperr.ErrNotFound)
+	assert.ErrorIs(t, err, errorx.ErrNotFound)
 }
 
 func TestVerifyHandler_InvalidCode_ShouldReturnError(t *testing.T) {
@@ -141,7 +141,7 @@ func TestVerifyHandler_InvalidCode_ShouldReturnError(t *testing.T) {
 		Code:  "invalid-code",
 	})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, registration.ErrInvalidVerificationCode)
+	assert.ErrorIs(t, err, registration.ErrPersistentVerificationCodeMismatch)
 
 	s.MockRepo.AssertRegistrationExistsByEmail(t, reg.Email()).
 		AssertStatus(t, registration.StatusPending).
@@ -166,7 +166,7 @@ func TestVerifyHandler_InvalidCode_TooManyAttempts_ShouldReturnError(t *testing.
 		Code:  "invalid-code",
 	})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, registration.ErrTooManyAttempts)
+	assert.ErrorIs(t, err, registration.ErrPersistentTooManyAttempts)
 
 	s.MockRepo.AssertRegistrationExistsByEmail(t, reg.Email()).
 		AssertStatus(t, registration.StatusExpired).

@@ -114,7 +114,14 @@ func (r *Response) AssertError(expectedStatus int, expectedMessage string) *Resp
 	var resp map[string]any
 	r.ParseJSON(&resp)
 	require.False(r.t, resp["succeeded"].(bool), "expected succeeded=false")
-	require.Contains(r.t, resp["message"].(string), expectedMessage)
+	assert.Contains(r.t, resp["message"].(string), expectedMessage)
+	return r
+}
+
+func (r *Response) AssertBadRequest() *Response {
+	r.t.Helper()
+	r.AssertStatus(http.StatusBadRequest)
+
 	return r
 }
 

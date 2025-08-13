@@ -14,15 +14,15 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/apperr"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 )
 
 var (
-	ErrMissingVerificationCode = apperr.NewInvalid("missing verification code")
-	ErrMissingBarcode          = apperr.NewInvalid("missing barcode")
-	ErrMissingPassword         = apperr.NewInvalid("missing password")
-	ErrUserAlreadyExists       = apperr.NewConflict("user with this email already exists")
+	ErrMissingVerificationCode = errorx.NewValidationFieldFailed("verification_code").WithArgs(map[string]any{"Field": "verification_code"})
+	ErrMissingBarcode          = errorx.NewValidationFieldFailed("barcode").WithArgs(map[string]any{"Field": "barcode"})
+	ErrMissingPassword         = errorx.NewValidationFieldFailed("password").WithArgs(map[string]any{"Field": "password"})
+	ErrUserAlreadyExists       = errorx.NewDuplicateEntryWithField("user", "email")
 )
 
 type StudentComplete struct {

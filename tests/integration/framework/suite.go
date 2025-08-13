@@ -47,6 +47,7 @@ type IntegrationTestSuite struct {
 	pgPool          *pgxpool.Pool
 	watermillRouter *message.Router
 	traceProvider   trace.TracerProvider
+	traceRecorder   *tracetest.SpanRecorder
 	logger          *slog.Logger
 
 	routerRunning atomic.Bool
@@ -77,11 +78,10 @@ type Application struct {
 func (s *IntegrationTestSuite) SetupSuite() {
 	ctx := context.Background()
 
-	rec := tracetest.NewSpanRecorder()
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(rec))
-	otel.SetTracerProvider(tp)
-	s.traceProvider = tp
 	s.logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	s.traceRecorder = tracetest.NewSpanRecorder()
+	s.traceProvider = sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(s.traceRecorder))
+	otel.SetTracerProvider(s.traceProvider)
 
 	s.startPostgreSQL(ctx)
 	s.runMigrations()
@@ -174,7 +174,7 @@ func (s *IntegrationTestSuite) createApplication() {
 
 	s.httpHandler = chi.NewRouter()
 	registrationHTTP := registrationhttp.NewHTTP(registrationhttp.Args{
-		Command: regApp.CMD,
+		Command: &regApp.CMD,
 	})
 	registrationHTTP.Route(s.httpHandler)
 }
@@ -262,6 +262,7 @@ func (s *IntegrationTestSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (s *IntegrationTestSuite) AfterTest(suiteName, testName string) {
+	s.traceRecorder.Reset()
 	s.DB.TruncateAll(s.T())
 	// s.Event.ClearAllEvents(s.T())
 	s.MockMailSender.Reset()

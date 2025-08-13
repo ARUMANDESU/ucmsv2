@@ -3,6 +3,7 @@ module github.com/ARUMANDESU/ucms
 go 1.24.0
 
 require (
+	github.com/BurntSushi/toml v1.5.0
 	github.com/ThreeDotsLabs/watermill v1.4.7
 	github.com/ThreeDotsLabs/watermill-sql/v4 v4.0.0-rc.6
 	github.com/exaring/otelpgx v0.9.3
@@ -10,6 +11,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.5
+	github.com/nicksnyder/go-i18n/v2 v2.6.0
 	github.com/oapi-codegen/runtime v1.1.2
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.38.0
@@ -19,6 +21,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.37.0
 	go.opentelemetry.io/otel/trace v1.37.0
 	golang.org/x/crypto v0.40.0
+	golang.org/x/text v0.27.0
 )
 
 require (
@@ -86,7 +89,6 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
 	google.golang.org/grpc v1.73.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )

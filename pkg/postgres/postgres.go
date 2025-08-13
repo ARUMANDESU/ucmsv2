@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/exaring/otelpgx"
 	"github.com/golang-migrate/migrate/v4"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/pkg/ctxs"
 	"github.com/ARUMANDESU/ucms/pkg/env"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
 func NewPgxPool(ctx context.Context, pgdsn string, mode env.Mode) (*pgxpool.Pool, error) {
@@ -71,13 +73,28 @@ func WithTx(ctx context.Context, pool *pgxpool.Pool, fn func(ctx context.Context
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback(ctx)
-		} else {
-			err = tx.Commit(ctx)
-		}
-	}()
 
-	return fn(ctxs.WithTx(ctx, tx), tx)
+	fnerr := fn(ctxs.WithTx(ctx, tx), tx)
+	if fnerr != nil && !errorx.IsPersistable(fnerr) {
+		rollbackerr := tx.Rollback(ctx)
+		if rollbackerr != nil {
+			slog.ErrorContext(ctx, "failed to rollback transaction", slog.String("error", rollbackerr.Error()))
+			return fmt.Errorf("failed to rollback transaction: %w", rollbackerr)
+		}
+		slog.ErrorContext(ctx, "transaction rolled back due to error", slog.String("error", fnerr.Error()))
+		return fnerr
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to commit transaction", slog.String("error", err.Error()))
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if fnerr != nil && errorx.IsPersistable(fnerr) {
+		slog.DebugContext(ctx, "update function returned an error but is allowed to continue", slog.String("error", fnerr.Error()))
+		return fnerr
+	}
+
+	return nil
 }

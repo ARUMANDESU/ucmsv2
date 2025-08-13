@@ -1,0 +1,140 @@
+# Success messages
+[success]
+other = "Операция успешно завершена"
+
+[resource_created]
+other = "Ресурс успешно создан"
+
+[resource_deleted]
+other = "Ресурс успешно удален"
+
+# Client errors with templates
+[invalid]
+other = "Некорректный запрос"
+
+[validation_failed]
+other = "Ошибка валидации"
+[validation_failed_field]
+other = "Ошибка валидации поля: {{.Field}}"
+
+[malformed_json]
+other = "Неверный формат JSON"
+
+[unauthorized]
+other = "Требуется аутентификация"
+
+[invalid_credentials]
+other = "Неверное имя пользователя или пароль"
+
+[token_expired]
+other = "Срок действия токена истек"
+
+[forbidden]
+other = "Доступ запрещен"
+
+[access_denied]
+other = "Недостаточно прав доступа"
+
+[not_found]
+other = "Ресурс не найден"
+[not_found_with_type]
+other = "{{.ResourceType}} не найден"
+
+[method_not_allowed]
+other = "HTTP метод не разрешен"
+
+[conflict]
+other = "Конфликт ресурсов"
+
+[duplicate_entry]
+other = "Ресурс уже существует"
+[duplicate_entry_with_field]
+other = "{{.ResourceType}} с таким {{.Field}} уже существует"
+
+[rate_limit_exceeded]
+other = "Слишком много запросов. Попробуйте позже"
+[rate_limit_exceeded_with_time]
+other = "Превышен лимит запросов. Повторите через {{.RetryAfter}} секунд"
+
+# Idempotency
+[idempotency_key_missing]
+other = "Для этой операции требуется ключ идемпотентности"
+
+[idempotency_key_payload_mismatch]
+other = "Запрос с этим ключом имеет другое содержимое"
+
+[idempotency_key_in_progress]
+other = "Запрос с этим ключом уже обрабатывается"
+
+# Password validation
+[password_too_weak]
+other = "Пароль слишком слабый"
+
+[password_format_invalid]
+other = "Пароль должен содержать минимум 8 символов: заглавную букву, строчную букву, цифру и специальный символ"
+
+# Business logic
+[already_processed]
+other = "Запрос уже обработан"
+
+[business_rule_violation]
+other = "Нарушение бизнес-правила"
+
+[insufficient_permissions]
+other = "У вас нет прав для выполнения этого действия"
+
+# Server errors
+[internal_error]
+other = "Внутренняя ошибка сервера. Попробуйте позже"
+
+[service_unavailable]
+other = "Сервис временно недоступен"
+
+[upstream_service_error]
+other = "Ошибка внешнего сервиса"
+
+[upstream_timeout]
+other = "Таймаут внешнего сервиса"
+
+[maintenance_mode]
+other = "Сервис находится в режиме технического обслуживания"
+
+# Pluralization (Russian has complex plural rules)
+[items_count]
+one = "{{.Count}} элемент"
+few = "{{.Count}} элемента"
+many = "{{.Count}} элементов"
+other = "{{.Count}} элементов"
+
+[users_online]
+zero = "Пользователей онлайн нет"
+one = "{{.Count}} пользователь онлайн"
+few = "{{.Count}} пользователя онлайн"
+many = "{{.Count}} пользователей онлайн"
+other = "{{.Count}} пользователей онлайн"
+
+[clubs_found]
+zero = "Клубы не найдены"
+one = "Найден {{.Count}} клуб"
+few = "Найдено {{.Count}} клуба"
+many = "Найдено {{.Count}} клубов"
+other = "Найдено {{.Count}} клубов"
+
+# Active/Inactive states
+[user_status_active]
+other = "Пользователь активен"
+
+[user_status_inactive]
+other = "Пользователь неактивен"
+
+[club_status_active]
+other = "Клуб активен"
+
+[club_status_inactive]
+other = "Клуб неактивен"
+
+[account_activated]
+other = "Аккаунт активирован"
+
+[account_deactivated]
+other = "Аккаунт деактивирован"

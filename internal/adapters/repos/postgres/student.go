@@ -28,10 +28,10 @@ func NewStudentRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *Student
 		panic("pgxpool.Pool cannot be nil")
 	}
 	if t == nil {
-		t = trace.NewNoopTracerProvider().Tracer("")
+		t = tracer
 	}
 	if l == nil {
-		l = slog.Default()
+		l = logger
 	}
 
 	return &StudentRepo{

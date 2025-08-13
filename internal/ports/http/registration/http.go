@@ -20,15 +20,16 @@ var (
 )
 
 type HTTP struct {
-	tracer trace.Tracer
-	logger *slog.Logger
-	cmd    registration.Command
+	tracer     trace.Tracer
+	logger     *slog.Logger
+	cmd        *registration.Command
+	errhandler *httpx.ErrorHandler
 }
 
 type Args struct {
 	Tracer  trace.Tracer
 	Logger  *slog.Logger
-	Command registration.Command
+	Command *registration.Command
 }
 
 func NewHTTP(args Args) *HTTP {
@@ -40,9 +41,10 @@ func NewHTTP(args Args) *HTTP {
 	}
 
 	return &HTTP{
-		tracer: args.Tracer,
-		logger: args.Logger,
-		cmd:    args.Command,
+		tracer:     args.Tracer,
+		logger:     args.Logger,
+		cmd:        args.Command,
+		errhandler: httpx.NewErrorHandler(),
 	}
 }
 
@@ -64,7 +66,7 @@ func (h *HTTP) StartStudentRegistration(w http.ResponseWriter, r *http.Request) 
 
 	cmd := cmd.StartStudent{Email: string(body.Email)}
 	if err := h.cmd.StartStudent.Handle(ctx, cmd); err != nil {
-		httpx.HandleError(w, r, err)
+		h.errhandler.HandleError(w, r, err)
 		return
 	}
 
@@ -86,7 +88,7 @@ func (h *HTTP) Verify(w http.ResponseWriter, r *http.Request) {
 		Code:  string(body.VerificationCode),
 	}
 	if err := h.cmd.Verify.Handle(ctx, cmd); err != nil {
-		httpx.HandleError(w, r, err)
+		h.errhandler.HandleError(w, r, err)
 		return
 	}
 
@@ -113,7 +115,7 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 		GroupID:          body.GroupId,
 	}
 	if err := h.cmd.StudentComplete.Handle(ctx, cmd); err != nil {
-		httpx.HandleError(w, r, err)
+		h.errhandler.HandleError(w, r, err)
 		return
 	}
 

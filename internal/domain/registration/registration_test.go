@@ -141,7 +141,7 @@ func TestRegistration_VerifyCode(t *testing.T) {
 		reg := validRegistration(t)
 
 		err := reg.VerifyCode("wrongcode")
-		require.ErrorIs(t, err, ErrInvalidVerificationCode)
+		require.ErrorIs(t, err, ErrPersistentVerificationCodeMismatch)
 
 		NewRegistrationAssertion(reg).
 			AssertStatus(t, StatusPending).

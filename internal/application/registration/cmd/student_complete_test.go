@@ -10,7 +10,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/apperr"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 	"github.com/ARUMANDESU/ucms/tests/mocks"
@@ -340,5 +340,5 @@ func TestStudentCompleteHandler_RegistrationNotFound_ShouldFail(t *testing.T) {
 		GroupID:          fixtures.TestStudent.GroupID,
 	})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, apperr.ErrNotFound)
+	assert.ErrorIs(t, err, errorx.ErrNotFound)
 }

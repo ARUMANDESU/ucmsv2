@@ -1,0 +1,134 @@
+# Success messages
+[success]
+other = "Operation completed successfully"
+
+[resource_created]
+other = "Resource created successfully"
+
+[resource_deleted]
+other = "Resource deleted successfully"
+
+# Client errors with templates
+[invalid]
+other = "Invalid request"
+
+[validation_failed]
+other = "Validation failed"
+[validation_failed_field]
+other = "Validation failed for field: {{.Field}}"
+
+[malformed_json]
+other = "Invalid JSON format"
+
+[unauthorized]
+other = "Authentication required"
+
+[invalid_credentials]
+other = "Invalid username or password"
+
+[token_expired]
+other = "Access token has expired"
+
+[forbidden]
+other = "Access denied"
+
+[access_denied]
+other = "Insufficient permissions"
+
+[not_found]
+other = "Resource not found"
+[not_found_with_type]
+other = "{{.ResourceType}} not found"
+
+[method_not_allowed]
+other = "HTTP method not allowed"
+
+[conflict]
+other = "Resource conflict"
+
+[duplicate_entry]
+other = "Resource already exists"
+[duplicate_entry_with_field]
+other = "{{.ResourceType}} with this {{.Field}} already exists"
+
+[rate_limit_exceeded]
+other = "Too many requests. Please try again later"
+[rate_limit_exceeded_with_time]
+other = "Rate limit exceeded. Try again in {{.RetryAfter}} seconds"
+
+# Idempotency
+[idempotency_key_missing]
+other = "Idempotency key is required for this operation"
+
+[idempotency_key_payload_mismatch]
+other = "Request with this key has different payload"
+
+[idempotency_key_in_progress]
+other = "A request with this key is already being processed"
+
+# Password validation
+[password_too_weak]
+other = "Password is too weak"
+
+[password_format_invalid]
+other = "Password must contain at least 8 characters with uppercase, lowercase, number, and special character"
+
+# Business logic
+[already_processed]
+other = "Request has already been processed"
+
+[business_rule_violation]
+other = "Business rule violation"
+
+[insufficient_permissions]
+other = "You don't have permission to perform this action"
+
+# Server errors
+[internal_error]
+other = "Internal server error. Please try again later"
+
+[service_unavailable]
+other = "Service is temporarily unavailable"
+
+[upstream_service_error]
+other = "External service error"
+
+[upstream_timeout]
+other = "External service timeout"
+
+[maintenance_mode]
+other = "Service is under maintenance"
+
+# Pluralization examples
+[items_count]
+one = "{{.Count}} item"
+other = "{{.Count}} items"
+
+[users_online]
+zero = "No users online"
+one = "{{.Count}} user online"
+other = "{{.Count}} users online"
+
+[clubs_found]
+zero = "No clubs found"
+one = "Found {{.Count}} club"
+other = "Found {{.Count}} clubs"
+
+# Active/Inactive states
+[user_status_active]
+other = "User is active"
+
+[user_status_inactive]
+other = "User is inactive"
+
+[club_status_active]
+other = "Club is active"
+
+[club_status_inactive]
+other = "Club is inactive"
+
+[account_activated]
+other = "Account has been activated"
+
+[account_deactivated]
+other = "Account has been deactivated"

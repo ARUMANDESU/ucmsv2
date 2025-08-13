@@ -14,8 +14,8 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/adapters/repos"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/pkg/apperr"
 	"github.com/ARUMANDESU/ucms/pkg/env"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 )
 
@@ -65,9 +65,9 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 	ctx, span := h.tracer.Start(ctx, "StartStudentHandler.Handle")
 	defer span.End()
 	if cmd.Email == "" {
-		span.RecordError(apperr.ErrInvalidInput)
+		span.RecordError(errorx.ErrInvalidInput)
 		span.SetStatus(codes.Error, "Email is required")
-		return apperr.ErrInvalidInput
+		return errorx.ErrInvalidInput
 	}
 
 	redactedEmail := logging.RedactEmail(cmd.Email)
@@ -82,9 +82,9 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 		return fmt.Errorf("failed to get user by email: %w", err)
 	}
 	if user != nil {
-		span.RecordError(apperr.NewConflict("user with this email already exists"))
+		span.RecordError(errorx.NewDuplicateEntryWithField("user", "email"))
 		span.SetStatus(codes.Error, "User already exists")
-		return apperr.NewConflict("user with this email already exists")
+		return errorx.NewDuplicateEntryWithField("user", "email")
 	}
 	span.AddEvent("User not found, proceeding with registration")
 
@@ -119,7 +119,7 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 	}
 
 	if reg.IsCompleted() {
-		return apperr.NewConflict("user with this email is already registered")
+		return errorx.NewDuplicateEntryWithField("user", "email")
 	}
 
 	span.AddEvent("Registration found: proceeding with verification code resend")

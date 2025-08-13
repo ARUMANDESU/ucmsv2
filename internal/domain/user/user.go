@@ -61,10 +61,10 @@ func (u *User) SetFirstName(firstName string) error {
 		return errors.New("user is nil")
 	}
 	if len([]rune(firstName)) > MaxFirstNameLen {
-		return errors.New("first name is too long")
+		return ErrFirstNameTooLong
 	}
 	if len([]rune(firstName)) < MinFirstNameLen {
-		return errors.New("first name is too short")
+		return ErrFirstNameTooShort
 	}
 
 	u.firstName = firstName
@@ -77,10 +77,10 @@ func (u *User) SetLastName(lastName string) error {
 		return errors.New("user is nil")
 	}
 	if len([]rune(lastName)) > MaxLastNameLen {
-		return errors.New("last name is too long")
+		return ErrLastNameTooLong
 	}
 	if len([]rune(lastName)) < MinLastNameLen {
-		return errors.New("last name is too short")
+		return ErrLastNameTooShort
 	}
 
 	u.lastName = lastName
