@@ -274,63 +274,64 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 	})
 }
 
-//	func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
-//		s.T().Run("Complete Without Verification", func(t *testing.T) {
-//			email := "no-verify@test.com"
-//			s.DB.SeedGroup(s.T(), fixtures.SEGroup.ID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
-//
-//			s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
-//			reg := s.DB.RequireRegistrationExists(t, email)
-//
-//			s.HTTP.CompleteStudentRegistration(t, registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-//				Email:            openapi_types.Email(email),
-//				VerificationCode: reg.GetVerificationCode(),
-//				Password:         fixtures.TestStudent.Password,
-//				Barcode:          "STU003",
-//				FirstName:        "Test",
-//				LastName:         "Student",
-//				GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
-//			}).AssertSuccess()
-//		})
-//
-//		s.T().Run("Double Complete", func(t *testing.T) {
-//			email := "double-complete@test.com"
-//			s.setupCompletedRegistration(email)
-//
-//			s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-//				Email:            openapi_types.Email(email),
-//				VerificationCode: s.getVerificationCode(email),
-//				Password:         fixtures.TestStudent.Password,
-//				Barcode:          "STU004",
-//				FirstName:        "Test",
-//				LastName:         "Student",
-//				GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
-//			}).AssertStatus(http.StatusUnprocessableEntity)
-//		})
-//	}
-//
-//	func (s *RegistrationIntegrationSuite) TestBusinessRules() {
-//		s.T().Run("Registration Already Exists", func(t *testing.T) {
-//			email := "existing@test.com"
-//			s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
-//			s.HTTP.StartStudentRegistration(t, email).AssertStatus(http.StatusConflict)
-//		})
-//
-//		s.T().Run("Name Length Validation", func(t *testing.T) {
-//			email := "names@test.com"
-//			s.setupVerifiedRegistration(email)
-//
-//			s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-//				Email:            openapi_types.Email(email),
-//				VerificationCode: s.getVerificationCode(email),
-//				Password:         fixtures.TestStudent.Password,
-//				Barcode:          "STU005",
-//				FirstName:        "X",
-//				LastName:         strings.Repeat("A", 101),
-//				GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
-//			}).AssertBadRequest()
-//		})
-//	}
+func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
+	s.T().Run("Complete Without Verification", func(t *testing.T) {
+		email := "no-verify@test.com"
+		s.DB.SeedGroup(s.T(), fixtures.SEGroup.ID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
+
+		s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
+		reg := s.DB.RequireRegistrationExists(t, email)
+
+		s.HTTP.CompleteStudentRegistration(t, registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+			Email:            openapi_types.Email(email),
+			VerificationCode: reg.GetVerificationCode(),
+			Password:         fixtures.TestStudent.Password,
+			Barcode:          "STU003",
+			FirstName:        "Test",
+			LastName:         "Student",
+			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+		}).AssertSuccess()
+	})
+
+	s.T().Run("Double Complete", func(t *testing.T) {
+		email := "double-complete@test.com"
+		s.setupCompletedRegistration(email)
+
+		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+			Email:            openapi_types.Email(email),
+			VerificationCode: s.getVerificationCode(email),
+			Password:         fixtures.TestStudent.Password,
+			Barcode:          "STU004",
+			FirstName:        "Test",
+			LastName:         "Student",
+			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+		}).AssertStatus(http.StatusUnprocessableEntity)
+	})
+}
+
+func (s *RegistrationIntegrationSuite) TestBusinessRules() {
+	s.T().Run("Registration Already Exists", func(t *testing.T) {
+		email := "existing@test.com"
+		s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
+		s.HTTP.StartStudentRegistration(t, email).AssertStatus(http.StatusTooManyRequests)
+	})
+
+	s.T().Run("Name Length Validation", func(t *testing.T) {
+		email := "names@test.com"
+		s.setupVerifiedRegistration(email)
+
+		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+			Email:            openapi_types.Email(email),
+			VerificationCode: s.getVerificationCode(email),
+			Password:         fixtures.TestStudent.Password,
+			Barcode:          "STU005",
+			FirstName:        "X",
+			LastName:         strings.Repeat("A", 101),
+			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+		}).AssertBadRequest()
+	})
+}
+
 func (s *RegistrationIntegrationSuite) setupVerifiedRegistration(email string) {
 	if !s.DB.CheckGroupExists(s.T(), fixtures.SEGroup.ID) {
 		s.DB.SeedGroup(s.T(), fixtures.SEGroup.ID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)

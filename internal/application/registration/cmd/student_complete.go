@@ -48,8 +48,20 @@ func (c StudentComplete) Validate() error {
 	if c.FirstName == "" {
 		return user.ErrMissingFirstName
 	}
+	if len([]rune(c.FirstName)) > user.MaxFirstNameLen {
+		return user.ErrFirstNameTooLong
+	}
+	if len([]rune(c.FirstName)) < user.MinFirstNameLen {
+		return user.ErrFirstNameTooShort
+	}
 	if c.LastName == "" {
 		return user.ErrMissingLastName
+	}
+	if len([]rune(c.LastName)) > user.MaxLastNameLen {
+		return user.ErrLastNameTooLong
+	}
+	if len([]rune(c.LastName)) < user.MinLastNameLen {
+		return user.ErrLastNameTooShort
 	}
 	if c.Password == "" {
 		return ErrMissingPassword
