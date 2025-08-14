@@ -101,6 +101,19 @@ func (ra *RegistrationAssertion) AssertResendTimeout(t *testing.T, expected time
 	return ra
 }
 
+func (ra *RegistrationAssertion) AssertResendNotAvailable(t *testing.T) *RegistrationAssertion {
+	t.Helper()
+	assert.True(
+		t,
+		// check if resend timeout is in the future, because if it is, then resend is not available
+		ra.registration.resendTimeout.After(time.Now()),
+		"Expected registration resend timeout to be in the future, got %s; current time is %s",
+		ra.registration.resendTimeout,
+		time.Now(),
+	)
+	return ra
+}
+
 func (ra *RegistrationAssertion) AssertEventsCount(t *testing.T, expected int) *RegistrationAssertion {
 	t.Helper()
 	events := ra.registration.GetUncommittedEvents()
@@ -170,4 +183,43 @@ func (rsa *RegistrationStartedAssertion) AssertVerificationCodeNotEmpty(t *testi
 	t.Helper()
 	assert.NotEmpty(t, rsa.event.VerificationCode, "Expected registration verification code to not be empty")
 	return rsa
+}
+
+type VerificationCodeSentAssertion struct {
+	event *VerificationCodeResent
+}
+
+func NewVerificationCodeSentAssertion(event *VerificationCodeResent) *VerificationCodeSentAssertion {
+	return &VerificationCodeSentAssertion{event: event}
+}
+
+func (vsa *VerificationCodeSentAssertion) AssertRegistrationID(t *testing.T, expected ID) *VerificationCodeSentAssertion {
+	t.Helper()
+	assert.Equal(t, expected, vsa.event.RegistrationID, "Expected registration ID to be %s, got %s", expected, vsa.event.RegistrationID)
+	return vsa
+}
+
+func (vsa *VerificationCodeSentAssertion) AssertEmail(t *testing.T, expected string) *VerificationCodeSentAssertion {
+	t.Helper()
+	assert.Equal(t, expected, vsa.event.Email, "Expected registration email to be %s, got %s", expected, vsa.event.Email)
+	return vsa
+}
+
+func (vsa *VerificationCodeSentAssertion) AssertVerificationCode(t *testing.T, expected string) *VerificationCodeSentAssertion {
+	t.Helper()
+	assert.Equal(
+		t,
+		expected,
+		vsa.event.VerificationCode,
+		"Expected registration verification code to be %s, got %s",
+		expected,
+		vsa.event.VerificationCode,
+	)
+	return vsa
+}
+
+func (vsa *VerificationCodeSentAssertion) AssertVerificationCodeNotEmpty(t *testing.T) *VerificationCodeSentAssertion {
+	t.Helper()
+	assert.NotEmpty(t, vsa.event.VerificationCode, "Expected registration verification code to not be empty")
+	return vsa
 }

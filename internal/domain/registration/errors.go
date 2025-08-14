@@ -17,6 +17,7 @@ var (
 	ErrInvalidVerificationCode            = errorx.NewValidationFieldFailed("verification_code").WithHTTPCode(http.StatusUnprocessableEntity)
 	ErrCodeExpired                        = errorx.NewValidationFieldFailed("verification_code")
 	ErrInvalidStatus                      = errorx.NewValidationFieldFailed("status").WithHTTPCode(http.StatusUnprocessableEntity)
+	ErrRegistrationCompleted              = errorx.NewAlreadyProcessed()
 	ErrWaitUntilResend                    = errorx.NewRateLimitExceeded()
 	ErrPersistentTooManyAttempts          = errorx.NewPersistable(errorx.NewRateLimitExceeded())
 	ErrPersistentVerificationCodeMismatch = errorx.NewPersistable(

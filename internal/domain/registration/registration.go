@@ -272,13 +272,19 @@ func (r *Registration) ResendCode() error {
 		return fmt.Errorf("%w: time left until next resend: %s", ErrWaitUntilResend, time.Until(r.resendTimeout).String())
 	}
 
+	if r.IsCompleted() {
+		return ErrRegistrationCompleted
+	}
+
 	code, err := generateCode()
 	if err != nil {
 		return fmt.Errorf("failed to generate new verification code: %w", err)
 	}
+	fmt.Println("Generated new verification code:", code)
 
 	r.verificationCode = code
 	r.codeExpiresAt = time.Now().UTC().Add(10 * time.Minute)
+	r.resendTimeout = time.Now().UTC().Add(ResendTimeout)
 	r.codeAttempts = 0
 	r.updatedAt = time.Now().UTC()
 	r.status = StatusPending

@@ -92,6 +92,11 @@ func (b *RegistrationBuilder) WithCodeAttempts(attempts int8) *RegistrationBuild
 	return b
 }
 
+func (b *RegistrationBuilder) WithMaxAttemptsReached() *RegistrationBuilder {
+	b.codeAttempts = registration.MaxVerificationCodeAttempts
+	return b
+}
+
 func (b *RegistrationBuilder) WithExpiredCode() *RegistrationBuilder {
 	b.codeExpiresAt = time.Now().Add(-1 * time.Hour)
 	return b
@@ -99,6 +104,11 @@ func (b *RegistrationBuilder) WithExpiredCode() *RegistrationBuilder {
 
 func (b *RegistrationBuilder) WithResendAvailable() *RegistrationBuilder {
 	b.resendTimeout = time.Now().Add(-1 * time.Minute)
+	return b
+}
+
+func (b *RegistrationBuilder) WithResendNotAvailable() *RegistrationBuilder {
+	b.resendTimeout = time.Now().Add(1 * time.Minute)
 	return b
 }
 

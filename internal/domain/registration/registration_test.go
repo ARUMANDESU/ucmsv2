@@ -367,6 +367,7 @@ func TestRegistration_ResendCode(t *testing.T) {
 			AssertEmail(t, reg.email).
 			AssertVerificationCodeIsNot(t, originalCode).
 			AssertCodeAttempts(t, 0).
+            AssertResendNotAvailable(t).
 			AssertEventsCount(t, 1)
 
 		events := reg.GetUncommittedEvents()
