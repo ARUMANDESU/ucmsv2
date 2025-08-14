@@ -69,7 +69,7 @@ func (p *Port) Run(ctx context.Context, handlers AppEventHandlers) error {
 		return fmt.Errorf("student registration completed handler is nil")
 	}
 
-	err := p.eventGroupProcessor.AddHandlersGroup("emial-event-group",
+	err := p.eventGroupProcessor.AddHandlersGroup("email-event-group",
 		cqrs.NewEventHandler("OnRegistrationStarted", handlers.Mail.RegistrationStarted.Handle),
 	)
 	if err != nil {

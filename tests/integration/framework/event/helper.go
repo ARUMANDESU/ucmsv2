@@ -150,13 +150,21 @@ func (h *Helper) ClearAllEvents(t *testing.T) {
 
 	tables := []string{
 		"watermill_events_registration",
-		"watermill_offsets_events_registration",
 		"watermill_events_student",
+	}
+
+	offsetTables := []string{
+		"watermill_offsets_events_registration",
 		"watermill_offsets_events_student",
 	}
 
 	for _, table := range tables {
-		_, err := h.pool.Exec(context.Background(), fmt.Sprintf("TRUNCATE TABLE %s", table))
+		_, err := h.pool.Exec(t.Context(), fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY", table))
+		require.NoError(t, err)
+	}
+
+	for _, table := range offsetTables {
+		_, err := h.pool.Exec(t.Context(), `UPDATE `+table+` SET offset_acked = 0, last_processed_transaction_id = '0'::xid8`)
 		require.NoError(t, err)
 	}
 }

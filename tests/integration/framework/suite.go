@@ -211,7 +211,6 @@ func (s *IntegrationTestSuite) startWatermillRouter() {
 			s.T().Logf("Watermill router failed: %v", err)
 		}
 		s.T().Log("Watermill router stopped")
-		s.routerRunning.Store(false)
 	}()
 
 	select {
@@ -278,9 +277,9 @@ func (s *IntegrationTestSuite) AfterTest(suiteName, testName string) {
 	// 	fmt.Println("")
 	// }
 	s.T().Logf("Cleaning up after test: %s.%s", suiteName, testName)
+	s.Event.ClearAllEvents(s.T())
 	s.traceRecorder.Reset()
 	s.DB.TruncateAll(s.T())
-	// s.Event.ClearAllEvents(s.T())
 	s.MockMailSender.Reset()
 }
 
