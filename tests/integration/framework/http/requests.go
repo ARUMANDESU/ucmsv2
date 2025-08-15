@@ -34,3 +34,11 @@ func (h *Helper) CompleteStudentRegistration(t *testing.T, req registrationhttp.
 		Body:   req,
 	})
 }
+
+func (h *Helper) ResendVerificationCode(t *testing.T, email string) *Response {
+	return h.Do(t, Request{
+		Method: "POST",
+		Path:   "/v1/registrations/resend",
+		Body:   map[string]string{"email": email},
+	})
+}

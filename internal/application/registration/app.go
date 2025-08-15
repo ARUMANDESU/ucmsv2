@@ -14,6 +14,7 @@ type Command struct {
 	Verify          *cmd.VerifyHandler
 	StartStudent    *cmd.StartStudentHandler
 	StudentComplete *cmd.StudentCompleteHandler
+	ResendCode      *cmd.ResendCodeHandler
 }
 
 type Event struct{}
@@ -40,6 +41,10 @@ func NewApp(args Args) *App {
 				UserGetter:       args.UserGetter,
 				RegistrationRepo: args.Repo,
 				GroupGetter:      args.GroupGetter,
+			}),
+			ResendCode: cmd.NewResendCodeHandler(cmd.ResendCodeHandlerArgs{
+				Repo:       args.Repo,
+				UserGetter: args.UserGetter,
 			}),
 		},
 		Event: Event{},

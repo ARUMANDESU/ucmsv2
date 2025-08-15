@@ -49,7 +49,7 @@ func NewResendCodeHandler(args ResendCodeHandlerArgs) *ResendCodeHandler {
 	}
 }
 
-func (h *ResendCodeHandler) Handle(ctx context.Context, cmd *ResendCode) error {
+func (h *ResendCodeHandler) Handle(ctx context.Context, cmd ResendCode) error {
 	ctx, span := h.tracer.Start(ctx, "ResendCodeHandler.Handle")
 	defer span.End()
 

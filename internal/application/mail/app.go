@@ -13,7 +13,9 @@ type App struct {
 }
 
 type Event struct {
-	RegistrationStarted *event.RegistrationStartedHandler
+	RegistrationStarted    *event.RegistrationStartedHandler
+	VerificationCodeResent *event.VerificationCodeResentHandler
+	StudentRegistered      *event.StudentRegisteredHandler
 }
 
 type Args struct {
@@ -26,6 +28,16 @@ func NewApp(args Args) *App {
 	return &App{
 		Event: Event{
 			RegistrationStarted: event.NewRegistrationStartedHandler(event.RegistrationStartedHandlerArgs{
+				Mailsender: args.Mailsender,
+				Tracer:     args.Tracer,
+				Logger:     args.Logger,
+			}),
+			VerificationCodeResent: event.NewVerificationCodeResentHandler(event.VerificationCodeResentHandlerArgs{
+				Mailsender: args.Mailsender,
+				Tracer:     args.Tracer,
+				Logger:     args.Logger,
+			}),
+			StudentRegistered: event.NewStudentRegisteredHandler(event.StudentRegisteredHandlerArgs{
 				Mailsender: args.Mailsender,
 				Tracer:     args.Tracer,
 				Logger:     args.Logger,

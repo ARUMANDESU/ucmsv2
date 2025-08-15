@@ -17,6 +17,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
+	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 	"github.com/ARUMANDESU/ucms/tests/integration/framework"
 	"github.com/ARUMANDESU/ucms/tests/integration/framework/db"
@@ -72,6 +73,7 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 		s.Equal(email, mails[0].To)
 		s.Contains(mails[0].Subject, "Email Verification Code")
 		s.Contains(mails[0].Body, reg.GetVerificationCode())
+		s.MockMailSender.Reset()
 	})
 
 	s.T().Run("Complete Registration", func(t *testing.T) {
@@ -119,6 +121,75 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 	s.T().Run("Verify Registration Status", func(t *testing.T) {
 		s.DB.RequireRegistrationExists(t, email).
 			HasStatus(registration.StatusCompleted)
+	})
+
+	s.T().Run("Verify Welcome Email Sent", func(t *testing.T) {
+		s.Require().Eventually(func() bool {
+			mails := s.MockMailSender.GetSentMails()
+			return len(mails) > 0
+		}, 5*time.Second, 100*time.Millisecond, "Welcome email should be sent within 5 seconds")
+
+		mails := s.MockMailSender.GetSentMails()
+		s.Require().Len(mails, 1)
+		s.Equal(email, mails[0].To)
+		s.Contains(mails[0].Subject, "Welcome to UCMS")
+		s.Contains(mails[0].Body, fixtures.TestStudent.FirstName)
+		s.MockMailSender.Reset()
+	})
+}
+
+func (s *RegistrationIntegrationSuite) TestStudentRegistrationWithResend() {
+	email := "resend@test.com"
+
+	s.T().Run("resend", func(t *testing.T) {
+		reg := builders.NewRegistrationBuilder().
+			WithEmail(email).
+			WithResendAvailable().
+			Build()
+		s.DB.SeedRegistration(t, reg)
+
+		s.HTTP.ResendVerificationCode(t, email).AssertAccepted()
+
+		e := event.RequireEvent(t, s.Event, &registration.VerificationCodeResent{})
+		registration.NewVerificationCodeSentAssertion(e).
+			AssertEmail(t, email).
+			AssertRegistrationID(t, reg.ID()).
+			AssertVerificationCodeNotEqual(t, reg.VerificationCode()).
+			AssertVerificationCodeNotEmpty(t)
+
+		s.Require().Eventually(func() bool {
+			mails := s.MockMailSender.GetSentMails()
+			return len(mails) > 0
+		}, 5*time.Second, 100*time.Millisecond, "Email should be sent within 5 seconds")
+
+		mails := s.MockMailSender.GetSentMails()
+		s.Require().Len(mails, 1)
+		s.Equal(email, mails[0].To)
+		s.Contains(mails[0].Subject, "Verification Code Resent")
+		s.Contains(mails[0].Body, e.VerificationCode)
+		s.MockMailSender.Reset()
+	})
+
+	s.T().Run("resend again, should fail", func(t *testing.T) {
+		s.HTTP.ResendVerificationCode(t, email).AssertStatus(http.StatusTooManyRequests)
+	})
+}
+
+func (s *RegistrationIntegrationSuite) TestStudentRegistration_FailPath() {
+	s.T().Run("resend timeout is not passed", func(t *testing.T) {
+		email := "resend@test.com"
+		reg := builders.NewRegistrationBuilder().
+			WithEmail(email).
+			WithResendNotAvailable().
+			Build()
+		s.DB.SeedRegistration(s.T(), reg)
+
+		s.HTTP.ResendVerificationCode(t, email).AssertStatus(http.StatusTooManyRequests)
+	})
+
+	s.T().Run("registration not exists", func(t *testing.T) {
+		email := "notexists@test.com"
+		s.HTTP.ResendVerificationCode(t, email).AssertStatus(http.StatusNotFound)
 	})
 }
 

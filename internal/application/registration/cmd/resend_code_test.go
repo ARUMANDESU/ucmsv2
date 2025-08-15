@@ -50,7 +50,7 @@ func TestResendCodeHandler_HappyPath(t *testing.T) {
 		originalCode := reg.VerificationCode()
 		s.MockRepo.SeedRegistration(t, reg)
 
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: reg.Email(),
 		}
 
@@ -82,7 +82,7 @@ func TestResendCodeHandler_HappyPath(t *testing.T) {
 		originalCode := reg.VerificationCode()
 		s.MockRepo.SeedRegistration(t, reg)
 
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: reg.Email(),
 		}
 
@@ -114,7 +114,7 @@ func TestResendCodeHandler_HappyPath(t *testing.T) {
 		originalCode := reg.VerificationCode()
 		s.MockRepo.SeedRegistration(t, reg)
 
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: email,
 		}
 
@@ -142,7 +142,7 @@ func TestResendCodeHandler_ErrorCases(t *testing.T) {
 	s := NewResendCodeSuite(t)
 
 	t.Run("empty email", func(t *testing.T) {
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: "",
 		}
 
@@ -158,7 +158,7 @@ func TestResendCodeHandler_ErrorCases(t *testing.T) {
 			Build()
 		s.MockUserRepo.SeedUser(t, existingUser)
 
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: email,
 		}
 
@@ -170,7 +170,7 @@ func TestResendCodeHandler_ErrorCases(t *testing.T) {
 	t.Run("registration not found", func(t *testing.T) {
 		email := "nonexistent@test.com"
 
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: email,
 		}
 
@@ -187,7 +187,7 @@ func TestResendCodeHandler_ErrorCases(t *testing.T) {
 			Build()
 		s.MockRepo.SeedRegistration(t, reg)
 
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: email,
 		}
 
@@ -205,7 +205,7 @@ func TestResendCodeHandler_ErrorCases(t *testing.T) {
 			Build()
 		s.MockRepo.SeedRegistration(t, reg)
 
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: email,
 		}
 
@@ -221,7 +221,7 @@ func TestResendCodeHandler_EdgeCases(t *testing.T) {
 	s := NewResendCodeSuite(t)
 
 	t.Run("whitespace only email", func(t *testing.T) {
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: "   ",
 		}
 
@@ -239,7 +239,7 @@ func TestResendCodeHandler_EdgeCases(t *testing.T) {
 		originalCode := reg.VerificationCode()
 		s.MockRepo.SeedRegistration(t, reg)
 
-		cmd := &ResendCode{
+		cmd := ResendCode{
 			Email: email,
 		}
 

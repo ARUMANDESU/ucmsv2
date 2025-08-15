@@ -19,6 +19,11 @@ type Password = string
 // RegistrationEmailVerificationcode defines model for RegistrationEmailVerificationcode.
 type RegistrationEmailVerificationcode = string
 
+// PostV1RegistrationsResendJSONBody defines parameters for PostV1RegistrationsResend.
+type PostV1RegistrationsResendJSONBody struct {
+	Email openapi_types.Email `json:"email"`
+}
+
 // PostV1RegistrationsStudentsCompleteJSONBody defines parameters for PostV1RegistrationsStudentsComplete.
 type PostV1RegistrationsStudentsCompleteJSONBody struct {
 	Barcode          Barcode                           `json:"barcode"`
@@ -50,6 +55,9 @@ type PostV1RegistrationsVerifyJSONBody struct {
 type PostV1RegistrationsVerifyParams struct {
 	IdempotencyKey openapi_types.UUID `json:"Idempotency-Key"`
 }
+
+// PostV1RegistrationsResendJSONRequestBody defines body for PostV1RegistrationsResend for application/json ContentType.
+type PostV1RegistrationsResendJSONRequestBody PostV1RegistrationsResendJSONBody
 
 // PostV1RegistrationsStudentsCompleteJSONRequestBody defines body for PostV1RegistrationsStudentsComplete for application/json ContentType.
 type PostV1RegistrationsStudentsCompleteJSONRequestBody PostV1RegistrationsStudentsCompleteJSONBody

@@ -18,6 +18,13 @@ const (
 
 type ID string
 
+func (id ID) String() string {
+	if id == "" {
+		return ""
+	}
+	return string(id)
+}
+
 type User struct {
 	event.Recorder
 	id        ID

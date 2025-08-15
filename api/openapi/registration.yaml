@@ -1,629 +1,499 @@
-{
-  "openapi": "3.0.1",
-  "info": {
-    "title": "ucms",
-    "description": "",
-    "version": "1.0.0"
-  },
-  "tags": [
-    {
-      "name": "v1"
-    },
-    {
-      "name": "registrations"
-    },
-    {
-      "name": "students"
-    }
-  ],
-  "paths": {
-    "/v1/registrations/students/start": {
-      "post": {
-        "summary": "Start student registration",
-        "deprecated": false,
-        "description": "",
-        "tags": [
-          "v1",
-          "registrations",
-          "students"
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "description": "",
-            "required": true,
-            "example": "",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "format": "email",
-                    "maxLength": 254
-                  }
-                },
-                "required": [
-                  "email"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Email is required",
-                  "code": "INVALID_INPUT",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          },
-          "409": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "A request with this key is already being processed",
-                  "code": "IDEMPOTENCY_KEY_IN_PROGRESS",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          },
-          "422": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "",
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "This operation cannot be completed"
-                    },
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "code": {
-                      "type": "string",
-                      "const": "IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD"
-                    }
-                  },
-                  "required": [
-                    "message",
-                    "success",
-                    "code"
-                  ]
-                },
-                "example": {
-                  "message": "This operation cannot be completed",
-                  "code": "IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          },
-          "429": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Too many requests",
-                  "success": false,
-                  "code": "RATE_LIMIT_EXCEEDED"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "500": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Internal Server Error",
-                  "success": false,
-                  "code": "INTERNAL_ERROR"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "x-400:Idempotency key is required": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Idempotency key is required for this operation",
-                  "code": "IDEMPOTENCY_KEY_MISSING",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          }
-        },
-        "security": []
-      }
-    },
-    "/v1/registrations/verify": {
-      "post": {
-        "summary": "Verify registration email",
-        "deprecated": false,
-        "description": "",
-        "tags": [
-          "v1",
-          "registrations"
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "description": "",
-            "required": true,
-            "example": "",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "format": "email"
-                  },
-                  "verification_code": {
-                    "$ref": "#/components/schemas/RegistrationEmailVerificationcode"
-                  }
-                },
-                "required": [
-                  "email",
-                  "verification_code"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "409": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "A request with this key is already being processed",
-                  "code": "IDEMPOTENCY_KEY_IN_PROGRESS",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          },
-          "422": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Invalid verification code",
-                  "success": true,
-                  "code": "INVALID_VERIFICATION_CODE"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "429": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Too many requests",
-                  "success": false,
-                  "code": "RATE_LIMIT_EXCEEDED"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "500": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Internal Server Error",
-                  "success": false,
-                  "code": "INTERNAL_ERROR"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "x-422:Idempotency key mismatch": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "",
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "This operation cannot be completed"
-                    },
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "code": {
-                      "type": "string",
-                      "const": "IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD"
-                    }
-                  },
-                  "required": [
-                    "message",
-                    "success",
-                    "code"
-                  ]
-                },
-                "example": {
-                  "message": "This operation cannot be completed",
-                  "code": "IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          },
-          "x-400:Idempotency key is required": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Idempotency key is required for this operation",
-                  "code": "IDEMPOTENCY_KEY_MISSING",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          }
-        },
-        "security": []
-      }
-    },
-    "/v1/registrations/students/complete": {
-      "post": {
-        "summary": "Complete student registration",
-        "deprecated": false,
-        "description": "",
-        "tags": [
-          "v1",
-          "registrations",
-          "students"
-        ],
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "format": "email"
-                  },
-                  "verification_code": {
-                    "$ref": "#/components/schemas/RegistrationEmailVerificationcode"
-                  },
-                  "barcode": {
-                    "$ref": "#/components/schemas/Barcode"
-                  },
-                  "first_name": {
-                    "type": "string"
-                  },
-                  "last_name": {
-                    "type": "string"
-                  },
-                  "password": {
-                    "$ref": "#/components/schemas/Password"
-                  },
-                  "group_id": {
-                    "$ref": "#/components/schemas/GroupID"
-                  }
-                },
-                "required": [
-                  "email",
-                  "verification_code",
-                  "barcode",
-                  "first_name",
-                  "last_name",
-                  "password",
-                  "group_id"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Password must contain at least 8 characters with uppercase, lowercase, number, and special character",
-                  "success": false,
-                  "code": "PASSWORD_FORMAT_INVALID"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "409": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "User Already Exists",
-                  "success": false,
-                  "code": "DUPLICATE_ENTRY"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "422": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "",
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "This operation cannot be completed"
-                    },
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "code": {
-                      "type": "string",
-                      "const": "IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD"
-                    }
-                  },
-                  "required": [
-                    "message",
-                    "success",
-                    "code"
-                  ]
-                },
-                "example": {
-                  "message": "This operation cannot be completed",
-                  "code": "IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          },
-          "429": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Too many requests",
-                  "success": false,
-                  "code": "RATE_LIMIT_EXCEEDED"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "500": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Internal Server Error",
-                  "success": false,
-                  "code": "INTERNAL_ERROR"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "x-409:Idempotency already being processed": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "A request with this key is already being processed",
-                  "code": "IDEMPOTENCY_KEY_IN_PROGRESS",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          },
-          "x-400:Idempotency key is required": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Default%20JSON%20Response"
-                },
-                "example": {
-                  "message": "Idempotency key is required for this operation",
-                  "code": "IDEMPOTENCY_KEY_MISSING",
-                  "success": false
-                }
-              }
-            },
-            "headers": {}
-          }
-        },
-        "security": []
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "Default JSON Response": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string"
-          },
-          "success": {
-            "type": "boolean",
-            "default": false
-          },
-          "code": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "message",
-          "success"
-        ]
-      },
-      "RegistrationEmailVerificationcode": {
-        "type": "string",
-        "pattern": "^[A-Z0-9]+",
-        "minLength": 6,
-        "maxLength": 6,
-        "example": "VALID1"
-      },
-      "Barcode": {
-        "type": "string"
-      },
-      "GroupID": {
-        "type": "string",
-        "format": "uuid"
-      },
-      "Password": {
-        "type": "string",
-        "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
-        "format": "password",
-        "minLength": 8
-      }
-    },
-    "securitySchemes": {}
-  },
-  "servers": [],
-  "security": []
-}
+openapi: 3.0.1
+info:
+  title: ucms
+  description: ''
+  version: 1.0.0
+tags:
+  - name: v1
+  - name: registrations
+  - name: students
+paths:
+  /v1/registrations/students/start:
+    post:
+      summary: Start student registration
+      deprecated: false
+      description: ''
+      tags:
+        - v1
+        - registrations
+        - students
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          description: ''
+          required: true
+          example: ''
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 254
+              required:
+                - email
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Email is required
+                code: INVALID_INPUT
+                success: false
+          headers: {}
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: A request with this key is already being processed
+                code: IDEMPOTENCY_KEY_IN_PROGRESS
+                success: false
+          headers: {}
+        '422':
+          description: ''
+          content:
+            application/json:
+              schema:
+                title: ''
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: This operation cannot be completed
+                  success:
+                    type: boolean
+                    default: false
+                  code:
+                    type: string
+                    const: IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD
+                required:
+                  - message
+                  - success
+                  - code
+              example:
+                message: This operation cannot be completed
+                code: IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD
+                success: false
+          headers: {}
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Too many requests
+                success: false
+                code: RATE_LIMIT_EXCEEDED
+          headers: {}
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Internal Server Error
+                success: false
+                code: INTERNAL_ERROR
+          headers: {}
+        x-400:Idempotency key is required:
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Idempotency key is required for this operation
+                code: IDEMPOTENCY_KEY_MISSING
+                success: false
+          headers: {}
+      security: []
+  /v1/registrations/verify:
+    post:
+      summary: Verify registration email
+      deprecated: false
+      description: ''
+      tags:
+        - v1
+        - registrations
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          description: ''
+          required: true
+          example: ''
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                verification_code:
+                  $ref: '#/components/schemas/RegistrationEmailVerificationcode'
+              required:
+                - email
+                - verification_code
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: A request with this key is already being processed
+                code: IDEMPOTENCY_KEY_IN_PROGRESS
+                success: false
+          headers: {}
+        '422':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Invalid verification code
+                success: true
+                code: INVALID_VERIFICATION_CODE
+          headers: {}
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Too many requests
+                success: false
+                code: RATE_LIMIT_EXCEEDED
+          headers: {}
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Internal Server Error
+                success: false
+                code: INTERNAL_ERROR
+          headers: {}
+        x-422:Idempotency key mismatch:
+          description: ''
+          content:
+            application/json:
+              schema:
+                title: ''
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: This operation cannot be completed
+                  success:
+                    type: boolean
+                    default: false
+                  code:
+                    type: string
+                    const: IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD
+                required:
+                  - message
+                  - success
+                  - code
+              example:
+                message: This operation cannot be completed
+                code: IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD
+                success: false
+          headers: {}
+        x-400:Idempotency key is required:
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Idempotency key is required for this operation
+                code: IDEMPOTENCY_KEY_MISSING
+                success: false
+          headers: {}
+      security: []
+  /v1/registrations/students/complete:
+    post:
+      summary: Complete student registration
+      deprecated: false
+      description: ''
+      tags:
+        - v1
+        - registrations
+        - students
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                verification_code:
+                  $ref: '#/components/schemas/RegistrationEmailVerificationcode'
+                barcode:
+                  $ref: '#/components/schemas/Barcode'
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                password:
+                  $ref: '#/components/schemas/Password'
+                group_id:
+                  $ref: '#/components/schemas/GroupID'
+              required:
+                - email
+                - verification_code
+                - barcode
+                - first_name
+                - last_name
+                - password
+                - group_id
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: >-
+                  Password must contain at least 8 characters with uppercase,
+                  lowercase, number, and special character
+                success: false
+                code: PASSWORD_FORMAT_INVALID
+          headers: {}
+        '409':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: User Already Exists
+                success: false
+                code: DUPLICATE_ENTRY
+          headers: {}
+        '422':
+          description: ''
+          content:
+            application/json:
+              schema:
+                title: ''
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: This operation cannot be completed
+                  success:
+                    type: boolean
+                    default: false
+                  code:
+                    type: string
+                    const: IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD
+                required:
+                  - message
+                  - success
+                  - code
+              example:
+                message: This operation cannot be completed
+                code: IDEMPOTENCY_KEY_REUSED_DIFFERENT_PAYLOAD
+                success: false
+          headers: {}
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Too many requests
+                success: false
+                code: RATE_LIMIT_EXCEEDED
+          headers: {}
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Internal Server Error
+                success: false
+                code: INTERNAL_ERROR
+          headers: {}
+        x-409:Idempotency already being processed:
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: A request with this key is already being processed
+                code: IDEMPOTENCY_KEY_IN_PROGRESS
+                success: false
+          headers: {}
+        x-400:Idempotency key is required:
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Idempotency key is required for this operation
+                code: IDEMPOTENCY_KEY_MISSING
+                success: false
+          headers: {}
+      security: []
+  /v1/registrations/resend:
+    post:
+      summary: Resend email verification code
+      deprecated: false
+      description: ''
+      tags:
+        - v1
+        - registrations
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+                - email
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Too many requests
+                success: false
+                code: RATE_LIMIT_EXCEEDED
+          headers: {}
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Internal Server Error
+                success: false
+                code: INTERNAL_ERROR
+          headers: {}
+      security: []
+components:
+  schemas:
+    Default JSON Response:
+      type: object
+      properties:
+        message:
+          type: string
+        success:
+          type: boolean
+          default: false
+        code:
+          type: string
+      required:
+        - message
+        - success
+    RegistrationEmailVerificationcode:
+      type: string
+      pattern: ^[A-Z0-9]+
+      minLength: 6
+      maxLength: 6
+      example: VALID1
+    Barcode:
+      type: string
+    GroupID:
+      type: string
+      format: uuid
+    Password:
+      type: string
+      pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$
+      format: password
+      minLength: 8
+  securitySchemes: {}
+servers: []
+security: []

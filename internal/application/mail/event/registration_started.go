@@ -57,6 +57,10 @@ func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration
 		return nil
 	}
 
+	l := h.logger.With(
+		slog.String("event", "RegistrationStarted"),
+		slog.String("registration.id", e.RegistrationID.String()),
+	)
 	ctx, span := h.tracer.Start(
 		ctx,
 		"RegistrationStartedHandler.Handle",
@@ -69,11 +73,13 @@ func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration
 	if e.Email == "" {
 		span.RecordError(errors.New("email is empty"))
 		span.SetStatus(codes.Error, "email is empty")
+		l.ErrorContext(ctx, "Email is empty")
 		return errors.New("email is empty")
 	}
 	if e.VerificationCode == "" {
 		span.RecordError(errors.New("verification code is empty"))
 		span.SetStatus(codes.Error, "verification code is empty")
+		l.ErrorContext(ctx, "Verification code is empty")
 		return errors.New("verification code is empty")
 	}
 
@@ -85,6 +91,7 @@ func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration
 	if err := h.mailsender.SendMail(ctx, payload); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to send email verification code")
+		l.ErrorContext(ctx, "Failed to send email verification code", slog.Any("error", err))
 		return fmt.Errorf("failed to send email verification code: %w", err)
 	}
 

@@ -52,6 +52,7 @@ func (h *HTTP) Route(r chi.Router) {
 	r.Post("/v1/registrations/verify", h.Verify)
 	r.Post("/v1/registrations/students/start", h.StartStudentRegistration)
 	r.Post("/v1/registrations/students/complete", h.CompleteStudentRegistration)
+	r.Post("/v1/registrations/resend", h.ResendVerificationCode)
 }
 
 func (h *HTTP) StartStudentRegistration(w http.ResponseWriter, r *http.Request) {
@@ -120,4 +121,23 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 	}
 
 	httpx.Success(w, r, http.StatusOK, nil)
+}
+
+func (h *HTTP) ResendVerificationCode(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.tracer.Start(r.Context(), "ResendVerificationCode")
+	defer span.End()
+
+	var body PostV1RegistrationsResendJSONRequestBody
+	if err := httpx.ReadJSON(w, r, &body); err != nil {
+		httpx.BadRequest(w, r, err.Error())
+		return
+	}
+
+	cmd := cmd.ResendCode{Email: string(body.Email)}
+	if err := h.cmd.ResendCode.Handle(ctx, cmd); err != nil {
+		h.errhandler.HandleError(w, r, err)
+		return
+	}
+
+	httpx.Success(w, r, http.StatusAccepted, nil)
 }

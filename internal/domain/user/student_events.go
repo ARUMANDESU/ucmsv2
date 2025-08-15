@@ -12,6 +12,7 @@ const (
 
 type StudentRegistered struct {
 	event.Header
+	event.Otel
 	StudentID ID
 	Email     string
 	FirstName string

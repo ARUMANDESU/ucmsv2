@@ -185,27 +185,27 @@ func (rsa *RegistrationStartedAssertion) AssertVerificationCodeNotEmpty(t *testi
 	return rsa
 }
 
-type VerificationCodeSentAssertion struct {
+type VerificationCodeResentAssertion struct {
 	event *VerificationCodeResent
 }
 
-func NewVerificationCodeSentAssertion(event *VerificationCodeResent) *VerificationCodeSentAssertion {
-	return &VerificationCodeSentAssertion{event: event}
+func NewVerificationCodeSentAssertion(event *VerificationCodeResent) *VerificationCodeResentAssertion {
+	return &VerificationCodeResentAssertion{event: event}
 }
 
-func (vsa *VerificationCodeSentAssertion) AssertRegistrationID(t *testing.T, expected ID) *VerificationCodeSentAssertion {
+func (vsa *VerificationCodeResentAssertion) AssertRegistrationID(t *testing.T, expected ID) *VerificationCodeResentAssertion {
 	t.Helper()
 	assert.Equal(t, expected, vsa.event.RegistrationID, "Expected registration ID to be %s, got %s", expected, vsa.event.RegistrationID)
 	return vsa
 }
 
-func (vsa *VerificationCodeSentAssertion) AssertEmail(t *testing.T, expected string) *VerificationCodeSentAssertion {
+func (vsa *VerificationCodeResentAssertion) AssertEmail(t *testing.T, expected string) *VerificationCodeResentAssertion {
 	t.Helper()
 	assert.Equal(t, expected, vsa.event.Email, "Expected registration email to be %s, got %s", expected, vsa.event.Email)
 	return vsa
 }
 
-func (vsa *VerificationCodeSentAssertion) AssertVerificationCode(t *testing.T, expected string) *VerificationCodeSentAssertion {
+func (vsa *VerificationCodeResentAssertion) AssertVerificationCode(t *testing.T, expected string) *VerificationCodeResentAssertion {
 	t.Helper()
 	assert.Equal(
 		t,
@@ -218,7 +218,20 @@ func (vsa *VerificationCodeSentAssertion) AssertVerificationCode(t *testing.T, e
 	return vsa
 }
 
-func (vsa *VerificationCodeSentAssertion) AssertVerificationCodeNotEmpty(t *testing.T) *VerificationCodeSentAssertion {
+func (vsa *VerificationCodeResentAssertion) AssertVerificationCodeNotEqual(t *testing.T, expected string) *VerificationCodeResentAssertion {
+	t.Helper()
+	assert.NotEqual(
+		t,
+		expected,
+		vsa.event.VerificationCode,
+		"Expected registration verification code not to be %s, got %s",
+		expected,
+		vsa.event.VerificationCode,
+	)
+	return vsa
+}
+
+func (vsa *VerificationCodeResentAssertion) AssertVerificationCodeNotEmpty(t *testing.T) *VerificationCodeResentAssertion {
 	t.Helper()
 	assert.NotEmpty(t, vsa.event.VerificationCode, "Expected registration verification code to not be empty")
 	return vsa

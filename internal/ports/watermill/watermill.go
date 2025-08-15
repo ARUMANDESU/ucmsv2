@@ -62,23 +62,14 @@ func NewPortForTest(router *message.Router, conn *pgxpool.Pool, wmlogger watermi
 }
 
 func (p *Port) Run(ctx context.Context, handlers AppEventHandlers) error {
-	if handlers.Mail.RegistrationStarted == nil {
-		return fmt.Errorf("mail registration started handler is nil")
-	}
-	if handlers.Student.StudentRegistrationCompleted == nil {
-		return fmt.Errorf("student registration completed handler is nil")
-	}
-
-	err := p.eventGroupProcessor.AddHandlersGroup("email-event-group",
-		cqrs.NewEventHandler("OnRegistrationStarted", handlers.Mail.RegistrationStarted.Handle),
+	err := p.eventProcessor.AddHandlers(
+		cqrs.NewEventHandler("MailOnRegistrationStarted", handlers.Mail.RegistrationStarted.Handle),
+		cqrs.NewEventHandler("MailOnVerificationCodeResent", handlers.Mail.VerificationCodeResent.Handle),
+		cqrs.NewEventHandler("StudentOnStudentRegistrationCompleted", handlers.Student.StudentRegistrationCompleted.Handle),
+		cqrs.NewEventHandler("MailOnStudentRegistered", handlers.Mail.StudentRegistered.Handle),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to add registration started handler: %w", err)
-	}
-
-	err = p.eventProcessor.AddHandlers(cqrs.NewEventHandler("OnStudentRegistrationCompleted", handlers.Student.StudentRegistrationCompleted.Handle))
-	if err != nil {
-		return fmt.Errorf("failed to add student event handler: %w", err)
+		return fmt.Errorf("failed to add event handlers: %w", err)
 	}
 
 	return nil
