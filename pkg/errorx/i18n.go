@@ -62,6 +62,11 @@ func (e *I18nError) WithCause(cause error) *I18nError {
 	return e
 }
 
+func (e *I18nError) WithKey(key string) *I18nError {
+	e.MessageKey = key
+	return e
+}
+
 func New(messageKey string) *I18nError {
 	return &I18nError{
 		MessageKey:  messageKey,

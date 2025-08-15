@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 )
@@ -104,6 +106,10 @@ func (u *User) SetAvatarURL(avatarURL string) error {
 	u.avatarURL = avatarURL
 	u.updatedAt = time.Now().UTC()
 	return nil
+}
+
+func (u *User) ComparePassword(password string) error {
+	return bcrypt.CompareHashAndPassword(u.passHash, []byte(password))
 }
 
 func (u *User) ID() ID {
