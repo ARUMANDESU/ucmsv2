@@ -92,8 +92,10 @@ type Login struct {
 }
 
 type LoginResponse struct {
-	AccessToken  string
-	RefreshToken string
+	AccessToken     string
+	RefreshToken    string
+	AccessTokenExp  time.Duration
+	RefreshTokenExp time.Duration
 }
 
 // LoginHandle handles user login logic and return access jwt token
@@ -153,13 +155,14 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 	}
 
 	return LoginResponse{
-		AccessToken:  accessjwt,
-		RefreshToken: refreshjwt,
+		AccessToken:     accessjwt,
+		RefreshToken:    refreshjwt,
+		AccessTokenExp:  a.accessTokenExpDuration,
+		RefreshTokenExp: a.refreshTokenExpDuration,
 	}, nil
 }
 
 type Refresh struct {
-	AccessToken  string
 	RefreshToken string
 }
 
@@ -167,12 +170,6 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 	ctx, span := a.tracer.Start(ctx, "App.RefreshHandle")
 	defer span.End()
 
-	accessToken, err := jwt.Parse(cmd.RefreshToken, func(t *jwt.Token) (any, error) {
-		return a.accessTokenSecretKey, nil
-	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
-	if err != nil {
-		return LoginResponse{}, fmt.Errorf("failed to parse access token: %w", err)
-	}
 	refreshToken, err := jwt.Parse(cmd.RefreshToken, func(t *jwt.Token) (any, error) {
 		return a.refreshTokenSecretKey, nil
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
@@ -194,32 +191,23 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 	if exp.Before(time.Now().UTC()) {
 		return LoginResponse{}, errorx.NewInvalidRequest().WithKey("refresh_token_expired")
 	}
-
-	accessClaims, ok := accessToken.Claims.(jwt.MapClaims)
+	userID, ok := refreshClaims["uid"].(string)
 	if !ok {
-		return LoginResponse{}, errorx.NewInvalidRequest().WithKey("invalid_access_token_claims")
+		return LoginResponse{}, errorx.NewInvalidCredentials()
 	}
 
-	if accessClaims["iss"] != "ucmsv2_auth" || accessClaims["sub"] != "user" {
-		return LoginResponse{}, errorx.NewInvalidRequest().WithKey("invalid_access_token_claims")
+	u, err := a.usergetter.GetUserByID(ctx, user.ID(userID))
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	uid, ok := accessClaims["uid"].(string)
-	if !ok {
-		return LoginResponse{}, errorx.NewInvalidRequest().WithKey("invalid_access_token_uid")
-	}
-	userRole, ok := accessClaims["user_role"].(string)
-	if !ok {
-		return LoginResponse{}, errorx.NewInvalidRequest().WithKey("invalid_access_token_user_role")
-	}
-
-	accessToken = jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"iss":       "ucmsv2_auth",
 		"sub":       "user",
 		"exp":       time.Now().Add(a.accessTokenExpDuration).UTC(),
 		"iat":       time.Now().UTC(),
-		"uid":       uid,
-		"user_role": userRole,
+		"uid":       u.ID().String(),
+		"user_role": u.Role().String(),
 	})
 
 	accessjwt, err := accessToken.SignedString(a.accessTokenSecretKey)
@@ -228,7 +216,9 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 	}
 
 	return LoginResponse{
-		AccessToken:  accessjwt,
-		RefreshToken: cmd.RefreshToken, // keep the same refresh token
+		AccessToken:     accessjwt,
+		RefreshToken:    cmd.RefreshToken, // keep the same refresh token
+		AccessTokenExp:  a.accessTokenExpDuration,
+		RefreshTokenExp: a.refreshTokenExpDuration,
 	}, nil
 }

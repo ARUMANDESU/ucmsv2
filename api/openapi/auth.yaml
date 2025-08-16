@@ -1,0 +1,202 @@
+openapi: 3.0.1
+info:
+  title: ucms
+  description: ''
+  version: 1.0.0
+tags:
+  - name: v1
+  - name: auth
+  - name: login
+  - name: jwt
+  - name: logout
+  - name: cookies
+paths:
+  /v1/auth/login:
+    post:
+      summary: Login
+      deprecated: false
+      description: ''
+      tags:
+        - v1
+        - auth
+        - login
+        - jwt
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email_barcode:
+                  anyOf:
+                    - type: string
+                      format: email
+                    - $ref: '#/components/schemas/Barcode'
+                password:
+                  type: string
+                  format: password
+              required:
+                - email_barcode
+                - password
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Too many requests
+                success: false
+                code: RATE_LIMIT_EXCEEDED
+          headers: {}
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Internal Server Error
+                success: false
+                code: INTERNAL_ERROR
+          headers: {}
+      security: []
+  /v1/auth/refresh:
+    post:
+      summary: Refresh access token
+      deprecated: false
+      description: ''
+      tags:
+        - v1
+        - auth
+        - jwt
+      parameters:
+        - name: ucmsv2_access
+          in: cookie
+          description: ''
+          required: false
+          example: ''
+          schema:
+            type: string
+        - name: ucmsv2_refresh
+          in: cookie
+          description: ''
+          required: false
+          example: ''
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Too many requests
+                success: false
+                code: RATE_LIMIT_EXCEEDED
+          headers: {}
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Internal Server Error
+                success: false
+                code: INTERNAL_ERROR
+          headers: {}
+      security:
+        - jwt: []
+  /v1/auth/logout:
+    post:
+      summary: Logout
+      deprecated: false
+      description: ''
+      tags:
+        - v1
+        - auth
+        - logout
+        - cookies
+        - jwt
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+          headers: {}
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Too many requests
+                success: false
+                code: RATE_LIMIT_EXCEEDED
+          headers: {}
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Internal Server Error
+                success: false
+                code: INTERNAL_ERROR
+          headers: {}
+      security: []
+components:
+  schemas:
+    Default JSON Response:
+      type: object
+      properties:
+        message:
+          type: string
+        success:
+          type: boolean
+          default: false
+        code:
+          type: string
+      required:
+        - message
+        - success
+    Barcode:
+      type: string
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+servers: []
+security: []
