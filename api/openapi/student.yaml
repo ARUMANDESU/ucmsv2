@@ -1,0 +1,143 @@
+openapi: 3.0.1
+info:
+  title: ucms
+  description: ''
+  version: 1.0.0
+tags:
+  - name: v1
+  - name: students
+  - name: me
+  - name: auth
+paths:
+  /v1/students/me:
+    get:
+      summary: Get Student
+      deprecated: false
+      description: ''
+      tags:
+        - v1
+        - students
+        - me
+        - auth
+      parameters:
+        - name: ucmsv2_access
+          in: cookie
+          description: access jwt token
+          required: false
+          example: ''
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  success:
+                    type: boolean
+                    default: false
+                  code:
+                    type: string
+                  student:
+                    type: object
+                    properties:
+                      barcode:
+                        $ref: '#/components/schemas/Barcode'
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                      avatar_url:
+                        type: string
+                      role:
+                        type: string
+                        enum:
+                          - student
+                          - aitusa
+                          - staff
+                      registered_at:
+                        type: string
+                        format: date-time
+                      group:
+                        type: object
+                        properties:
+                          id:
+                            description: ID
+                            $ref: '#/components/schemas/GroupID'
+                          name:
+                            type: string
+                          major:
+                            type: string
+                          year:
+                            type: string
+                        required:
+                          - id
+                          - name
+                          - major
+                          - year
+                    required:
+                      - barcode
+                      - first_name
+                      - last_name
+                      - email
+                      - avatar_url
+                      - role
+                      - registered_at
+                      - group
+                required:
+                  - message
+                  - success
+                  - student
+          headers: {}
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Too many requests
+                success: false
+                code: RATE_LIMIT_EXCEEDED
+          headers: {}
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Default%20JSON%20Response'
+              example:
+                message: Internal Server Error
+                success: false
+                code: INTERNAL_ERROR
+          headers: {}
+      security: []
+components:
+  schemas:
+    Barcode:
+      type: string
+    GroupID:
+      type: string
+      format: uuid
+    Default JSON Response:
+      type: object
+      properties:
+        message:
+          type: string
+        success:
+          type: boolean
+          default: false
+        code:
+          type: string
+      required:
+        - message
+        - success
+  securitySchemes: {}
+servers: []
+security: []

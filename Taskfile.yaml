@@ -7,7 +7,7 @@ tasks:
   openapi_http:
     cmds:
       - ./scripts/openapi-http.sh registration internal/ports/http registrationhttp
-      - ./scripts/openapi-http.sh auth internal/ports/http authhttp
+      - ./scripts/openapi-http.sh student internal/ports/http studenthttp
   http:
     cmds:
       - cmd: go run ./cmd/api/
