@@ -1,0 +1,238 @@
+
+# ---- core ----
+
+[validation_required]
+other = "бос болмауы тиіс"
+
+[validation_nil_or_not_empty_required]
+other = "бос болмауы тиіс"
+
+[validation_nil]
+other = "бос болуы тиіс"
+
+[validation_empty]
+other = "бос болуы тиіс"
+
+[validation_in_invalid]
+other = "жарамды мән болуы тиіс"
+
+[validation_not_in_invalid]
+other = "тізімде болмауы тиіс"
+
+[validation_match_invalid]
+other = "дұрыс пішімде болуы тиіс"
+
+[validation_multiple_of_invalid]
+other = "{{.base}} еселенген болуы тиіс"
+
+[validation_length_too_long]
+other = "ұзындығы {{.max}}-тен аспауы тиіс"
+
+[validation_length_too_short]
+other = "ұзындығы кемінде {{.min}} болуы тиіс"
+
+[validation_length_invalid]
+other = "ұзындығы дәл {{.min}} болуы тиіс"
+
+[validation_length_out_of_range]
+other = "ұзындығы {{.min}}–{{.max}} аралығында болуы тиіс"
+
+[validation_length_empty_required]
+other = "мән бос болуы тиіс"
+
+[validation_min_greater_equal_than_required]
+other = "кемінде {{.threshold}} болуы тиіс"
+
+[validation_max_less_equal_than_required]
+other = "ең көбі {{.threshold}} болуы тиіс"
+
+[validation_min_greater_than_required]
+other = "{{.threshold}}-тен үлкен болуы тиіс"
+
+[validation_max_less_than_required]
+other = "{{.threshold}}-тен кіші болуы тиіс"
+
+[validation_not_nil_required]
+other = "міндетті"
+
+[validation_key_wrong_type]
+other = "кілт түрі дұрыс емес"
+
+[validation_key_missing]
+other = "міндетті кілт жоқ"
+
+[validation_key_unexpected]
+other = "күтілмеген кілт"
+
+[validation_date_invalid]
+other = "жарамды күн болуы тиіс"
+
+[validation_date_out_of_range]
+other = "күн рұқсат етілген ауқымнан тыс"
+
+# ---- is ----
+
+[validation_is_email]
+other = "жарамды электрондық пошта мекенжайы болуы тиіс"
+
+[validation_is_url]
+other = "жарамды URL болуы тиіс"
+
+[validation_is_request_url]
+other = "жарамды сұрау URL-і болуы тиіс"
+
+[validation_is_request_uri]
+other = "жарамды сұрау URI-і болуы тиіс"
+
+[validation_is_alpha]
+other = "тек ағылшын әріптерінен тұруы тиіс"
+
+[validation_is_digit]
+other = "тек цифрлардан тұруы тиіс"
+
+[validation_is_alphanumeric]
+other = "тек ағылшын әріптері мен цифрларынан тұруы тиіс"
+
+[validation_is_utf_letter]
+other = "тек Unicode әріп таңбаларынан тұруы тиіс"
+
+[validation_is_utf_digit]
+other = "тек Unicode ондық цифрларынан тұруы тиіс"
+
+[validation_is_utf_letter_numeric]
+other = "тек Unicode әріптері мен сандарынан тұруы тиіс"
+
+[validation_is_utf_numeric]
+other = "тек Unicode сан таңбаларынан тұруы тиіс"
+
+[validation_is_lower_case]
+other = "кіші әріпте болуы тиіс"
+
+[validation_is_upper_case]
+other = "үлкен әріпте болуы тиіс"
+
+[validation_is_hexadecimal]
+other = "жарамды он алтылық сан болуы тиіс"
+
+[validation_is_hex_color]
+other = "жарамды он алтылық түс коды болуы тиіс"
+
+[validation_is_rgb_color]
+other = "жарамды RGB түс коды болуы тиіс"
+
+[validation_is_int]
+other = "бүтін сан болуы тиіс"
+
+[validation_is_float]
+other = "ондық бөлшек сан болуы тиіс"
+
+[validation_is_uuid_v3]
+other = "жарамды UUID v3 болуы тиіс"
+
+[validation_is_uuid_v4]
+other = "жарамды UUID v4 болуы тиіс"
+
+[validation_is_uuid_v5]
+other = "жарамды UUID v5 болуы тиіс"
+
+[validation_is_uuid]
+other = "жарамды UUID болуы тиіс"
+
+[validation_is_credit_card]
+other = "жарамды банк картасының нөмірі болуы тиіс"
+
+[validation_is_isbn_10]
+other = "жарамды ISBN-10 болуы тиіс"
+
+[validation_is_isbn_13]
+other = "жарамды ISBN-13 болуы тиіс"
+
+[validation_is_isbn]
+other = "жарамды ISBN болуы тиіс"
+
+[validation_is_json]
+other = "жарамды JSON пішімінде болуы тиіс"
+
+[validation_is_ascii]
+other = "тек ASCII таңбаларынан тұруы тиіс"
+
+[validation_is_printable_ascii]
+other = "тек басып шығарылатын ASCII таңбаларынан тұруы тиіс"
+
+[validation_is_multibyte]
+other = "құрамында көпбайтты таңбалар болуы тиіс"
+
+[validation_is_full_width]
+other = "құрамында толық ені бар таңбалар болуы тиіс"
+
+[validation_is_half_width]
+other = "құрамында жартылай ені бар таңбалар болуы тиіс"
+
+[validation_is_variable_width]
+other = "құрамында толық және жартылай ені бар таңбалар болуы тиіс"
+
+[validation_is_base64]
+other = "Base64-пен кодталуы тиіс"
+
+[validation_is_data_uri]
+other = "Base64-пен кодталған data URI болуы тиіс"
+
+[validation_is_e164_number]
+other = "E.164 пішіміндегі телефон нөмірі болуы тиіс"
+
+[validation_is_country_code_2_letter]
+other = "екі әріптік ел коды болуы тиіс"
+
+[validation_is_country_code_3_letter]
+other = "үш әріптік ел коды болуы тиіс"
+
+[validation_is_currency_code]
+other = "ISO 4217 валюта коды болуы тиіс"
+
+[validation_is_dial_string]
+other = "жарамды теру жолы болуы тиіс"
+
+[validation_is_mac_address]
+other = "жарамды MAC-мекенжай болуы тиіс"
+
+[validation_is_ip]
+other = "жарамды IP мекенжайы болуы тиіс"
+
+[validation_is_ipv4]
+other = "жарамды IPv4 мекенжайы болуы тиіс"
+
+[validation_is_ipv6]
+other = "жарамды IPv6 мекенжайы болуы тиіс"
+
+[validation_is_sub_domain]
+other = "жарамды субдомен болуы тиіс"
+
+[validation_is_domain]
+other = "жарамды домен болуы тиіс"
+
+[validation_is_dns_name]
+other = "жарамды DNS атауы болуы тиіс"
+
+[validation_is_host]
+other = "жарамды IP мекенжайы немесе DNS атауы болуы тиіс"
+
+[validation_is_port]
+other = "жарамды порт нөмірі болуы тиіс"
+
+[validation_is_mongo_id]
+other = "жарамды он алтылық MongoDB ObjectId болуы тиіс"
+
+[validation_is_latitude]
+other = "жарамды ендік мәні болуы тиіс"
+
+[validation_is_longitude]
+other = "жарамды бойлық мәні болуы тиіс"
+
+[validation_is_ssn]
+other = "жарамды әлеуметтік сақтандыру нөмірі (SSN) болуы тиіс"
+
+[validation_is_semver]
+other = "жарамды семантикалық нұсқа (semver) болуы тиіс"
+
+[validation_is_password]
+other = "кемінде 8 таңбадан тұруы керек: бас әріп, кіші әріп, сан және арнайы таңба"

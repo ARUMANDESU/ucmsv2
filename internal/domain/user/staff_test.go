@@ -3,9 +3,11 @@ package user_test
 import (
 	"testing"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 )
 
@@ -23,52 +25,52 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 		{
 			name:    "missing ID",
 			args:    builders.NewStaffBuilder().WithID("").BuildRegisterArgs(),
-			wantErr: user.ErrMissingID,
+			wantErr: validation.Errors{"id": validation.ErrRequired},
 		},
 		{
 			name:    "missing Email",
 			args:    builders.NewStaffBuilder().WithEmail("").BuildRegisterArgs(),
-			wantErr: user.ErrMissingEmail,
+			wantErr: validation.Errors{"email": validation.ErrRequired},
 		},
 		{
 			name:    "missing PassHash",
 			args:    builders.NewStaffBuilder().WithPassHash(nil).BuildRegisterArgs(),
-			wantErr: user.ErrMissingPassHash,
+			wantErr: validation.Errors{"pass_hash": validation.ErrRequired},
 		},
 		{
 			name:    "empty PassHash",
 			args:    builders.NewStaffBuilder().WithPassHash([]byte{}).BuildRegisterArgs(),
-			wantErr: user.ErrMissingPassHash,
+			wantErr: validation.Errors{"pass_hash": validation.ErrRequired},
 		},
 		{
 			name:    "missing FirstName",
 			args:    builders.NewStaffBuilder().WithFirstName("").BuildRegisterArgs(),
-			wantErr: user.ErrMissingFirstName,
+			wantErr: validation.Errors{"first_name": validation.ErrRequired},
 		},
 		{
 			name:    "FirstName too long",
 			args:    builders.NewStaffBuilder().WithInvalidLongFirstName().BuildRegisterArgs(),
-			wantErr: user.ErrFirstNameTooLong,
+			wantErr: validation.Errors{"first_name": validation.ErrLengthOutOfRange},
 		},
 		{
 			name:    "FirstName too short",
 			args:    builders.NewStaffBuilder().WithInvalidShortFirstName().BuildRegisterArgs(),
-			wantErr: user.ErrFirstNameTooShort,
+			wantErr: validation.Errors{"first_name": validation.ErrLengthOutOfRange},
 		},
 		{
 			name:    "missing LastName",
 			args:    builders.NewStaffBuilder().WithLastName("").BuildRegisterArgs(),
-			wantErr: user.ErrMissingLastName,
+			wantErr: validation.Errors{"last_name": validation.ErrRequired},
 		},
 		{
 			name:    "LastName too long",
 			args:    builders.NewStaffBuilder().WithInvalidLongLastName().BuildRegisterArgs(),
-			wantErr: user.ErrLastNameTooLong,
+			wantErr: validation.Errors{"last_name": validation.ErrLengthOutOfRange},
 		},
 		{
 			name:    "LastName too short",
 			args:    builders.NewStaffBuilder().WithInvalidShortLastName().BuildRegisterArgs(),
-			wantErr: user.ErrLastNameTooShort,
+			wantErr: validation.Errors{"last_name": validation.ErrLengthOutOfRange},
 		},
 	}
 
@@ -79,7 +81,7 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 				user.NewStaffAssertions(staff).
 					AssertByRegistrationArgs(t, tt.args)
 			} else {
-				assert.ErrorIs(t, err, tt.wantErr, "expected error %v, got %v", tt.wantErr, err)
+				errorx.AssertValidationErrors(t, err, tt.wantErr)
 				assert.Nil(t, staff, "expected staff to be nil on error")
 			}
 		})
@@ -88,6 +90,12 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 
 func TestRegisterStaff_EmptyArgs(t *testing.T) {
 	staff, err := user.RegisterStaff(user.RegisterStaffArgs{})
-	assert.ErrorIs(t, err, user.ErrMissingID, "expected ErrMissingID for empty args")
+	errorx.AssertValidationErrors(t, err, validation.Errors{
+		"id":         validation.ErrRequired,
+		"email":      validation.ErrRequired,
+		"first_name": validation.ErrRequired,
+		"last_name":  validation.ErrRequired,
+		"pass_hash":  validation.ErrRequired,
+	})
 	assert.Nil(t, staff, "expected staff to be nil on error")
 }

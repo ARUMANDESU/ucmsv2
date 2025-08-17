@@ -2,9 +2,10 @@ package user
 
 import (
 	"errors"
-	"strings"
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
@@ -16,6 +17,9 @@ const (
 	MinFirstNameLen = 2
 	MaxLastNameLen  = 100
 	MinLastNameLen  = 2
+	MaxBarcodeLen   = 100
+	MinBarcodeLen   = 6
+	MaxAvatarURLLen = 1000
 )
 
 type ID string
@@ -70,11 +74,9 @@ func (u *User) SetFirstName(firstName string) error {
 	if u == nil {
 		return errors.New("user is nil")
 	}
-	if len([]rune(firstName)) > MaxFirstNameLen {
-		return ErrFirstNameTooLong
-	}
-	if len([]rune(firstName)) < MinFirstNameLen {
-		return ErrFirstNameTooShort
+	err := validation.Validate(firstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen), is.Alphanumeric)
+	if err != nil {
+		return err
 	}
 
 	u.firstName = firstName
@@ -86,11 +88,9 @@ func (u *User) SetLastName(lastName string) error {
 	if u == nil {
 		return errors.New("user is nil")
 	}
-	if len([]rune(lastName)) > MaxLastNameLen {
-		return ErrLastNameTooLong
-	}
-	if len([]rune(lastName)) < MinLastNameLen {
-		return ErrLastNameTooShort
+	err := validation.Validate(lastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen), is.Alphanumeric)
+	if err != nil {
+		return err
 	}
 
 	u.lastName = lastName
@@ -101,6 +101,10 @@ func (u *User) SetLastName(lastName string) error {
 func (u *User) SetAvatarURL(avatarURL string) error {
 	if u == nil {
 		return errors.New("user is nil")
+	}
+	err := validation.Validate(avatarURL, validation.Length(1, MaxAvatarURLLen))
+	if err != nil {
+		return err
 	}
 
 	u.avatarURL = avatarURL
@@ -182,31 +186,4 @@ func (u *User) UpdatedAt() time.Time {
 	}
 
 	return u.updatedAt
-}
-
-func ValidatePasswordManual(password string) bool {
-	if len(password) < 8 {
-		return false
-	}
-
-	var hasLower, hasUpper, hasDigit, hasSpecial bool
-	allowedSpecial := "@$!%*?&"
-
-	for _, char := range password {
-		switch {
-		case char >= 'a' && char <= 'z':
-			hasLower = true
-		case char >= 'A' && char <= 'Z':
-			hasUpper = true
-		case char >= '0' && char <= '9':
-			hasDigit = true
-		case strings.ContainsRune(allowedSpecial, char):
-			hasSpecial = true
-		default:
-			// Invalid character found
-			return false
-		}
-	}
-
-	return hasLower && hasUpper && hasDigit && hasSpecial
 }

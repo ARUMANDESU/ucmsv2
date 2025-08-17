@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
@@ -12,11 +11,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/env"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 )
+
+var ErrEmailNotAvailable = errorx.NewDuplicateEntry().WithKey("error_email_not_available")
 
 var (
 	tracer = otel.Tracer("ucms/application/registration/cmd")
@@ -61,54 +61,47 @@ func NewStartStudentHandler(args StartStudentHandlerArgs) *StartStudentHandler {
 }
 
 func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) error {
-	ctx, span := h.tracer.Start(ctx, "StartStudentHandler.Handle")
+	ctx, span := h.tracer.Start(
+		ctx,
+		"StartStudentHandler.Handle",
+		trace.WithAttributes(attribute.String("student.email", logging.RedactEmail(cmd.Email))),
+	)
 	defer span.End()
-	if cmd.Email == "" {
-		err := user.ErrMissingEmail
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Email is required")
-		return err
-	}
-
-	redactedEmail := logging.RedactEmail(cmd.Email)
-	span.SetAttributes(attribute.String("student.email", redactedEmail))
-
-	h.logger.DebugContext(ctx, "starting student registration", "email", cmd.Email)
 
 	user, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
 	if err != nil && !errorx.IsNotFound(err) {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to get user by email")
-		return fmt.Errorf("failed to get user by email: %w", err)
+		span.SetStatus(codes.Error, "failed to get user by email")
+		return err
 	}
 	if user != nil {
-		span.RecordError(errorx.NewDuplicateEntryWithField("user", "email"))
-		span.SetStatus(codes.Error, "User already exists")
-		return errorx.NewDuplicateEntryWithField("user", "email")
+		span.RecordError(ErrEmailNotAvailable)
+		span.SetStatus(codes.Error, "email already registered")
+		return ErrEmailNotAvailable
 	}
-	span.AddEvent("User not found, proceeding with registration")
+	span.AddEvent("user not found, proceeding with registration")
 
 	reg, err := h.repo.GetRegistrationByEmail(ctx, cmd.Email)
 	if err != nil && !errorx.IsNotFound(err) {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to get registration by email")
-		return fmt.Errorf("failed to get registration by email: %w", err)
+		span.SetStatus(codes.Error, "failed to get registration by email")
+		return err
 	}
 	if errorx.IsNotFound(err) {
 		reg, err = registration.NewRegistration(cmd.Email, h.mode)
 		if err != nil {
 			span.RecordError(err)
-			span.SetStatus(codes.Error, "Failed to create new registration")
-			return fmt.Errorf("failed to create new registration: %w", err)
+			span.SetStatus(codes.Error, "failed to create new registration")
+			return err
 		}
 
 		err = h.repo.SaveRegistration(ctx, reg)
 		if err != nil {
 			span.RecordError(err)
-			span.SetStatus(codes.Error, "Failed to save registration")
-			return fmt.Errorf("failed to save registration: %w", err)
+			span.SetStatus(codes.Error, "failed to save registration")
+			return err
 		}
-		span.AddEvent("Registration saved successfully",
+		span.AddEvent("registration saved successfully",
 			trace.WithAttributes(
 				attribute.String("registration.id", reg.ID().String()),
 				attribute.String("registration.status", reg.Status().String()),
@@ -119,23 +112,24 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 	}
 
 	if reg.IsCompleted() {
-		return errorx.NewDuplicateEntryWithField("user", "email")
+		span.RecordError(ErrEmailNotAvailable)
+		span.SetStatus(codes.Error, "registration already completed")
+		return ErrEmailNotAvailable
 	}
-
-	span.AddEvent("Registration found: proceeding with verification code resend")
 
 	err = h.repo.UpdateRegistration(ctx, reg.ID(), func(ctx context.Context, r *registration.Registration) error {
 		err := r.ResendCode()
 		if err != nil {
 			trace.SpanFromContext(ctx).AddEvent("resend verification code failed")
-			return fmt.Errorf("failed to resend verification code: %w", err)
+			return err
 		}
+
 		return nil
 	})
 	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to update registration")
-		return fmt.Errorf("failed to update registration: %w", err)
+		span.SetStatus(codes.Error, "failed to update registration")
+		return err
 	}
 
 	return nil

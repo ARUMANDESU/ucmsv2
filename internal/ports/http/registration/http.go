@@ -3,15 +3,22 @@ package registrationhttp
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/oapi-codegen/runtime/types"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/application/registration"
 	"github.com/ARUMANDESU/ucms/internal/application/registration/cmd"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/httpx"
+	"github.com/ARUMANDESU/ucms/pkg/sanitizex"
 )
 
 var (
@@ -59,14 +66,29 @@ func (h *HTTP) StartStudentRegistration(w http.ResponseWriter, r *http.Request) 
 	ctx, span := h.tracer.Start(r.Context(), "StartStudentRegistration")
 	defer span.End()
 
-	var body PostV1RegistrationsStudentsStartJSONRequestBody
-	if err := httpx.ReadJSON(w, r, &body); err != nil {
+	var req PostV1RegistrationsStudentsStartJSONRequestBody
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to read json")
 		httpx.BadRequest(w, r, err.Error())
 		return
 	}
 
-	cmd := cmd.StartStudent{Email: string(body.Email)}
-	if err := h.cmd.StartStudent.Handle(ctx, cmd); err != nil {
+	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
+
+	err := validation.ValidateStruct(&req,
+		validation.Field(&req.Email, validation.Required, is.Email),
+	)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to validate request body")
+		h.errhandler.HandleError(w, r, err)
+		return
+	}
+
+	if err := h.cmd.StartStudent.Handle(ctx, cmd.StartStudent{Email: string(req.Email)}); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to start studen registration")
 		h.errhandler.HandleError(w, r, err)
 		return
 	}
@@ -78,17 +100,35 @@ func (h *HTTP) Verify(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.tracer.Start(r.Context(), "VerifyRegistration")
 	defer span.End()
 
-	var body PostV1RegistrationsVerifyJSONRequestBody
-	if err := httpx.ReadJSON(w, r, &body); err != nil {
+	var req PostV1RegistrationsVerifyJSONRequestBody
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to read json")
 		httpx.BadRequest(w, r, err.Error())
 		return
 	}
 
+	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
+	req.VerificationCode = sanitizex.CleanSingleLine(req.VerificationCode)
+
+	err := validation.ValidateStruct(&req,
+		validation.Field(&req.Email, validation.Required, is.Email),
+		validation.Field(&req.VerificationCode, validation.Required, validation.Length(3, 50), is.Alphanumeric),
+	)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to validate request body")
+		h.errhandler.HandleError(w, r, err)
+		return
+	}
+
 	cmd := cmd.Verify{
-		Email: string(body.Email),
-		Code:  string(body.VerificationCode),
+		Email: string(req.Email),
+		Code:  string(req.VerificationCode),
 	}
 	if err := h.cmd.Verify.Handle(ctx, cmd); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to verify registration email")
 		h.errhandler.HandleError(w, r, err)
 		return
 	}
@@ -100,22 +140,49 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 	ctx, span := h.tracer.Start(r.Context(), "CompleteStudentRegistration")
 	defer span.End()
 
-	var body PostV1RegistrationsStudentsCompleteJSONRequestBody
-	if err := httpx.ReadJSON(w, r, &body); err != nil {
+	var req PostV1RegistrationsStudentsCompleteJSONRequestBody
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to read json")
 		httpx.BadRequest(w, r, err.Error())
 		return
 	}
 
+	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
+	req.Barcode = Barcode(sanitizex.CleanSingleLine(string(req.Barcode)))
+	req.VerificationCode = sanitizex.CleanSingleLine(req.VerificationCode)
+	req.FirstName = sanitizex.CleanSingleLine(req.FirstName)
+	req.LastName = sanitizex.CleanSingleLine(req.LastName)
+	req.Password = strings.TrimSpace(req.Password)
+
+	err := validation.ValidateStruct(&req,
+		validation.Field(&req.Email, validation.Required, is.Email),
+		validation.Field(&req.VerificationCode, validation.Required, validation.Length(3, 50), is.Alphanumeric),
+		validation.Field(&req.FirstName, validation.Required, validation.Length(1, 100), is.Alphanumeric),
+		validation.Field(&req.LastName, validation.Required, validation.Length(1, 100), is.Alphanumeric),
+		validation.Field(&req.Password, validation.Required, validation.Length(8, 100), validation.By(errorx.ValidatePasswordManual)),
+		validation.Field(&req.Barcode, validation.Required, validation.Length(1, 100), is.Alphanumeric),
+		validation.Field(&req.GroupId, validation.Required, validation.By(errorx.ValidateGroupID)),
+	)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to validate request body")
+		h.errhandler.HandleError(w, r, err)
+		return
+	}
+
 	cmd := cmd.StudentComplete{
-		Email:            string(body.Email),
-		VerificationCode: string(body.VerificationCode),
-		Barcode:          string(body.Barcode),
-		FirstName:        string(body.FirstName),
-		LastName:         string(body.LastName),
-		Password:         string(body.Password),
-		GroupID:          body.GroupId,
+		Email:            string(req.Email),
+		VerificationCode: string(req.VerificationCode),
+		Barcode:          string(req.Barcode),
+		FirstName:        string(req.FirstName),
+		LastName:         string(req.LastName),
+		Password:         string(req.Password),
+		GroupID:          req.GroupId,
 	}
 	if err := h.cmd.StudentComplete.Handle(ctx, cmd); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to complete student registration")
 		h.errhandler.HandleError(w, r, err)
 		return
 	}
@@ -127,14 +194,30 @@ func (h *HTTP) ResendVerificationCode(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.tracer.Start(r.Context(), "ResendVerificationCode")
 	defer span.End()
 
-	var body PostV1RegistrationsResendJSONRequestBody
-	if err := httpx.ReadJSON(w, r, &body); err != nil {
+	var req PostV1RegistrationsResendJSONRequestBody
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to read json")
 		httpx.BadRequest(w, r, err.Error())
 		return
 	}
 
-	cmd := cmd.ResendCode{Email: string(body.Email)}
+	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
+
+	err := validation.ValidateStruct(&req,
+		validation.Field(&req.Email, validation.Required, is.Email),
+	)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to validate request body")
+		h.errhandler.HandleError(w, r, err)
+		return
+	}
+
+	cmd := cmd.ResendCode{Email: string(req.Email)}
 	if err := h.cmd.ResendCode.Handle(ctx, cmd); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to resend registration email verification code")
 		h.errhandler.HandleError(w, r, err)
 		return
 	}

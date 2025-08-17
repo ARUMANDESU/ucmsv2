@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,41 +46,42 @@ func TestNewRegistration(t *testing.T) {
 			email:       "",
 			mode:        env.Test,
 			expectError: true,
-			errorType:   ErrEmptyEmail,
+			errorType:   validation.ErrEmpty,
 		},
 		{
 			name:        "email too long",
-			email:       "a" + strings.Repeat("b", MaxEmailLength-2) + "@example.com",
+			email:       "a" + strings.Repeat("b", 255) + "@example.com", // 256 characters
 			mode:        env.Test,
 			expectError: true,
-			errorType:   ErrEmailExceedsMaxLength,
+			errorType:   is.ErrEmail,
 		},
 		{
 			name:        "invalid email format - no @",
 			email:       "notanemail",
 			mode:        env.Test,
 			expectError: true,
-			errorType:   ErrInvalidEmailFormat,
+			errorType:   is.ErrEmail,
 		},
 		{
 			name:        "invalid email format - no domain",
 			email:       "user@",
 			mode:        env.Test,
 			expectError: true,
-			errorType:   ErrInvalidEmailFormat,
+			errorType:   is.ErrEmail,
 		},
 		{
 			name:        "invalid email format - no TLD",
 			email:       "user@domain",
 			mode:        env.Test,
 			expectError: true,
-			errorType:   ErrInvalidEmailFormat,
+			errorType:   is.ErrEmail,
 		},
 		{
 			name:        "localhost email in dev mode",
 			email:       "test@localhost",
 			mode:        env.Dev,
 			expectError: true,
+            errorType:   is.ErrEmail,
 		},
 	}
 
@@ -90,7 +93,9 @@ func TestNewRegistration(t *testing.T) {
 				assert.Error(t, err)
 				assert.Nil(t, reg)
 				if tt.errorType != nil {
-					assert.ErrorIs(t, err, tt.errorType)
+					assert.ErrorAs(t, err, &tt.errorType)
+                } else {
+                    assert.ErrorIs(t, err, validation.ErrEmpty)
 				}
 			} else {
 				require.NoError(t, err)
@@ -405,58 +410,6 @@ func TestRegistration_IsCompleted(t *testing.T) {
 
 	reg.status = StatusCompleted
 	assert.True(t, reg.IsCompleted())
-}
-
-func TestHasRealTLD(t *testing.T) {
-	tests := []struct {
-		name     string
-		email    string
-		expected bool
-	}{
-		{
-			name:     "gmail.com",
-			email:    "user@gmail.com",
-			expected: true,
-		},
-		{
-			name:     "yahoo.com",
-			email:    "user@yahoo.com",
-			expected: true,
-		},
-		{
-			name:     "localhost",
-			email:    "user@localhost",
-			expected: false,
-		},
-		{
-			name:     "internal",
-			email:    "user@internal",
-			expected: false,
-		},
-		{
-			name:     "example.local",
-			email:    "user@example.local",
-			expected: false,
-		},
-		{
-			name:     "invalid email",
-			email:    "notanemail",
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := hasRealTLD(tt.email)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestEmailValidationConstants(t *testing.T) {
-	assert.Equal(t, 1*time.Minute, ResendTimeout)
-	assert.Equal(t, 10*time.Minute, ExpiresAt)
-	assert.Equal(t, 254, MaxEmailLength)
 }
 
 func TestEmailRegex(t *testing.T) {

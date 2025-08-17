@@ -2,10 +2,11 @@ package event
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
+	"github.com/ARUMANDESU/ucms/pkg/logging"
 )
 
 var (
@@ -57,30 +59,28 @@ func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration
 		return nil
 	}
 
-	l := h.logger.With(
-		slog.String("event", "RegistrationStarted"),
-		slog.String("registration.id", e.RegistrationID.String()),
-	)
+	l := h.logger.With(slog.String("event", "RegistrationStarted"), slog.String("registration.id", e.RegistrationID.String()))
 	ctx, span := h.tracer.Start(
 		ctx,
 		"RegistrationStartedHandler.Handle",
 		trace.WithNewRoot(),
 		trace.WithLinks(trace.LinkFromContext(e.Extract())),
-		trace.WithAttributes(attribute.String("event.registration.id", e.RegistrationID.String())),
+		trace.WithAttributes(
+			attribute.String("event.registration.id", e.RegistrationID.String()),
+			attribute.String("event.registration.email", logging.RedactEmail(e.Email)),
+		),
 	)
 	defer span.End()
 
-	if e.Email == "" {
-		span.RecordError(errors.New("email is empty"))
-		span.SetStatus(codes.Error, "email is empty")
-		l.ErrorContext(ctx, "Email is empty")
-		return errors.New("email is empty")
-	}
-	if e.VerificationCode == "" {
-		span.RecordError(errors.New("verification code is empty"))
-		span.SetStatus(codes.Error, "verification code is empty")
-		l.ErrorContext(ctx, "Verification code is empty")
-		return errors.New("verification code is empty")
+	err := validation.ValidateStruct(e,
+		validation.Field(&e.Email, validation.Required, is.EmailFormat),
+		validation.Field(&e.VerificationCode, validation.Required),
+	)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "validation failed")
+		l.ErrorContext(ctx, "validation failed", slog.Any("error", err))
+		return err
 	}
 
 	payload := mail.Payload{

@@ -2,7 +2,7 @@ package authapp
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -10,10 +10,13 @@ import (
 	"github.com/google/uuid"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/logging"
 )
 
 const (
@@ -26,10 +29,7 @@ var (
 	logger = otelslog.NewLogger("ucms/internal/application/auth")
 )
 
-var (
-	ErrWrongEmailOrBarcodeOrPassword = errorx.NewInvalidRequest().WithKey("wrong_email_or_barcode_or_password")
-	ErrWrongEmailOrBarcodeFormat     = errorx.NewInvalidRequest().WithKey("wrong_email_or_barcode_format")
-)
+var ErrWrongEmailOrBarcodeOrPassword = errorx.NewInvalidRequest().WithKey("wrong_email_or_barcode_or_password")
 
 type UserGetter interface {
 	GetUserByID(ctx context.Context, id user.ID) (*user.User, error)
@@ -43,8 +43,9 @@ type App struct {
 
 	accessTokenExpDuration  time.Duration
 	refreshTokenExpDuration time.Duration
-	accessTokenSecretKey    string
-	refreshTokenSecretKey   string
+	accessTokenSecretKey    []byte
+	refreshTokenSecretKey   []byte
+	signingMethod           *jwt.SigningMethodHMAC
 }
 
 type Args struct {
@@ -66,8 +67,9 @@ func NewApp(args Args) *App {
 
 		accessTokenExpDuration:  AccessTokenExpDuration,
 		refreshTokenExpDuration: RefreshTokenExpDuration,
-		accessTokenSecretKey:    args.AccessTokenSecretKey,
-		refreshTokenSecretKey:   args.RefreshTokenSecretKey,
+		accessTokenSecretKey:    []byte(args.AccessTokenSecretKey),
+		refreshTokenSecretKey:   []byte(args.RefreshTokenSecretKey),
+		signingMethod:           jwt.SigningMethodHS256,
 	}
 
 	if args.AccessTokenlExpDuration != nil {
@@ -88,6 +90,7 @@ func NewApp(args Args) *App {
 
 type Login struct {
 	EmailOrBarcode string
+	IsEmail        bool
 	Password       string
 }
 
@@ -100,46 +103,58 @@ type LoginResponse struct {
 
 // LoginHandle handles user login logic and return access jwt token
 func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error) {
-	ctx, span := a.tracer.Start(ctx, "App.LoginHandle")
+	ctx, span := a.tracer.Start(
+		ctx,
+		"App.LoginHandle",
+		trace.WithAttributes(
+			attribute.Bool("is_email", cmd.IsEmail),
+			attribute.String("signing_method", a.signingMethod.Alg()),
+			attribute.String("access_token_exp_duration", a.accessTokenExpDuration.String()),
+			attribute.String("refresh_token_exp_duration", a.refreshTokenExpDuration.String()),
+		),
+	)
 	defer span.End()
 
-	var isEmail bool
-	var isBarcode bool
-
-	var u *user.User
-	var err error
-	if isEmail {
+	var (
+		u   *user.User
+		err error
+	)
+	if cmd.IsEmail {
+		span.SetAttributes(attribute.String("user.email", logging.RedactEmail(cmd.EmailOrBarcode)))
 		u, err = a.usergetter.GetUserByEmail(ctx, cmd.EmailOrBarcode)
-	} else if isBarcode {
-		u, err = a.usergetter.GetUserByID(ctx, user.ID(cmd.EmailOrBarcode))
 	} else {
-		return LoginResponse{}, ErrWrongEmailOrBarcodeFormat
+		span.SetAttributes(attribute.String("user.id", cmd.EmailOrBarcode))
+		u, err = a.usergetter.GetUserByID(ctx, user.ID(cmd.EmailOrBarcode))
 	}
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to get user")
 		if errorx.IsNotFound(err) {
-			return LoginResponse{}, ErrWrongEmailOrBarcodeOrPassword
+			return LoginResponse{}, ErrWrongEmailOrBarcodeOrPassword.WithCause(err)
 		}
-		return LoginResponse{}, fmt.Errorf("failed to get user by email or barcode: %w", err)
+		return LoginResponse{}, err
 	}
 
 	err = u.ComparePassword(cmd.Password)
 	if err != nil {
-		return LoginResponse{}, fmt.Errorf("failed to compare password: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to compare password")
+		return LoginResponse{}, ErrWrongEmailOrBarcodeOrPassword.WithCause(err)
 	}
 
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	accessToken := jwt.NewWithClaims(a.signingMethod, jwt.MapClaims{
 		"iss":       "ucmsv2_auth",
 		"sub":       "user",
-		"exp":       time.Now().Add(a.accessTokenExpDuration).UTC(),
-		"iat":       time.Now().UTC(),
+		"exp":       time.Now().Add(a.accessTokenExpDuration).Unix(),
+		"iat":       time.Now().Unix(),
 		"uid":       u.ID().String(),
 		"user_role": u.Role().String(),
 	})
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	refreshToken := jwt.NewWithClaims(a.signingMethod, jwt.MapClaims{
 		"iss":   "ucmsv2_auth",
 		"sub":   "refresh",
-		"exp":   time.Now().Add(a.refreshTokenExpDuration).UTC(),
-		"iat":   time.Now().UTC(),
+		"exp":   time.Now().Add(a.refreshTokenExpDuration).Unix(),
+		"iat":   time.Now().Unix(),
 		"jti":   uuid.New().String(),
 		"uid":   u.ID().String(),
 		"scope": "refresh",
@@ -147,11 +162,15 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 
 	accessjwt, err := accessToken.SignedString(a.accessTokenSecretKey)
 	if err != nil {
-		return LoginResponse{}, fmt.Errorf("failed to sign access token: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to sign access token")
+		return LoginResponse{}, err
 	}
 	refreshjwt, err := refreshToken.SignedString(a.refreshTokenSecretKey)
 	if err != nil {
-		return LoginResponse{}, fmt.Errorf("failed to sign refresh token: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to sign refresh token")
+		return LoginResponse{}, err
 	}
 
 	return LoginResponse{
@@ -167,52 +186,80 @@ type Refresh struct {
 }
 
 func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, error) {
-	ctx, span := a.tracer.Start(ctx, "App.RefreshHandle")
+	ctx, span := a.tracer.Start(
+		ctx,
+		"App.RefreshHandle",
+		trace.WithAttributes(
+			attribute.String("signing_method", a.signingMethod.Alg()),
+			attribute.String("access_token_exp_duration", a.accessTokenExpDuration.String()),
+			attribute.String("refresh_token_exp_duration", a.refreshTokenExpDuration.String()),
+		),
+	)
 	defer span.End()
 
 	refreshToken, err := jwt.Parse(cmd.RefreshToken, func(t *jwt.Token) (any, error) {
 		return a.refreshTokenSecretKey, nil
-	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	}, jwt.WithValidMethods([]string{a.signingMethod.Alg()}))
 	if err != nil {
-		return LoginResponse{}, fmt.Errorf("failed to parse refresh token: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to parse refresh jwt token")
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 
 	refreshClaims, ok := refreshToken.Claims.(jwt.MapClaims)
 	if !ok {
-		return LoginResponse{}, errorx.NewInvalidRequest().WithKey("invalid_refresh_token_claims")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to parse refresh token claims")
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 	if refreshClaims["iss"] != "ucmsv2_auth" || refreshClaims["sub"] != "refresh" {
-		return LoginResponse{}, errorx.NewInvalidRequest().WithKey("invalid_refresh_token_claims")
+		err = errors.New("invalid refresh token issuer or subject")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "invalid refresh token claims")
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
-	exp, ok := refreshClaims["exp"].(time.Time)
+	expUnix, ok := refreshClaims["exp"].(float64)
 	if !ok {
-		return LoginResponse{}, errorx.NewInvalidRequest().WithKey("invalid_refresh_token_exp")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "invalid refresh token expiration")
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
+	exp := time.Unix(int64(expUnix), 0)
 	if exp.Before(time.Now().UTC()) {
-		return LoginResponse{}, errorx.NewInvalidRequest().WithKey("refresh_token_expired")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "refresh token expired")
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 	userID, ok := refreshClaims["uid"].(string)
 	if !ok {
-		return LoginResponse{}, errorx.NewInvalidCredentials()
+		err := errors.New("missing or invalid user ID in refresh token claims")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "invalid refresh token user ID")
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
+	span.SetAttributes(attribute.String("user.id", userID))
 
 	u, err := a.usergetter.GetUserByID(ctx, user.ID(userID))
 	if err != nil {
-		return LoginResponse{}, fmt.Errorf("failed to get user: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to get user by ID")
+		return LoginResponse{}, errorx.NewInternalError().WithCause(err)
 	}
 
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	accessToken := jwt.NewWithClaims(a.signingMethod, jwt.MapClaims{
 		"iss":       "ucmsv2_auth",
 		"sub":       "user",
-		"exp":       time.Now().Add(a.accessTokenExpDuration).UTC(),
-		"iat":       time.Now().UTC(),
+		"exp":       time.Now().Add(a.accessTokenExpDuration).Unix(),
+		"iat":       time.Now().Unix(),
 		"uid":       u.ID().String(),
 		"user_role": u.Role().String(),
 	})
 
 	accessjwt, err := accessToken.SignedString(a.accessTokenSecretKey)
 	if err != nil {
-		return LoginResponse{}, fmt.Errorf("failed to sign access token: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to sign access token")
+		return LoginResponse{}, errorx.NewInternalError().WithCause(err)
 	}
 
 	return LoginResponse{

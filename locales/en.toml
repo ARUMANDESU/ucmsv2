@@ -1,13 +1,3 @@
-# Success messages
-[success]
-other = "Operation completed successfully"
-
-[resource_created]
-other = "Resource created successfully"
-
-[resource_deleted]
-other = "Resource deleted successfully"
-
 # Client errors with templates
 [invalid]
 other = "Invalid request"
@@ -99,36 +89,48 @@ other = "External service timeout"
 [maintenance_mode]
 other = "Service is under maintenance"
 
-# Pluralization examples
-[items_count]
-one = "{{.Count}} item"
-other = "{{.Count}} items"
+# Authentication errors
+[wrong_email_or_barcode_or_password]
+other = "Invalid email/barcode or password"
 
-[users_online]
-zero = "No users online"
-one = "{{.Count}} user online"
-other = "{{.Count}} users online"
+[wrong_email_or_barcode_format]
+other = "Invalid email or barcode format"
 
-[clubs_found]
-zero = "No clubs found"
-one = "Found {{.Count}} club"
-other = "Found {{.Count}} clubs"
+[invalid_refresh_token_claims]
+other = "Invalid refresh token claims"
 
-# Active/Inactive states
-[user_status_active]
-other = "User is active"
+[invalid_refresh_token_exp]
+other = "Invalid refresh token expiration"
 
-[user_status_inactive]
-other = "User is inactive"
+[refresh_token_expired]
+other = "Refresh token has expired"
 
-[club_status_active]
-other = "Club is active"
+# Registration errors
+[email_max_len]
+other = "Email address is too long"
 
-[club_status_inactive]
-other = "Club is inactive"
+[empty_email]
+other = "Email address cannot be empty"
 
-[account_activated]
-other = "Account has been activated"
+[invalid_email_format]
+other = "Invalid email address format"
 
-[account_deactivated]
-other = "Account has been deactivated"
+# Staff registration token errors
+[timestamp_in_past]
+other = "Timestamp cannot be in the past"
+
+[at_least_one_email]
+other = "At least one email address is required"
+
+[email_already_exists_field]
+other = "Email address already exists"
+
+[max_emails_exceeded_field]
+other = "Maximum number of emails exceeded (limit: {{.MaxEmails}})"
+
+# Registration availability errors
+[error_email_not_available]
+other = "This email address is already registered"
+
+[error_barcode_not_available]
+other = "This barcode is already in use"

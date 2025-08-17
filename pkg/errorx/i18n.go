@@ -104,7 +104,7 @@ func IsCode(err error, code Code) bool {
 
 	var i18nErr *I18nError
 	if errors.As(err, &i18nErr) {
-		return i18nErr.Code == code || i18nErr.HTTPCode == HTTPStatusCode(code)
+		return i18nErr.Code == code
 	}
 
 	return false

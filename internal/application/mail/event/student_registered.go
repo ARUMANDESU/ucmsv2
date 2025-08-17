@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"log/slog"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
+	"github.com/ARUMANDESU/ucms/pkg/logging"
 )
 
 type StudentRegisteredHandler struct {
@@ -48,21 +51,28 @@ func (h *StudentRegisteredHandler) Handle(ctx context.Context, e *user.StudentRe
 	l := h.logger.With(
 		slog.String("event", "StudentRegistered"),
 		slog.String("student.id", e.StudentID.String()),
-	)
+		slog.String("student.email", logging.RedactEmail(e.Email)),
+		slog.String("student.group.id", e.GroupID.String()))
 
 	ctx, span := h.tracer.Start(
 		ctx,
 		"StudentRegisteredHandler.Handle",
 		trace.WithNewRoot(),
 		trace.WithLinks(trace.LinkFromContext(e.Extract())),
-		trace.WithAttributes(attribute.String("student.id", e.StudentID.String())),
+		trace.WithAttributes(
+			attribute.String("student.id", e.StudentID.String()),
+			attribute.String("student.email", logging.RedactEmail(e.Email)),
+			attribute.String("student.group.id", e.GroupID.String())),
 	)
 	defer span.End()
 
-	l.DebugContext(ctx, "Handling StudentRegistered event by mail application",
-		slog.String("student.first_name", e.FirstName),
-		slog.String("student.last_name", e.LastName),
-		slog.String("student.group.id", e.GroupID.String()))
+	err := validation.ValidateStruct(e, validation.Field(&e.Email, validation.Required, is.EmailFormat))
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "invalid student registration data")
+		l.ErrorContext(ctx, "invalid student registration data", "error", err.Error())
+		return err
+	}
 
 	payload := mail.Payload{
 		To:      e.Email,
@@ -76,8 +86,8 @@ func (h *StudentRegisteredHandler) Handle(ctx context.Context, e *user.StudentRe
 
 	if err := h.mailsender.SendMail(ctx, payload); err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to send registration email")
-		l.ErrorContext(ctx, "Failed to send registration email", slog.Any("error", err))
+		span.SetStatus(codes.Error, "failed to send registration email")
+		l.ErrorContext(ctx, "failed to send registration email", slog.Any("error", err))
 		return err
 	}
 

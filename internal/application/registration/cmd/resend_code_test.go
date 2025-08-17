@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/mocks"
@@ -140,16 +139,6 @@ func TestResendCodeHandler_ErrorCases(t *testing.T) {
 	t.Parallel()
 
 	s := NewResendCodeSuite(t)
-
-	t.Run("empty email", func(t *testing.T) {
-		cmd := ResendCode{
-			Email: "",
-		}
-
-		err := s.Handler.Handle(t.Context(), cmd)
-		require.Error(t, err)
-		assert.ErrorIs(t, err, user.ErrMissingEmail)
-	})
 
 	t.Run("user already exists", func(t *testing.T) {
 		email := "existing@test.com"

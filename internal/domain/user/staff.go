@@ -3,6 +3,9 @@ package user
 import (
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
+
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 )
@@ -13,41 +16,25 @@ type Staff struct {
 }
 
 type RegisterStaffArgs struct {
-	ID        ID
-	FirstName string
-	LastName  string
-	AvatarURL string
-	Email     string
-	PassHash  []byte
+	ID        ID     `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	AvatarURL string `json:"avatar_url"`
+	Email     string `json:"email"`
+	PassHash  []byte `json:"pass_hash"`
 }
 
 func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
-	if p.ID == "" {
-		return nil, ErrMissingID
-	}
-	if p.Email == "" {
-		return nil, ErrMissingEmail
-	}
-	if len(p.PassHash) == 0 {
-		return nil, ErrMissingPassHash
-	}
-	if p.FirstName == "" {
-		return nil, ErrMissingFirstName
-	}
-	if len([]rune(p.FirstName)) > MaxFirstNameLen {
-		return nil, ErrFirstNameTooLong
-	}
-	if len([]rune(p.FirstName)) < MinFirstNameLen {
-		return nil, ErrFirstNameTooShort
-	}
-	if p.LastName == "" {
-		return nil, ErrMissingLastName
-	}
-	if len([]rune(p.LastName)) > MaxLastNameLen {
-		return nil, ErrLastNameTooLong
-	}
-	if len([]rune(p.LastName)) < MinLastNameLen {
-		return nil, ErrLastNameTooShort
+	err := validation.ValidateStruct(&p,
+		validation.Field(&p.ID, validation.Required),
+		validation.Field(&p.Email, validation.Required),
+		validation.Field(&p.FirstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen), is.Alphanumeric),
+		validation.Field(&p.LastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen), is.Alphanumeric),
+		validation.Field(&p.PassHash, validation.Required),
+		validation.Field(&p.AvatarURL, validation.Length(0, 1000)),
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	now := time.Now().UTC()

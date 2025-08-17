@@ -9,7 +9,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
@@ -126,134 +125,6 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 	})
 }
 
-func TestStudentCompleteHandler_ArgsValidation(t *testing.T) {
-	t.Parallel()
-
-	s := NewStudentCompleteSuite(t)
-
-	tests := []struct {
-		name    string
-		args    StudentComplete
-		wantErr error
-	}{
-		{
-			name: "missing email",
-			args: StudentComplete{
-				Email:            "",
-				VerificationCode: fixtures.ValidVerificationCode,
-				Barcode:          fixtures.TestStudent.ID,
-				FirstName:        fixtures.TestStudent.FirstName,
-				LastName:         fixtures.TestStudent.LastName,
-				Password:         fixtures.TestStudent.Password,
-				GroupID:          fixtures.TestStudent.GroupID,
-			},
-			wantErr: user.ErrMissingEmail,
-		},
-		{
-			name: "missing verification code",
-			args: StudentComplete{
-				Email:            fixtures.ValidStudentEmail,
-				VerificationCode: "",
-				Barcode:          fixtures.TestStudent.ID,
-				FirstName:        fixtures.TestStudent.FirstName,
-				LastName:         fixtures.TestStudent.LastName,
-				Password:         fixtures.TestStudent.Password,
-				GroupID:          fixtures.TestStudent.GroupID,
-			},
-			wantErr: ErrMissingVerificationCode,
-		},
-		{
-			name: "missing barcode",
-			args: StudentComplete{
-				Email:            fixtures.ValidStudentEmail,
-				VerificationCode: fixtures.ValidVerificationCode,
-				Barcode:          "",
-				FirstName:        fixtures.TestStudent.FirstName,
-				LastName:         fixtures.TestStudent.LastName,
-				Password:         fixtures.TestStudent.Password,
-				GroupID:          fixtures.TestStudent.GroupID,
-			},
-			wantErr: ErrMissingBarcode,
-		},
-		{
-			name: "missing first name",
-			args: StudentComplete{
-				Email:            fixtures.ValidStudentEmail,
-				VerificationCode: fixtures.ValidVerificationCode,
-				Barcode:          fixtures.TestStudent.ID,
-				FirstName:        "",
-				LastName:         fixtures.TestStudent.LastName,
-				Password:         fixtures.TestStudent.Password,
-				GroupID:          fixtures.TestStudent.GroupID,
-			},
-			wantErr: user.ErrMissingFirstName,
-		},
-		{
-			name: "missing last name",
-			args: StudentComplete{
-				Email:            fixtures.ValidStudentEmail,
-				VerificationCode: fixtures.ValidVerificationCode,
-				Barcode:          fixtures.TestStudent.ID,
-				FirstName:        fixtures.TestStudent.FirstName,
-				LastName:         "",
-				Password:         fixtures.TestStudent.Password,
-				GroupID:          fixtures.TestStudent.GroupID,
-			},
-			wantErr: user.ErrMissingLastName,
-		},
-		{
-			name: "missing password",
-			args: StudentComplete{
-				Email:            fixtures.ValidStudentEmail,
-				VerificationCode: fixtures.ValidVerificationCode,
-				Barcode:          fixtures.TestStudent.ID,
-				FirstName:        fixtures.TestStudent.FirstName,
-				LastName:         fixtures.TestStudent.LastName,
-				Password:         "",
-				GroupID:          fixtures.TestStudent.GroupID,
-			},
-			wantErr: ErrMissingPassword,
-		},
-		{
-			name: "missing group ID",
-			args: StudentComplete{
-				Email:            fixtures.ValidStudentEmail,
-				VerificationCode: fixtures.ValidVerificationCode,
-				Barcode:          fixtures.TestStudent.ID,
-				FirstName:        fixtures.TestStudent.FirstName,
-				LastName:         fixtures.TestStudent.LastName,
-				Password:         fixtures.TestStudent.Password,
-				GroupID:          uuid.Nil,
-			},
-			wantErr: user.ErrMissingGroupID,
-		},
-		{
-			name: "password not strong enough",
-			args: StudentComplete{
-				Email:            fixtures.ValidStudentEmail,
-				VerificationCode: fixtures.ValidVerificationCode,
-				Barcode:          fixtures.TestStudent.ID,
-				FirstName:        fixtures.TestStudent.FirstName,
-				LastName:         fixtures.TestStudent.LastName,
-				Password:         "weak",
-				GroupID:          fixtures.TestStudent.GroupID,
-			},
-			wantErr: user.ErrPasswordNotStrongEnough,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := s.Handler.Handle(t.Context(), tt.args)
-			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 	t.Parallel()
 
@@ -272,7 +143,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 			GroupID:          fixtures.TestStudent.GroupID,
 		})
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrUserAlreadyExists)
+		assert.ErrorIs(t, err, ErrEmailNotAvailable)
 	})
 
 	t.Run("user by barcode already exists", func(t *testing.T) {
@@ -290,7 +161,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 			GroupID:          fixtures.TestStudent.GroupID,
 		})
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrUserAlreadyExistsByBarcode)
+		assert.ErrorIs(t, err, ErrBarcodeNotAvailable)
 	})
 	t.Run("user by email and barcode already exists", func(t *testing.T) {
 		s := NewStudentCompleteSuite(t)
@@ -307,7 +178,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 			GroupID:          fixtures.TestStudent.GroupID,
 		})
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrUserAlreadyExists)
+		assert.ErrorIs(t, err, ErrEmailNotAvailable)
 	})
 
 	t.Run("group not found", func(t *testing.T) {

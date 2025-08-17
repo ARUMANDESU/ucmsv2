@@ -4,6 +4,7 @@ type Factory struct {
 	Registration *RegistrationFactory
 	User         *UserFactory
 	Group        *GroupFactory
+	JWT          *JWTFactory
 }
 
 func NewFactory() *Factory {
@@ -11,5 +12,6 @@ func NewFactory() *Factory {
 		Registration: &RegistrationFactory{},
 		User:         &UserFactory{},
 		Group:        &GroupFactory{},
+		JWT:          &JWTFactory{},
 	}
 }

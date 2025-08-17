@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"log/slog"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
+	"github.com/ARUMANDESU/ucms/pkg/logging"
 )
 
 type VerificationCodeResentHandler struct {
@@ -47,13 +50,17 @@ func (h *VerificationCodeResentHandler) Handle(ctx context.Context, e *registrat
 	l := h.logger.With(
 		slog.String("event", "VerificationCodeResent"),
 		slog.String("registration.id", e.RegistrationID.String()),
+		slog.String("registration.email", logging.RedactEmail(e.Email)),
 	)
 	ctx, span := h.tracer.Start(
 		ctx,
 		"VerificationCodeResentHandler.Handle",
 		trace.WithNewRoot(),
 		trace.WithLinks(trace.LinkFromContext(e.Extract())),
-		trace.WithAttributes(attribute.String("event.registration.id", e.RegistrationID.String())),
+		trace.WithAttributes(
+			attribute.String("event.registration.id", e.RegistrationID.String()),
+			attribute.String("event.registration.email", logging.RedactEmail(e.Email)),
+		),
 	)
 	defer span.End()
 
@@ -62,14 +69,24 @@ func (h *VerificationCodeResentHandler) Handle(ctx context.Context, e *registrat
 		slog.String("verification_code", e.VerificationCode),
 	)
 
+	err := validation.ValidateStruct(e,
+		validation.Field(&e.Email, validation.Required, is.EmailFormat),
+		validation.Field(&e.VerificationCode, validation.Required))
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "invalid verification code resent data")
+		l.ErrorContext(ctx, "invalid verification code resent data", slog.Any("error", err))
+		return err
+	}
+
 	if err := h.mailsender.SendMail(ctx, mail.Payload{
 		To:      e.Email,
 		Subject: "Verification Code Resent",
 		Body:    fmt.Sprintf("Your verification code has been resent: %s", e.VerificationCode),
 	}); err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to send verification code resent email")
-		h.logger.ErrorContext(ctx, "Failed to send verification code resent email", slog.Any("error", err))
+		span.SetStatus(codes.Error, "failed to send verification code resent email")
+		h.logger.ErrorContext(ctx, "failed to send verification code resent email", slog.Any("error", err))
 		return err
 	}
 

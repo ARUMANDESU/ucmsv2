@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -92,7 +93,7 @@ func TestStudentRegistrationCompletedHandler_RegisterStudentError(t *testing.T) 
 				PassHash:       []byte("hashedpassword"),
 				GroupID:        fixtures.TestStudent.GroupID,
 			},
-			want: user.ErrMissingID,
+			want: validation.Errors{"id": validation.ErrRequired},
 		},
 		{
 			name: "missing email",
@@ -105,7 +106,7 @@ func TestStudentRegistrationCompletedHandler_RegisterStudentError(t *testing.T) 
 				PassHash:       []byte("hashedpassword"),
 				GroupID:        fixtures.TestStudent.GroupID,
 			},
-			want: user.ErrMissingEmail,
+			want: validation.Errors{"email": validation.ErrRequired},
 		},
 		{
 			name: "missing first name",
@@ -118,7 +119,7 @@ func TestStudentRegistrationCompletedHandler_RegisterStudentError(t *testing.T) 
 				PassHash:       []byte("hashedpassword"),
 				GroupID:        fixtures.TestStudent.GroupID,
 			},
-			want: user.ErrMissingFirstName,
+			want: validation.Errors{"first_name": validation.ErrRequired},
 		},
 		{
 			name: "missing last name",
@@ -131,7 +132,7 @@ func TestStudentRegistrationCompletedHandler_RegisterStudentError(t *testing.T) 
 				PassHash:       []byte("hashedpassword"),
 				GroupID:        fixtures.TestStudent.GroupID,
 			},
-			want: user.ErrMissingLastName,
+			want: validation.Errors{"last_name": validation.ErrRequired},
 		},
 		{
 			name: "missing group ID",
@@ -144,7 +145,7 @@ func TestStudentRegistrationCompletedHandler_RegisterStudentError(t *testing.T) 
 				PassHash:       []byte("hashedpassword"),
 				GroupID:        uuid.Nil,
 			},
-			want: user.ErrMissingGroupID,
+			want: validation.Errors{"group_id": validation.ErrRequired},
 		},
 	}
 
@@ -154,7 +155,7 @@ func TestStudentRegistrationCompletedHandler_RegisterStudentError(t *testing.T) 
 
 			err := s.Handler.Handle(context.Background(), tt.event)
 			require.Error(t, err)
-			assert.ErrorIs(t, err, tt.want)
+			errorx.AssertValidationErrors(t, err, tt.want)
 
 			s.MockStudentRepo.AssertStudentNotExistsByID(t, user.ID(fixtures.TestStudent.ID))
 		})

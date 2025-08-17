@@ -4,17 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/mail"
 	"regexp"
-	"strings"
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/net/publicsuffix"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/env"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/randcode"
 )
 
@@ -29,7 +30,6 @@ const (
 
 	ResendTimeout               = 1 * time.Minute
 	ExpiresAt                   = 10 * time.Minute
-	MaxEmailLength              = 254 // Maximum length for email addresses as per RFC 5321
 	MaxVerificationCodeAttempts = 3
 )
 
@@ -89,17 +89,9 @@ type Registration struct {
 }
 
 func NewRegistration(email string, mode env.Mode) (*Registration, error) {
-	if email == "" {
-		return nil, ErrEmptyEmail
-	}
-	if len(email) > MaxEmailLength {
-		return nil, ErrEmailExceedsMaxLength
-	}
-	if !emailRx.MatchString(email) {
-		return nil, ErrInvalidEmailFormat
-	}
-	if _, err := mail.ParseAddress(email); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrEmailParseFailed, err)
+	err := validation.Validate(&email, validation.Required, is.Email)
+	if err != nil {
+		return nil, err
 	}
 
 	code, err := generateCode()
@@ -192,15 +184,47 @@ func (r *Registration) VerifyCode(code string) error {
 }
 
 type StudentArgs struct {
-	VerificationCode string
-	Barcode          string
-	FirstName        string
-	LastName         string
-	Password         string
-	GroupID          uuid.UUID
+	VerificationCode string    `json:"verification_code"`
+	Barcode          string    `json:"barcode"`
+	FirstName        string    `json:"first_name"`
+	LastName         string    `json:"last_name"`
+	Password         string    `json:"password"`
+	GroupID          uuid.UUID `json:"group_id"`
 }
 
 func (r *Registration) CompleteStudentRegistration(args StudentArgs) error {
+	err := validation.ValidateStruct(&args,
+		validation.Field(&args.VerificationCode,
+			validation.Required,
+			validation.Length(VerificationCodeLength, VerificationCodeLength),
+			is.Alphanumeric,
+		),
+		validation.Field(&args.Barcode,
+			validation.Required,
+			validation.Length(user.MinBarcodeLen, user.MaxBarcodeLen),
+			is.Alphanumeric,
+		),
+		validation.Field(&args.FirstName,
+			validation.Required,
+			validation.Length(user.MinFirstNameLen, user.MaxFirstNameLen),
+			is.Alphanumeric,
+		),
+		validation.Field(&args.LastName,
+			validation.Required,
+			validation.Length(user.MinLastNameLen, user.MaxLastNameLen),
+			is.Alphanumeric,
+		),
+		validation.Field(&args.Password,
+			validation.Required,
+			validation.Length(8, 100),
+			validation.By(errorx.ValidatePasswordManual),
+		),
+		validation.Field(&args.GroupID, validation.Required, validation.By(errorx.ValidateGroupID)),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to validate student registration args: %w", err)
+	}
+
 	if r.verificationCode != args.VerificationCode {
 		return ErrInvalidVerificationCode
 	}
@@ -390,21 +414,4 @@ func generateCode() (string, error) {
 	}
 
 	return code, nil
-}
-
-func hasRealTLD(addr string) bool {
-	parsed, err := mail.ParseAddress(addr)
-	if err != nil {
-		return false
-	}
-
-	at := strings.LastIndexByte(parsed.Address, '@')
-	domain := parsed.Address[at+1:]
-
-	// Ask PSL what the public suffix is and whether it’s ICANN‑managed
-	suffix, icann := publicsuffix.PublicSuffix(domain)
-
-	// If the suffix is the entire domain, there's no registrable part,
-	// so "localhost", "internal", etc. will fail here.
-	return icann && suffix != domain
 }

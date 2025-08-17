@@ -55,14 +55,21 @@ func (h *StudentRegistrationCompletedHandler) Handle(ctx context.Context, e *reg
 		return nil
 	}
 
+	l := h.logger.With(
+		slog.String("event.registration_id", e.RegistrationID.String()),
+		slog.String("student.id", e.Barcode),
+		slog.String("group.id", e.GroupID.String()),
+	)
 	ctx, span := h.tracer.Start(ctx, "StudentRegistrationCompletedHandler.Handle",
 		trace.WithNewRoot(),
 		trace.WithLinks(trace.LinkFromContext(e.Extract())),
-		trace.WithAttributes(attribute.String("event.registration_id", e.RegistrationID.String())),
+		trace.WithAttributes(
+			attribute.String("event.registration_id", e.RegistrationID.String()),
+			attribute.String("student.id", e.Barcode),
+			attribute.String("group.id", e.GroupID.String()),
+		),
 	)
 	defer span.End()
-
-	h.logger.DebugContext(ctx, "handling student registration completed event", slog.Any("event", e))
 
 	student, err := user.RegisterStudent(user.RegisterStudentArgs{
 		ID:        user.ID(e.Barcode),
@@ -76,18 +83,16 @@ func (h *StudentRegistrationCompletedHandler) Handle(ctx context.Context, e *reg
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to register student")
-		h.logger.ErrorContext(ctx, "failed to register student")
+		l.ErrorContext(ctx, "failed to register student")
 		return err
 	}
 
 	if err := h.studentrepo.SaveStudent(ctx, student); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to save student")
-		h.logger.ErrorContext(ctx, "failed to save student", slog.Any("student", student))
+		l.ErrorContext(ctx, "failed to save student", slog.Any("student", student))
 		return err
 	}
-
-	h.logger.DebugContext(ctx, "student registration completed")
 
 	return nil
 }

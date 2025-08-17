@@ -7,6 +7,7 @@ tasks:
   openapi_http:
     cmds:
       - ./scripts/openapi-http.sh registration internal/ports/http registrationhttp
+      - ./scripts/openapi-http.sh auth internal/ports/http authhttp
   http:
     cmds:
       - cmd: go run ./cmd/api/
@@ -22,3 +23,7 @@ tasks:
         ignore_error: true
   test:
     deps: [test_unit, test_integration]
+
+  docker_local:
+    cmds:
+      - cmd: docker run -d -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=ucms -p 8765:5432 postgres:16.8

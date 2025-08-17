@@ -1,0 +1,238 @@
+
+# ---- core (github.com/go-ozzo/ozzo-validation/v4) ----
+
+[validation_required]
+other = "cannot be blank"
+
+[validation_nil_or_not_empty_required]
+other = "cannot be blank"
+
+[validation_nil]
+other = "must be blank"
+
+[validation_empty]
+other = "must be blank"
+
+[validation_in_invalid]
+other = "must be a valid value"
+
+[validation_not_in_invalid]
+other = "must not be in list"
+
+[validation_match_invalid]
+other = "must be in a valid format"
+
+[validation_multiple_of_invalid]
+other = "must be multiple of {{.base}}"
+
+[validation_length_too_long]
+other = "the length must be no more than {{.max}}"
+
+[validation_length_too_short]
+other = "the length must be no less than {{.min}}"
+
+[validation_length_invalid]
+other = "the length must be exactly {{.min}}"
+
+[validation_length_out_of_range]
+other = "the length must be between {{.min}} and {{.max}}"
+
+[validation_length_empty_required]
+other = "the value must be empty"
+
+[validation_min_greater_equal_than_required]
+other = "must be no less than {{.threshold}}"
+
+[validation_max_less_equal_than_required]
+other = "must be no greater than {{.threshold}}"
+
+[validation_min_greater_than_required]
+other = "must be greater than {{.threshold}}"
+
+[validation_max_less_than_required]
+other = "must be less than {{.threshold}}"
+
+[validation_not_nil_required]
+other = "is required"
+
+[validation_key_wrong_type]
+other = "key not the correct type"
+
+[validation_key_missing]
+other = "required key is missing"
+
+[validation_key_unexpected]
+other = "key not expected"
+
+[validation_date_invalid]
+other = "must be a valid date"
+
+[validation_date_out_of_range]
+other = "the date is out of range"
+
+# ---- is (github.com/go-ozzo/ozzo-validation/v4/is) ----
+
+[validation_is_email]
+other = "must be a valid email address"
+
+[validation_is_url]
+other = "must be a valid URL"
+
+[validation_is_request_url]
+other = "must be a valid request URL"
+
+[validation_is_request_uri]
+other = "must be a valid request URI"
+
+[validation_is_alpha]
+other = "must contain English letters only"
+
+[validation_is_digit]
+other = "must contain digits only"
+
+[validation_is_alphanumeric]
+other = "must contain English letters and digits only"
+
+[validation_is_utf_letter]
+other = "must contain unicode letter characters only"
+
+[validation_is_utf_digit]
+other = "must contain unicode decimal digits only"
+
+[validation_is_utf_letter_numeric]
+other = "must contain unicode letters and numbers only"
+
+[validation_is_utf_numeric]
+other = "must contain unicode number characters only"
+
+[validation_is_lower_case]
+other = "must be in lower case"
+
+[validation_is_upper_case]
+other = "must be in upper case"
+
+[validation_is_hexadecimal]
+other = "must be a valid hexadecimal number"
+
+[validation_is_hex_color]
+other = "must be a valid hexadecimal color code"
+
+[validation_is_rgb_color]
+other = "must be a valid RGB color code"
+
+[validation_is_int]
+other = "must be an integer number"
+
+[validation_is_float]
+other = "must be a floating point number"
+
+[validation_is_uuid_v3]
+other = "must be a valid UUID v3"
+
+[validation_is_uuid_v4]
+other = "must be a valid UUID v4"
+
+[validation_is_uuid_v5]
+other = "must be a valid UUID v5"
+
+[validation_is_uuid]
+other = "must be a valid UUID"
+
+[validation_is_credit_card]
+other = "must be a valid credit card number"
+
+[validation_is_isbn_10]
+other = "must be a valid ISBN-10"
+
+[validation_is_isbn_13]
+other = "must be a valid ISBN-13"
+
+[validation_is_isbn]
+other = "must be a valid ISBN"
+
+[validation_is_json]
+other = "must be in valid JSON format"
+
+[validation_is_ascii]
+other = "must contain ASCII characters only"
+
+[validation_is_printable_ascii]
+other = "must contain printable ASCII characters only"
+
+[validation_is_multibyte]
+other = "must contain multibyte characters"
+
+[validation_is_full_width]
+other = "must contain full-width characters"
+
+[validation_is_half_width]
+other = "must contain half-width characters"
+
+[validation_is_variable_width]
+other = "must contain both full-width and half-width characters"
+
+[validation_is_base64]
+other = "must be encoded in Base64"
+
+[validation_is_data_uri]
+other = "must be a Base64-encoded data URI"
+
+[validation_is_e164_number]
+other = "must be a valid E164 number"
+
+[validation_is_country_code_2_letter]
+other = "must be a valid two-letter country code"
+
+[validation_is_country_code_3_letter]
+other = "must be a valid three-letter country code"
+
+[validation_is_currency_code]
+other = "must be valid ISO 4217 currency code"
+
+[validation_is_dial_string]
+other = "must be a valid dial string"
+
+[validation_is_mac_address]
+other = "must be a valid MAC address"
+
+[validation_is_ip]
+other = "must be a valid IP address"
+
+[validation_is_ipv4]
+other = "must be a valid IPv4 address"
+
+[validation_is_ipv6]
+other = "must be a valid IPv6 address"
+
+[validation_is_sub_domain]
+other = "must be a valid subdomain"
+
+[validation_is_domain]
+other = "must be a valid domain"
+
+[validation_is_dns_name]
+other = "must be a valid DNS name"
+
+[validation_is_host]
+other = "must be a valid IP address or DNS name"
+
+[validation_is_port]
+other = "must be a valid port number"
+
+[validation_is_mongo_id]
+other = "must be a valid hex-encoded MongoDB ObjectId"
+
+[validation_is_latitude]
+other = "must be a valid latitude"
+
+[validation_is_longitude]
+other = "must be a valid longitude"
+
+[validation_is_ssn]
+other = "must be a valid social security number"
+
+[validation_is_semver]
+other = "must be a valid semantic version"
+
+[validation_is_password]
+other = "must contain at least 8 characters with uppercase, lowercase, number, and special character"

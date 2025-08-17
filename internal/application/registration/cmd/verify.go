@@ -5,11 +5,13 @@ import (
 	"log/slog"
 	"net/http"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/logging"
 )
 
 var (
@@ -50,32 +52,31 @@ func NewVerifyHandler(args VerifyHandlerArgs) *VerifyHandler {
 }
 
 func (h *VerifyHandler) Handle(ctx context.Context, cmd Verify) error {
-	ctx, span := h.tracer.Start(ctx, "VerifyHandler.Handle")
+	ctx, span := h.tracer.Start(ctx, "VerifyHandler.Handle",
+		trace.WithAttributes(attribute.String("email", logging.RedactEmail(cmd.Email))),
+	)
 	defer span.End()
 
-	h.logger.Debug("VerifyHandler.Handle called", "email", cmd.Email, "code", cmd.Code)
-
-	if cmd.Email == "" || cmd.Code == "" {
-		err := ErrMissingEmailCode
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "email or code is empty")
-		return err
-	}
-
-	return h.repo.UpdateRegistrationByEmail(ctx, cmd.Email, func(ctx context.Context, r *registration.Registration) error {
+	err := h.repo.UpdateRegistrationByEmail(ctx, cmd.Email, func(ctx context.Context, r *registration.Registration) error {
 		span := trace.SpanFromContext(ctx)
 
 		if r.IsStatus(registration.StatusVerified) {
-			span.SetStatus(codes.Ok, "registration already verified")
+			span.AddEvent("registration already verified")
 			return ErrOKAlreadyVerified
 		}
 
 		if err := r.VerifyCode(cmd.Code); err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to verify code")
+			span.AddEvent("failed to verify registration code")
 			return err
 		}
 
 		return nil
 	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed update registration")
+		return err
+	}
+
+	return nil
 }

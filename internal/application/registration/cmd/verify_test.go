@@ -73,45 +73,6 @@ func TestVerifyHandler_AlreadyVerified_ShouldSucceed(t *testing.T) {
 	s.MockRepo.AssertEventCount(t, 0)
 }
 
-func TestVerifyHandler_InvalidArgs_ShouldReturnError(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		arg     Verify
-		wantErr error
-	}{
-		{
-			name:    "Empty Email",
-			arg:     Verify{Email: "", Code: "valid-code"},
-			wantErr: ErrMissingEmailCode,
-		},
-		{
-			name:    "Empty Code",
-			arg:     Verify{Email: fixtures.ValidStudentEmail, Code: ""},
-			wantErr: ErrMissingEmailCode,
-		},
-		{
-			name:    "Both Empty",
-			arg:     Verify{Email: "", Code: ""},
-			wantErr: ErrMissingEmailCode,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			s := NewVerifySuite()
-			err := s.Handler.Handle(t.Context(), tt.arg)
-			require.Error(t, err)
-			assert.ErrorIs(t, err, tt.wantErr)
-
-			s.MockRepo.AssertEventCount(t, 0)
-		})
-	}
-}
-
 func TestVerifyHandler_InvalidEmail_ShouldReturnError(t *testing.T) {
 	t.Parallel()
 

@@ -1,0 +1,238 @@
+
+# ---- core ----
+
+[validation_required]
+other = "не может быть пустым"
+
+[validation_nil_or_not_empty_required]
+other = "не может быть пустым"
+
+[validation_nil]
+other = "должно быть пустым"
+
+[validation_empty]
+other = "должно быть пустым"
+
+[validation_in_invalid]
+other = "должно быть допустимым значением"
+
+[validation_not_in_invalid]
+other = "не должно входить в список"
+
+[validation_match_invalid]
+other = "должно соответствовать формату"
+
+[validation_multiple_of_invalid]
+other = "должно быть кратно {{.base}}"
+
+[validation_length_too_long]
+other = "длина не должна превышать {{.max}}"
+
+[validation_length_too_short]
+other = "длина должна быть не меньше {{.min}}"
+
+[validation_length_invalid]
+other = "длина должна быть ровно {{.min}}"
+
+[validation_length_out_of_range]
+other = "длина должна быть от {{.min}} до {{.max}}"
+
+[validation_length_empty_required]
+other = "значение должно быть пустым"
+
+[validation_min_greater_equal_than_required]
+other = "должно быть не меньше {{.threshold}}"
+
+[validation_max_less_equal_than_required]
+other = "должно быть не больше {{.threshold}}"
+
+[validation_min_greater_than_required]
+other = "должно быть больше {{.threshold}}"
+
+[validation_max_less_than_required]
+other = "должно быть меньше {{.threshold}}"
+
+[validation_not_nil_required]
+other = "обязательно"
+
+[validation_key_wrong_type]
+other = "ключ неверного типа"
+
+[validation_key_missing]
+other = "отсутствует обязательный ключ"
+
+[validation_key_unexpected]
+other = "неожиданный ключ"
+
+[validation_date_invalid]
+other = "должна быть корректной датой"
+
+[validation_date_out_of_range]
+other = "дата вне допустимого диапазона"
+
+# ---- is ----
+
+[validation_is_email]
+other = "должен быть корректный адрес электронной почты"
+
+[validation_is_url]
+other = "должен быть корректный URL"
+
+[validation_is_request_url]
+other = "должен быть корректный URL запроса"
+
+[validation_is_request_uri]
+other = "должен быть корректный URI запроса"
+
+[validation_is_alpha]
+other = "должно содержать только латинские буквы"
+
+[validation_is_digit]
+other = "должно содержать только цифры"
+
+[validation_is_alphanumeric]
+other = "должно содержать только латинские буквы и цифры"
+
+[validation_is_utf_letter]
+other = "должно содержать только буквенные символы Unicode"
+
+[validation_is_utf_digit]
+other = "должно содержать только десятичные цифры Unicode"
+
+[validation_is_utf_letter_numeric]
+other = "должно содержать только буквы и цифры Unicode"
+
+[validation_is_utf_numeric]
+other = "должно содержать только числовые символы Unicode"
+
+[validation_is_lower_case]
+other = "должно быть в нижнем регистре"
+
+[validation_is_upper_case]
+other = "должно быть в верхнем регистре"
+
+[validation_is_hexadecimal]
+other = "должно быть корректным шестнадцатеричным числом"
+
+[validation_is_hex_color]
+other = "должен быть корректный шестнадцатеричный код цвета"
+
+[validation_is_rgb_color]
+other = "должен быть корректный RGB-код цвета"
+
+[validation_is_int]
+other = "должно быть целым числом"
+
+[validation_is_float]
+other = "должно быть числом с плавающей точкой"
+
+[validation_is_uuid_v3]
+other = "должен быть корректный UUID v3"
+
+[validation_is_uuid_v4]
+other = "должен быть корректный UUID v4"
+
+[validation_is_uuid_v5]
+other = "должен быть корректный UUID v5"
+
+[validation_is_uuid]
+other = "должен быть корректный UUID"
+
+[validation_is_credit_card]
+other = "должен быть корректный номер банковской карты"
+
+[validation_is_isbn_10]
+other = "должен быть корректный ISBN-10"
+
+[validation_is_isbn_13]
+other = "должен быть корректный ISBN-13"
+
+[validation_is_isbn]
+other = "должен быть корректный ISBN"
+
+[validation_is_json]
+other = "должен быть корректный JSON"
+
+[validation_is_ascii]
+other = "должно содержать только символы ASCII"
+
+[validation_is_printable_ascii]
+other = "должно содержать только печатные символы ASCII"
+
+[validation_is_multibyte]
+other = "должно содержать многобайтные символы"
+
+[validation_is_full_width]
+other = "должно содержать символы полной ширины"
+
+[validation_is_half_width]
+other = "должно содержать символы половинной ширины"
+
+[validation_is_variable_width]
+other = "должно содержать и символы полной, и половинной ширины"
+
+[validation_is_base64]
+other = "должно быть закодировано в Base64"
+
+[validation_is_data_uri]
+other = "должен быть data URI, закодированный Base64"
+
+[validation_is_e164_number]
+other = "должен быть корректный номер формата E.164"
+
+[validation_is_country_code_2_letter]
+other = "должен быть корректный двухбуквенный код страны"
+
+[validation_is_country_code_3_letter]
+other = "должен быть корректный трёхбуквенный код страны"
+
+[validation_is_currency_code]
+other = "должен быть корректный код валюты ISO 4217"
+
+[validation_is_dial_string]
+other = "должна быть корректная строка набора"
+
+[validation_is_mac_address]
+other = "должен быть корректный MAC-адрес"
+
+[validation_is_ip]
+other = "должен быть корректный IP-адрес"
+
+[validation_is_ipv4]
+other = "должен быть корректный IPv4-адрес"
+
+[validation_is_ipv6]
+other = "должен быть корректный IPv6-адрес"
+
+[validation_is_sub_domain]
+other = "должен быть корректный поддомен"
+
+[validation_is_domain]
+other = "должен быть корректный домен"
+
+[validation_is_dns_name]
+other = "должно быть корректное DNS-имя"
+
+[validation_is_host]
+other = "должен быть корректный IP-адрес или DNS-имя"
+
+[validation_is_port]
+other = "должен быть корректный номер порта"
+
+[validation_is_mongo_id]
+other = "должен быть корректный шестнадцатеричный MongoDB ObjectId"
+
+[validation_is_latitude]
+other = "должна быть корректная широта"
+
+[validation_is_longitude]
+other = "должна быть корректная долгота"
+
+[validation_is_ssn]
+other = "должен быть корректный номер SSN"
+
+[validation_is_semver]
+other = "должна быть корректная семантическая версия"
+
+[validation_is_password]
+other = "должен содержать минимум 8 символов: заглавную букву, строчную букву, цифру и специальный символ"

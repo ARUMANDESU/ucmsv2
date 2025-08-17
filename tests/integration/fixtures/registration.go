@@ -62,7 +62,7 @@ var (
 		Email:     ValidStudent2Email,
 		FirstName: "Test",
 		LastName:  "Student2",
-		Password:  "SecurePass123!",
+		Password:  "AnotherPass123!",
 		GroupID:   uuid.MustParse("660e8400-e29b-41d4-a716-446655440001"),
 		Major:     major.IT,
 	}
