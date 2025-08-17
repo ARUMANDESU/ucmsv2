@@ -37,6 +37,11 @@ func NewErrorHandler() *ErrorHandler {
 	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/validation.kk.toml")
 	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/validation.ru.toml")
 
+	// Load fields files
+	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/fields.en.toml")
+	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/fields.kk.toml")
+	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/fields.ru.toml")
+
 	return &ErrorHandler{
 		bundle: bundle,
 		enloc:  i18n.NewLocalizer(bundle, "en"),
@@ -76,8 +81,13 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, err e
 	if errors.As(err, &valErrs) {
 		var msg strings.Builder
 		for field, fieldErr := range valErrs {
+			localizedField, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: field})
+			if err == nil {
+				field = localizedField
+			}
+
 			if valErr, ok := fieldErr.(validation.Error); ok {
-				msg.WriteString(fmt.Sprintf("%s: %s; ", field, localizer.MustLocalize(&i18n.LocalizeConfig{
+				msg.WriteString(fmt.Sprintf("%s %s; ", field, localizer.MustLocalize(&i18n.LocalizeConfig{
 					MessageID:    valErr.Code(),
 					TemplateData: valErr.Params(),
 				})))

@@ -1,0 +1,28 @@
+# Field labels for input tags
+# Kazakh (kk)
+
+# Authentication fields
+[email_barcode]
+other = "Электрондық пошта немесе баркод"
+
+[password]
+other = "Құпия сөз"
+
+# Registration fields
+[email]
+other = "Электрондық пошта мекенжайы"
+
+[verification_code]
+other = "Растау коды"
+
+[barcode]
+other = "Баркод"
+
+[first_name]
+other = "Аты"
+
+[last_name]
+other = "Тегі"
+
+[group_id]
+other = "Академиялық топ"

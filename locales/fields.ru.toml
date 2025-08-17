@@ -1,0 +1,28 @@
+# Field labels for input tags
+# Russian (ru)
+
+# Authentication fields
+[email_barcode]
+other = "Email или баркод"
+
+[password]
+other = "Пароль"
+
+# Registration fields
+[email]
+other = "Адрес электронной почты"
+
+[verification_code]
+other = "Код подтверждения"
+
+[barcode]
+other = "Баркод"
+
+[first_name]
+other = "Имя"
+
+[last_name]
+other = "Фамилия"
+
+[group_id]
+other = "Академическая группа"

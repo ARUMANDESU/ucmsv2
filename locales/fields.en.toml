@@ -1,0 +1,28 @@
+# Field labels for input tags
+# English (en)
+
+# Authentication fields
+[email_barcode]
+other = "Email or Barcode"
+
+[password]
+other = "Password"
+
+# Registration fields
+[email]
+other = "Email Address"
+
+[verification_code]
+other = "Verification Code"
+
+[barcode]
+other = "Barcode"
+
+[first_name]
+other = "First Name"
+
+[last_name]
+other = "Last Name"
+
+[group_id]
+other = "Academic Group"
