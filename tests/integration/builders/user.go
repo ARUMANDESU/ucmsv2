@@ -52,7 +52,7 @@ type UserBuilder struct {
 }
 
 func NewUserBuilder() *UserBuilder {
-	hash, _ := bcrypt.GenerateFromPassword([]byte(fixtures.TestStudent.Password), registration.PasswordCostFactor)
+	hash, _ := bcrypt.GenerateFromPassword([]byte(fixtures.TestStudent.Password), user.PasswordCostFactor)
 	now := time.Now()
 
 	return &UserBuilder{
@@ -87,7 +87,7 @@ func (b *UserBuilder) WithEmail(email string) *UserBuilder {
 
 func (b *UserBuilder) WithPassword(password string) *UserBuilder {
 	b.password = password
-	hash, _ := bcrypt.GenerateFromPassword([]byte(password), registration.PasswordCostFactor)
+	hash, _ := bcrypt.GenerateFromPassword([]byte(password), user.PasswordCostFactor)
 	b.passHash = hash
 	return b
 }
@@ -162,13 +162,15 @@ func (b *UserBuilder) BuildNew() *user.User {
 // StudentBuilder extends UserBuilder for student-specific properties
 type StudentBuilder struct {
 	UserBuilder
-	groupID uuid.UUID
+	groupID        uuid.UUID
+	registrationID registration.ID
 }
 
 func NewStudentBuilder() *StudentBuilder {
 	return &StudentBuilder{
-		UserBuilder: *NewUserBuilder().AsStudent(),
-		groupID:     fixtures.SEGroup.ID,
+		UserBuilder:    *NewUserBuilder().AsStudent(),
+		groupID:        fixtures.SEGroup.ID,
+		registrationID: registration.ID(fixtures.ValidStudentRegistrationID),
 	}
 }
 
@@ -180,6 +182,11 @@ func (b *StudentBuilder) WithGroupID(groupID uuid.UUID) *StudentBuilder {
 // Override UserBuilder methods to return *StudentBuilder for proper chaining
 func (b *StudentBuilder) WithID(id string) *StudentBuilder {
 	b.UserBuilder.WithID(id)
+	return b
+}
+
+func (b *StudentBuilder) WithRegistrationID(registrationID registration.ID) *StudentBuilder {
+	b.registrationID = registrationID
 	return b
 }
 
@@ -279,42 +286,51 @@ func (b *StudentBuilder) RehydrateStudentArgs() user.RehydrateStudentArgs {
 
 func (b *StudentBuilder) BuildNew() (*user.Student, error) {
 	return user.RegisterStudent(user.RegisterStudentArgs{
-		ID:        b.id,
-		FirstName: b.firstName,
-		LastName:  b.lastName,
-		AvatarURL: b.avatarURL,
-		Email:     b.email,
-		PassHash:  b.passHash,
-		GroupID:   b.groupID,
+		ID:             b.id,
+		RegistrationID: b.registrationID,
+		FirstName:      b.firstName,
+		LastName:       b.lastName,
+		AvatarURL:      b.avatarURL,
+		Email:          b.email,
+		Password:       b.password,
+		GroupID:        b.groupID,
 	})
 }
 
 func (b *StudentBuilder) BuildRegisterArgs() user.RegisterStudentArgs {
 	return user.RegisterStudentArgs{
-		ID:        b.id,
-		FirstName: b.firstName,
-		LastName:  b.lastName,
-		AvatarURL: b.avatarURL,
-		Email:     b.email,
-		PassHash:  b.passHash,
-		GroupID:   b.groupID,
+		ID:             b.id,
+		RegistrationID: b.registrationID,
+		FirstName:      b.firstName,
+		LastName:       b.lastName,
+		AvatarURL:      b.avatarURL,
+		Email:          b.email,
+		Password:       b.password,
+		GroupID:        b.groupID,
 	}
 }
 
 // StaffBuilder extends UserBuilder for staff-specific properties
 type StaffBuilder struct {
 	UserBuilder
+	registrationID registration.ID
 }
 
 func NewStaffBuilder() *StaffBuilder {
 	return &StaffBuilder{
-		UserBuilder: *NewUserBuilder().AsStaff(),
+		UserBuilder:    *NewUserBuilder().AsStaff(),
+		registrationID: registration.ID(fixtures.ValidStaffRegistrationID),
 	}
 }
 
 // Override UserBuilder methods to return *StaffBuilder for proper chaining
 func (b *StaffBuilder) WithID(id string) *StaffBuilder {
 	b.UserBuilder.WithID(id)
+	return b
+}
+
+func (b *StaffBuilder) WithRegistrationID(registrationID registration.ID) *StaffBuilder {
+	b.registrationID = registrationID
 	return b
 }
 
@@ -412,22 +428,24 @@ func (b *StaffBuilder) RehydrateStaffArgs() user.RehydrateStaffArgs {
 
 func (b *StaffBuilder) BuildNew() (*user.Staff, error) {
 	return user.RegisterStaff(user.RegisterStaffArgs{
-		ID:        b.id,
-		FirstName: b.firstName,
-		LastName:  b.lastName,
-		AvatarURL: b.avatarURL,
-		Email:     b.email,
-		PassHash:  b.passHash,
+		ID:             b.id,
+		RegistrationID: b.registrationID,
+		FirstName:      b.firstName,
+		LastName:       b.lastName,
+		AvatarURL:      b.avatarURL,
+		Email:          b.email,
+		Password:       b.password,
 	})
 }
 
 func (b *StaffBuilder) BuildRegisterArgs() user.RegisterStaffArgs {
 	return user.RegisterStaffArgs{
-		ID:        b.id,
-		FirstName: b.firstName,
-		LastName:  b.lastName,
-		AvatarURL: b.avatarURL,
-		Email:     b.email,
-		PassHash:  b.passHash,
+		ID:             b.id,
+		RegistrationID: b.registrationID,
+		FirstName:      b.firstName,
+		LastName:       b.lastName,
+		AvatarURL:      b.avatarURL,
+		Email:          b.email,
+		Password:       b.password,
 	}
 }

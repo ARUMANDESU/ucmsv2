@@ -2,6 +2,7 @@ package registration
 
 import (
 	"github.com/ARUMANDESU/ucms/internal/application/registration/cmd"
+	"github.com/ARUMANDESU/ucms/internal/application/registration/event"
 	"github.com/ARUMANDESU/ucms/pkg/env"
 )
 
@@ -17,13 +18,16 @@ type Command struct {
 	ResendCode      *cmd.ResendCodeHandler
 }
 
-type Event struct{}
+type Event struct {
+	Registration *event.RegistrationCompletedHandler
+}
 
 type Args struct {
-	Mode        env.Mode
-	Repo        cmd.Repo
-	UserGetter  cmd.UserGetter
-	GroupGetter cmd.GroupGetter
+	Mode         env.Mode
+	Repo         cmd.Repo
+	UserGetter   cmd.UserGetter
+	GroupGetter  cmd.GroupGetter
+	StudentSaver cmd.StudentSaver
 }
 
 func NewApp(args Args) *App {
@@ -41,12 +45,17 @@ func NewApp(args Args) *App {
 				UserGetter:       args.UserGetter,
 				RegistrationRepo: args.Repo,
 				GroupGetter:      args.GroupGetter,
+				StudentSaver:     args.StudentSaver,
 			}),
 			ResendCode: cmd.NewResendCodeHandler(cmd.ResendCodeHandlerArgs{
 				Repo:       args.Repo,
 				UserGetter: args.UserGetter,
 			}),
 		},
-		Event: Event{},
+		Event: Event{
+			Registration: event.NewRegistrationCompletedHandler(event.RegistrationCompletedHandlerArgs{
+				RegRepo: args.Repo,
+			}),
+		},
 	}
 }

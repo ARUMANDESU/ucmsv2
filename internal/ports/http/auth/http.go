@@ -20,6 +20,7 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/httpx"
 	"github.com/ARUMANDESU/ucms/pkg/sanitizex"
+	"github.com/ARUMANDESU/ucms/pkg/validationx"
 )
 
 const (
@@ -92,16 +93,16 @@ func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
 	req.EmailOrBarcode = sanitizex.CleanSingleLine(req.EmailOrBarcode)
 
 	var isEmail bool
-	validationFuncs := []validation.Rule{validation.Required}
+	validationRules := []validation.Rule{validation.Required}
 	if strings.Contains(req.EmailOrBarcode, "@") && strings.Contains(req.EmailOrBarcode, ".") {
 		isEmail = true
-		validationFuncs = append(validationFuncs, validation.Length(0, 500), is.Email)
+		copy(validationRules, validationx.EmailRules)
 	} else {
-		validationFuncs = append(validationFuncs, validation.Length(0, 80), is.Alphanumeric)
+		validationRules = append(validationRules, validation.Length(0, 80), is.Alphanumeric)
 	}
 
 	err := validation.ValidateStruct(&req,
-		validation.Field(&req.EmailOrBarcode, validationFuncs...),
+		validation.Field(&req.EmailOrBarcode, validationRules...),
 		validation.Field(&req.Password, validation.Required, validation.Length(0, 100)),
 	)
 	if err != nil {

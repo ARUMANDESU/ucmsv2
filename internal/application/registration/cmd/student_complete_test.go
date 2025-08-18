@@ -6,9 +6,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
@@ -20,12 +21,14 @@ type StudentCompleteSuite struct {
 	MockUser         *mocks.UserRepo
 	MockRegistration *mocks.RegistrationRepo
 	MockGroup        *mocks.GroupRepo
+	MockStudent      *mocks.StudentRepo
 }
 
 func NewStudentCompleteSuite(t *testing.T) *StudentCompleteSuite {
 	mockUser := mocks.NewUserRepo()
 	mockRegistration := mocks.NewRegistrationRepo()
 	mockGroup := mocks.NewGroupRepo()
+	mockStudent := mocks.NewStudentRepo()
 
 	// Seed a group for the test
 	group := builders.NewGroupBuilder().Build()
@@ -35,6 +38,7 @@ func NewStudentCompleteSuite(t *testing.T) *StudentCompleteSuite {
 		UserGetter:       mockUser,
 		RegistrationRepo: mockRegistration,
 		GroupGetter:      mockGroup,
+		StudentSaver:     mockStudent,
 	})
 
 	return &StudentCompleteSuite{
@@ -42,6 +46,7 @@ func NewStudentCompleteSuite(t *testing.T) *StudentCompleteSuite {
 		MockUser:         mockUser,
 		MockRegistration: mockRegistration,
 		MockGroup:        mockGroup,
+		MockStudent:      mockStudent,
 	}
 }
 
@@ -67,31 +72,37 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		s.MockRegistration.
-			AssertRegistrationExistsByID(t, reg.ID()).
-			AssertStatus(t, registration.StatusCompleted).
+		s.MockStudent.RequireStudentByID(t, user.ID(fixtures.TestStudent.ID)).
 			AssertEmail(t, fixtures.ValidStudentEmail).
-			AssertVerificationCode(t, reg.VerificationCode())
+			AssertAvatarURL(t, "").
+			AssertFirstName(t, fixtures.TestStudent.FirstName).
+			AssertLastName(t, fixtures.TestStudent.LastName).
+			AssertGroupID(t, fixtures.TestStudent.GroupID).
+			AssertPassword(t, fixtures.TestStudent.Password).
+			AssertRole(t, role.Student)
 
-		s.MockRegistration.AssertEventCount(t, 1)
-		e := mocks.RequireEventExists(t, s.MockRegistration.EventRepo, &registration.StudentRegistrationCompleted{})
-		assert.Equal(t, reg.ID(), e.RegistrationID)
-		assert.Equal(t, fixtures.TestStudent.ID, e.Barcode)
-		assert.Equal(t, fixtures.TestStudent.Email, e.Email)
-		assert.Equal(t, fixtures.TestStudent.FirstName, e.FirstName)
-		assert.Equal(t, fixtures.TestStudent.LastName, e.LastName)
-		assert.NoError(t, bcrypt.CompareHashAndPassword(e.PassHash, []byte(fixtures.TestStudent.Password)), "password should match")
-		assert.Equal(t, fixtures.TestStudent.GroupID, e.GroupID)
+		s.MockStudent.AssertEventCount(t, 1)
+		e := mocks.RequireEventExists(t, s.MockStudent.EventRepo, &user.StudentRegistered{})
+		user.NewStudentRegistrationAssertions(t, e).
+			AssertStudentID(user.ID(fixtures.TestStudent.ID)).
+			AssertRegistrationID(reg.ID()).
+			AssertEmail(fixtures.TestStudent.Email).
+			AssertFirstName(fixtures.TestStudent.FirstName).
+			AssertLastName(fixtures.TestStudent.LastName).
+			AssertGroupID(fixtures.TestStudent.GroupID)
 	})
+}
 
-	t.Run("not verified yet, complete registration", func(t *testing.T) {
+func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
+	t.Parallel()
+
+	t.Run("not verified yet", func(t *testing.T) {
 		s := NewStudentCompleteSuite(t)
 		reg := builders.NewRegistrationBuilder().
 			WithEmail(fixtures.ValidStudentEmail).
 			WithStatus(registration.StatusPending).
 			Build()
 		s.MockRegistration.SeedRegistration(t, reg)
-
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: reg.VerificationCode(),
@@ -101,32 +112,9 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 			Password:         fixtures.TestStudent.Password,
 			GroupID:          fixtures.TestStudent.GroupID,
 		})
-		require.NoError(t, err)
-		s.MockRegistration.
-			AssertRegistrationExistsByID(t, reg.ID()).
-			AssertStatus(t, registration.StatusCompleted).
-			AssertEmail(t, fixtures.ValidStudentEmail).
-			AssertVerificationCode(t, reg.VerificationCode())
-
-		s.MockRegistration.AssertEventCount(t, 2)
-
-		eventVerified := mocks.RequireEventExists(t, s.MockRegistration.EventRepo, &registration.EmailVerified{})
-		assert.Equal(t, reg.ID(), eventVerified.RegistrationID)
-		assert.Equal(t, fixtures.TestStudent.Email, eventVerified.Email)
-
-		eventCompleted := mocks.RequireEventExists(t, s.MockRegistration.EventRepo, &registration.StudentRegistrationCompleted{})
-		assert.Equal(t, reg.ID(), eventCompleted.RegistrationID)
-		assert.Equal(t, fixtures.TestStudent.ID, eventCompleted.Barcode)
-		assert.Equal(t, fixtures.TestStudent.Email, eventCompleted.Email)
-		assert.Equal(t, fixtures.TestStudent.FirstName, eventCompleted.FirstName)
-		assert.Equal(t, fixtures.TestStudent.LastName, eventCompleted.LastName)
-		assert.NoError(t, bcrypt.CompareHashAndPassword(eventCompleted.PassHash, []byte(fixtures.TestStudent.Password)), "password should match")
-		assert.Equal(t, fixtures.TestStudent.GroupID, eventCompleted.GroupID)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, registration.ErrVerifyFirst)
 	})
-}
-
-func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
-	t.Parallel()
 
 	t.Run("user by email already exists", func(t *testing.T) {
 		s := NewStudentCompleteSuite(t)
@@ -224,7 +212,7 @@ func TestStudentCompleteHandler_Verified(t *testing.T) {
 			GroupID:          fixtures.TestStudent.GroupID,
 		})
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, registration.ErrInvalidVerificationCode)
+		assert.ErrorIs(t, err, registration.ErrInvalidVerificationCode, "expected invalid verification code error, got: %v", err)
 	})
 }
 
@@ -248,7 +236,7 @@ func TestStudentCompleteHandler_AlreadyCompleted_ShouldFail(t *testing.T) {
 		GroupID:          fixtures.TestStudent.GroupID,
 	})
 	require.Error(t, err)
-	// assert.ErrorIs(t, err, registration.ErrAlreadyCompleted)
+	assert.ErrorIs(t, err, registration.ErrRegistrationCompleted)
 }
 
 func TestStudentCompleteHandler_Pending_InvalidVerificationCode_ShouldFail(t *testing.T) {
@@ -271,7 +259,7 @@ func TestStudentCompleteHandler_Pending_InvalidVerificationCode_ShouldFail(t *te
 		GroupID:          fixtures.TestStudent.GroupID,
 	})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, registration.ErrInvalidVerificationCode)
+	assert.ErrorIs(t, err, registration.ErrVerifyFirst)
 }
 
 func TestStudentCompleteHandler_RegistrationNotFound_ShouldFail(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/validationx"
 )
 
 func TestUser_SetFirstName(t *testing.T) {
@@ -49,7 +49,7 @@ func TestUser_SetFirstName(t *testing.T) {
 				t.Errorf("User.SetFirstName() error = %v, expectedErr %v", err, tt.expectedErr)
 			}
 			if err != nil {
-				errorx.AssertValidationError(t, err, tt.expectedErr)
+				validationx.AssertValidationError(t, err, tt.expectedErr)
 			} else {
 				assert.Equal(t, tt.firstName, tt.user.firstName, "First name should be set correctly")
 			}
@@ -95,7 +95,7 @@ func TestUser_SetLastName(t *testing.T) {
 				t.Errorf("User.SetLastName() error = %v, expectedErr %v", err, tt.expectedErr)
 			}
 			if err != nil {
-				errorx.AssertValidationError(t, err, tt.expectedErr)
+				validationx.AssertValidationError(t, err, tt.expectedErr)
 			} else {
 				assert.Equal(t, tt.lastName, tt.user.lastName, "Last name should be set correctly")
 			}
@@ -134,7 +134,7 @@ func TestUser_SetAvatarURL(t *testing.T) {
 				t.Errorf("User.SetAvatarURL() error = %v, expectedErr %v", err, tt.expectedErr)
 			}
 			if err != nil {
-				errorx.AssertValidationError(t, err, tt.expectedErr)
+				validationx.AssertValidationError(t, err, tt.expectedErr)
 			} else {
 				assert.Equal(t, tt.avatarURL, tt.user.avatarURL, "Avatar URL should be set correctly")
 			}

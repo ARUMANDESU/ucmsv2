@@ -134,3 +134,12 @@ other = "This email address is already registered"
 
 [error_barcode_not_available]
 other = "This barcode is already in use"
+
+[business_error_code_expired]
+other = "Verification code has expired"
+
+[business_error_verify_first]
+other = "Please verify your email first"
+
+[business_error_invalid_verification_code]
+other = "Invalid verification code"

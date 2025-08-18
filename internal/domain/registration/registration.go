@@ -4,28 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/env"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/randcode"
 )
 
-var emailRx = regexp.MustCompile(
-	`^[a-zA-Z0-9._%+\-]+@` + // local part
-		`(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+` + // labels
-		`[A-Za-z]{2,63}$`) // TLD
-
 const (
-	PasswordCostFactor     = 12 // Future-proofing; default is 10 in 2025.07.30
 	VerificationCodeLength = 6
 
 	ResendTimeout               = 1 * time.Minute
@@ -183,110 +173,21 @@ func (r *Registration) VerifyCode(code string) error {
 	return nil
 }
 
-type StudentArgs struct {
-	VerificationCode string    `json:"verification_code"`
-	Barcode          string    `json:"barcode"`
-	FirstName        string    `json:"first_name"`
-	LastName         string    `json:"last_name"`
-	Password         string    `json:"password"`
-	GroupID          uuid.UUID `json:"group_id"`
-}
-
-func (r *Registration) CompleteStudentRegistration(args StudentArgs) error {
-	err := validation.ValidateStruct(&args,
-		validation.Field(&args.VerificationCode,
-			validation.Required,
-			validation.Length(VerificationCodeLength, VerificationCodeLength),
-			is.Alphanumeric,
-		),
-		validation.Field(&args.Barcode,
-			validation.Required,
-			validation.Length(user.MinBarcodeLen, user.MaxBarcodeLen),
-			is.Alphanumeric,
-		),
-		validation.Field(&args.FirstName,
-			validation.Required,
-			validation.Length(user.MinFirstNameLen, user.MaxFirstNameLen),
-			is.Alphanumeric,
-		),
-		validation.Field(&args.LastName,
-			validation.Required,
-			validation.Length(user.MinLastNameLen, user.MaxLastNameLen),
-			is.Alphanumeric,
-		),
-		validation.Field(&args.Password,
-			validation.Required,
-			validation.Length(8, 100),
-			validation.By(errorx.ValidatePasswordManual),
-		),
-		validation.Field(&args.GroupID, validation.Required, validation.By(errorx.ValidateGroupID)),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to validate student registration args: %w", err)
+func (r *Registration) CheckCode(code string) error {
+	if r.status == StatusCompleted {
+		return ErrRegistrationCompleted
+	}
+	if r.status != StatusVerified {
+		return ErrVerifyFirst
 	}
 
-	if r.verificationCode != args.VerificationCode {
+	if time.Now().After(r.codeExpiresAt) {
+		return ErrCodeExpired
+	}
+
+	if r.verificationCode != code {
 		return ErrInvalidVerificationCode
 	}
-	if !r.IsStatus(StatusVerified) {
-		if err := r.VerifyCode(args.VerificationCode); err != nil {
-			return fmt.Errorf("failed to verify code: %w", err)
-		}
-	}
-
-	passHash, err := bcrypt.GenerateFromPassword([]byte(args.Password), PasswordCostFactor)
-	if err != nil {
-		return fmt.Errorf("failed to generate password hash: %w", err)
-	}
-
-	r.status = StatusCompleted
-	r.AddEvent(&StudentRegistrationCompleted{
-		Header:         event.NewEventHeader(),
-		RegistrationID: r.id,
-		Barcode:        args.Barcode,
-		Email:          r.email,
-		FirstName:      args.FirstName,
-		LastName:       args.LastName,
-		PassHash:       passHash,
-		GroupID:        args.GroupID,
-	})
-
-	return nil
-}
-
-type StaffArgs struct {
-	VerificationCode string
-	Barcode          string
-	FirstName        string
-	LastName         string
-	Password         string
-}
-
-func (r *Registration) CompleteStaffRegistration(args StaffArgs) error {
-	if r.verificationCode != args.VerificationCode {
-		return ErrInvalidVerificationCode
-	}
-	if !r.IsStatus(StatusVerified) {
-		if err := r.VerifyCode(args.VerificationCode); err != nil {
-			return fmt.Errorf("failed to verify code: %w", err)
-		}
-	}
-
-	passHash, err := bcrypt.GenerateFromPassword([]byte(args.Password), PasswordCostFactor)
-	if err != nil {
-		return fmt.Errorf("failed to generate password hash: %w", err)
-	}
-
-	r.status = StatusCompleted
-	r.AddEvent(&StaffRegistrationCompleted{
-		Header:         event.NewEventHeader(),
-		RegistrationID: r.id,
-		Barcode:        args.Barcode,
-		Email:          r.email,
-		FirstName:      args.FirstName,
-		LastName:       args.LastName,
-		PassHash:       passHash,
-	})
 
 	return nil
 }
@@ -320,6 +221,20 @@ func (r *Registration) ResendCode() error {
 		VerificationCode: code,
 	})
 
+	return nil
+}
+
+func (r *Registration) Complete() error {
+	if r == nil {
+		return errors.New("registration is nil")
+	}
+
+	if r.status != StatusVerified && r.status != StatusCompleted {
+		return fmt.Errorf("%w: %w", ErrInvalidStatus, errors.New("can only complete verified registrations"))
+	}
+
+	r.status = StatusCompleted
+	r.updatedAt = time.Now().UTC()
 	return nil
 }
 

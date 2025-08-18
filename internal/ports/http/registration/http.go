@@ -14,11 +14,12 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/application/registration"
+	registrationapp "github.com/ARUMANDESU/ucms/internal/application/registration"
 	"github.com/ARUMANDESU/ucms/internal/application/registration/cmd"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/pkg/httpx"
 	"github.com/ARUMANDESU/ucms/pkg/sanitizex"
+	"github.com/ARUMANDESU/ucms/pkg/validationx"
 )
 
 var (
@@ -29,14 +30,14 @@ var (
 type HTTP struct {
 	tracer     trace.Tracer
 	logger     *slog.Logger
-	cmd        *registration.Command
+	cmd        *registrationapp.Command
 	errhandler *httpx.ErrorHandler
 }
 
 type Args struct {
 	Tracer  trace.Tracer
 	Logger  *slog.Logger
-	Command *registration.Command
+	Command *registrationapp.Command
 }
 
 func NewHTTP(args Args) *HTTP {
@@ -77,7 +78,7 @@ func (h *HTTP) StartStudentRegistration(w http.ResponseWriter, r *http.Request) 
 	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
 
 	err := validation.ValidateStruct(&req,
-		validation.Field(&req.Email, validation.Required, is.Email),
+		validation.Field(&req.Email, validationx.EmailRules...),
 	)
 	if err != nil {
 		span.RecordError(err)
@@ -111,9 +112,14 @@ func (h *HTTP) Verify(w http.ResponseWriter, r *http.Request) {
 	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
 	req.VerificationCode = sanitizex.CleanSingleLine(req.VerificationCode)
 
-	err := validation.ValidateStruct(&req,
-		validation.Field(&req.Email, validation.Required, is.Email),
-		validation.Field(&req.VerificationCode, validation.Required, validation.Length(3, 50), is.Alphanumeric),
+	err := validation.ValidateStruct(
+		&req,
+		validation.Field(&req.Email, validationx.EmailRules...),
+		validation.Field(&req.VerificationCode,
+			validation.Required,
+			validation.Length(registration.VerificationCodeLength, registration.VerificationCodeLength),
+			is.Alphanumeric,
+		),
 	)
 	if err != nil {
 		span.RecordError(err)
@@ -156,13 +162,17 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 	req.Password = strings.TrimSpace(req.Password)
 
 	err := validation.ValidateStruct(&req,
-		validation.Field(&req.Email, validation.Required, is.Email),
-		validation.Field(&req.VerificationCode, validation.Required, validation.Length(3, 50), is.Alphanumeric),
-		validation.Field(&req.FirstName, validation.Required, validation.Length(1, 100), is.Alphanumeric),
-		validation.Field(&req.LastName, validation.Required, validation.Length(1, 100), is.Alphanumeric),
-		validation.Field(&req.Password, validation.Required, validation.Length(8, 100), validation.By(errorx.ValidatePasswordManual)),
+		validation.Field(&req.Email, validationx.EmailRules...),
+		validation.Field(&req.VerificationCode,
+			validation.Required,
+			validation.Length(registration.VerificationCodeLength, registration.VerificationCodeLength),
+			is.Alphanumeric,
+		),
+		validation.Field(&req.FirstName, validationx.NameRules...),
+		validation.Field(&req.LastName, validationx.NameRules...),
+		validation.Field(&req.Password, validationx.PasswordRules...),
 		validation.Field(&req.Barcode, validation.Required, validation.Length(1, 100), is.Alphanumeric),
-		validation.Field(&req.GroupId, validation.Required, validation.By(errorx.ValidateGroupID)),
+		validation.Field(&req.GroupId, validationx.Required),
 	)
 	if err != nil {
 		span.RecordError(err)
@@ -205,7 +215,7 @@ func (h *HTTP) ResendVerificationCode(w http.ResponseWriter, r *http.Request) {
 	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
 
 	err := validation.ValidateStruct(&req,
-		validation.Field(&req.Email, validation.Required, is.Email),
+		validation.Field(&req.Email, validationx.EmailRules...),
 	)
 	if err != nil {
 		span.RecordError(err)

@@ -4,10 +4,13 @@ import (
 	"testing"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/validationx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 )
 
@@ -28,19 +31,34 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 			wantErr: validation.Errors{"id": validation.ErrRequired},
 		},
 		{
+			name:    "missing RegistrationID",
+			args:    builders.NewStaffBuilder().WithRegistrationID(registration.ID{}).BuildRegisterArgs(),
+			wantErr: validation.Errors{"registration_id": validation.ErrRequired},
+		},
+		{
+			name:    "invalid RegistrationID",
+			args:    builders.NewStaffBuilder().WithRegistrationID(registration.ID(uuid.Nil)).BuildRegisterArgs(),
+			wantErr: validation.Errors{"registration_id": validation.ErrRequired},
+		},
+		{
 			name:    "missing Email",
 			args:    builders.NewStaffBuilder().WithEmail("").BuildRegisterArgs(),
 			wantErr: validation.Errors{"email": validation.ErrRequired},
 		},
 		{
-			name:    "missing PassHash",
-			args:    builders.NewStaffBuilder().WithPassHash(nil).BuildRegisterArgs(),
-			wantErr: validation.Errors{"pass_hash": validation.ErrRequired},
+			name:    "invalid Email format",
+			args:    builders.NewStaffBuilder().WithEmail("invalid-email").BuildRegisterArgs(),
+			wantErr: validation.Errors{"email": is.ErrEmail},
 		},
 		{
-			name:    "empty PassHash",
-			args:    builders.NewStaffBuilder().WithPassHash([]byte{}).BuildRegisterArgs(),
-			wantErr: validation.Errors{"pass_hash": validation.ErrRequired},
+			name:    "missing Password",
+			args:    builders.NewStaffBuilder().WithPassword("").BuildRegisterArgs(),
+			wantErr: validation.Errors{"password": validation.ErrRequired},
+		},
+		{
+			name:    "invalid Password format",
+			args:    builders.NewStaffBuilder().WithPassword("short").BuildRegisterArgs(),
+			wantErr: validation.Errors{"password": validation.ErrLengthOutOfRange},
 		},
 		{
 			name:    "missing FirstName",
@@ -81,7 +99,7 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 				user.NewStaffAssertions(staff).
 					AssertByRegistrationArgs(t, tt.args)
 			} else {
-				errorx.AssertValidationErrors(t, err, tt.wantErr)
+				validationx.AssertValidationErrors(t, err, tt.wantErr)
 				assert.Nil(t, staff, "expected staff to be nil on error")
 			}
 		})
@@ -90,12 +108,13 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 
 func TestRegisterStaff_EmptyArgs(t *testing.T) {
 	staff, err := user.RegisterStaff(user.RegisterStaffArgs{})
-	errorx.AssertValidationErrors(t, err, validation.Errors{
-		"id":         validation.ErrRequired,
-		"email":      validation.ErrRequired,
-		"first_name": validation.ErrRequired,
-		"last_name":  validation.ErrRequired,
-		"pass_hash":  validation.ErrRequired,
+	validationx.AssertValidationErrors(t, err, validation.Errors{
+		"id":              validation.ErrRequired,
+		"registration_id": validation.ErrRequired,
+		"email":           validation.ErrRequired,
+		"first_name":      validation.ErrRequired,
+		"last_name":       validation.ErrRequired,
+		"password":        validation.ErrRequired,
 	})
 	assert.Nil(t, staff, "expected staff to be nil on error")
 }

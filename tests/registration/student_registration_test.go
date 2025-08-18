@@ -9,10 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
@@ -93,18 +91,6 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 		}).AssertSuccess()
 	})
 
-	s.T().Run("Verify Student Registration Completed Event", func(t *testing.T) {
-		e := event.RequireEvent(t, s.Event, &registration.StudentRegistrationCompleted{})
-		require.NotNil(t, e, "Expected StudentRegistered event to be emitted")
-		assert.Equal(t, reg.GetID(), e.RegistrationID)
-		assert.Equal(t, fixtures.TestStudent.ID, e.Barcode)
-		assert.Equal(t, email, e.Email)
-		assert.Equal(t, fixtures.TestStudent.FirstName, e.FirstName)
-		assert.Equal(t, fixtures.TestStudent.LastName, e.LastName)
-		assert.Equal(t, fixtures.SEGroup.ID.String(), e.GroupID.String())
-		assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(e.PassHash), []byte(fixtures.TestStudent.Password)))
-	})
-
 	s.T().Run("Verify Student Creation", func(t *testing.T) {
 		s.Require().Eventually(func() bool {
 			return s.DB.CheckUserExists(t, email)
@@ -120,7 +106,7 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 
 	s.T().Run("Verify Registration Status", func(t *testing.T) {
 		s.DB.RequireRegistrationExists(t, email).
-			HasStatus(registration.StatusCompleted)
+			EventuallyHasStatus(registration.StatusCompleted)
 	})
 
 	s.T().Run("Verify Welcome Email Sent", func(t *testing.T) {
@@ -361,7 +347,7 @@ func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
 			FirstName:        "Test",
 			LastName:         "Student",
 			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
-		}).AssertSuccess()
+		}).AssertBadRequest()
 	})
 
 	s.T().Run("Double Complete", func(t *testing.T) {
@@ -376,7 +362,7 @@ func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
 			FirstName:        "Test",
 			LastName:         "Student",
 			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
-		}).AssertStatus(http.StatusUnprocessableEntity)
+		}).AssertStatus(http.StatusConflict)
 	})
 }
 

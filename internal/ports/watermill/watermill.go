@@ -65,8 +65,9 @@ func (p *Port) Run(ctx context.Context, handlers AppEventHandlers) error {
 	err := p.eventProcessor.AddHandlers(
 		cqrs.NewEventHandler("MailOnRegistrationStarted", handlers.Mail.RegistrationStarted.Handle),
 		cqrs.NewEventHandler("MailOnVerificationCodeResent", handlers.Mail.VerificationCodeResent.Handle),
-		cqrs.NewEventHandler("StudentOnStudentRegistrationCompleted", handlers.Student.StudentRegistrationCompleted.Handle),
 		cqrs.NewEventHandler("MailOnStudentRegistered", handlers.Mail.StudentRegistered.Handle),
+		cqrs.NewEventHandler("RegistrationOnStudentRegistered", handlers.Registration.Registration.StudentHandle),
+		cqrs.NewEventHandler("RegistrationOnStaffRegistered", handlers.Registration.Registration.StaffHandle),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to add event handlers: %w", err)

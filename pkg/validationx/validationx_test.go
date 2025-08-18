@@ -1,207 +1,212 @@
-package errorx
+package validationx
 
 import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestValidatePasswordManual(t *testing.T) {
 	tests := []struct {
 		name          string
 		password      string
-		expectedError bool
+		notError bool
 	}{
 		// Valid passwords
 		{
 			name:          "valid password with all requirements",
 			password:      "Password1!",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "valid password with @ symbol",
 			password:      "MyPass123@",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "valid password with $ symbol",
 			password:      "SecureP4$$",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "valid password with % symbol",
 			password:      "Strong9%Pass",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "valid password with * symbol",
 			password:      "Test123*Word",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "valid password with ? symbol",
 			password:      "Question8?Mark",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "valid password with & symbol",
 			password:      "Ampersand7&",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "valid long password",
 			password:      "ThisIsAVeryLongPassword123!",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "valid password with multiple special chars",
 			password:      "Multi9@!Special",
-			expectedError: true,
+			notError: true,
 		},
 
 		// Invalid passwords - too short
 		{
 			name:          "too short - 7 characters",
 			password:      "Pass1!",
-			expectedError: false,
+			notError: false,
 		},
 		{
 			name:          "too short - empty string",
 			password:      "",
-			expectedError: false,
+			notError: false,
 		},
 		{
 			name:          "too short - 1 character",
 			password:      "P",
-			expectedError: false,
+			notError: false,
 		},
 
 		// Invalid passwords - missing lowercase
 		{
 			name:          "missing lowercase letter",
 			password:      "PASSWORD1!",
-			expectedError: false,
+			notError: false,
 		},
 		{
 			name:          "only uppercase, digits, and special",
 			password:      "TESTPASS123@",
-			expectedError: false,
+			notError: false,
 		},
 
 		// Invalid passwords - missing uppercase
 		{
 			name:          "missing uppercase letter",
 			password:      "password1!",
-			expectedError: false,
+			notError: false,
 		},
 		{
 			name:          "only lowercase, digits, and special",
 			password:      "testpass123@",
-			expectedError: false,
+			notError: false,
 		},
 
 		// Invalid passwords - missing digit
 		{
 			name:          "missing digit",
 			password:      "Password!",
-			expectedError: false,
+			notError: false,
 		},
 		{
 			name:          "only letters and special chars",
 			password:      "TestPassword@",
-			expectedError: false,
+			notError: false,
 		},
 
 		// Invalid passwords - missing special character
 		{
 			name:          "missing special character",
 			password:      "Password123",
-			expectedError: false,
+			notError: false,
 		},
 		{
 			name:          "only letters and digits",
 			password:      "TestPassword123",
-			expectedError: false,
+			notError: false,
 		},
 
 		// Invalid passwords - invalid characters
 		{
 			name:          "contains space",
 			password:      "Pass word1!",
-			expectedError: false,
-		},
-		{
-			name:          "contains hyphen",
-			password:      "Pass-word1!",
-			expectedError: false,
-		},
-		{
-			name:          "contains underscore",
-			password:      "Pass_word1!",
-			expectedError: false,
-		},
-		{
-			name:          "contains period",
-			password:      "Pass.word1!",
-			expectedError: false,
-		},
-		{
-			name:          "contains comma",
-			password:      "Pass,word1!",
-			expectedError: false,
-		},
-		{
-			name:          "contains plus",
-			password:      "Password1+",
-			expectedError: false,
-		},
-		{
-			name:          "contains hash",
-			password:      "Password1#",
-			expectedError: false,
+			notError: false,
 		},
 		{
 			name:          "contains unicode",
 			password:      "Pássword1!",
-			expectedError: false,
+			notError: false,
+		},
+        // Valid passwords with special characters
+		{
+			name:          "contains hyphen",
+			password:      "Pass-word1!",
+			notError: true,
+		},
+		{
+			name:          "contains underscore",
+			password:      "Pass_word1!",
+			notError: true,
+		},
+		{
+			name:          "contains period",
+			password:      "Pass.word1!",
+			notError: true,
+		},
+		{
+			name:          "contains comma",
+			password:      "Pass,word1!",
+			notError: true,
+		},
+		{
+			name:          "contains plus",
+			password:      "Password1+",
+			notError: true,
+		},
+		{
+			name:          "contains hash",
+			password:      "Password1#",
+			notError: true,
 		},
 
 		// Edge cases
 		{
 			name:          "exactly 8 characters - valid",
 			password:      "Pass123!",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "exactly 8 characters - missing requirement",
 			password:      "Pass123a",
-			expectedError: false,
+			notError: false,
 		},
 		{
 			name:          "minimum valid with each special char",
 			password:      "aB3@efgh",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "all special characters allowed",
 			password:      "aB3@$!%*?&ef",
-			expectedError: true,
+			notError: true,
 		},
 		{
 			name:          "multiple of same character type",
 			password:      "AAAaaa111@@@",
-			expectedError: true,
+			notError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidatePasswordManual(tt.password)
-			if (err == nil) != tt.expectedError {
-				t.Errorf("ValidatePasswordManual(%q) = %v, expected error: %v", tt.password, err == nil, tt.expectedError)
-			} else if err != nil && tt.expectedError {
+			err := PasswordFormatRule{}.Validate(tt.password)
+			if (err == nil) != tt.notError {
+				t.Errorf("ValidatePasswordManual(%q) = %v, expected error: %v", tt.password, err == nil, tt.notError)
+			} else if err != nil && tt.notError {
 				t.Errorf("ValidatePasswordManual(%q) returned unexpected error: %v", tt.password, err)
-			} else if err == nil && !tt.expectedError {
+			} else if err == nil && !tt.notError {
 				t.Logf("Password is valid: %q", tt.password)
 			}
 		})
@@ -213,7 +218,7 @@ func BenchmarkValidatePasswordManual(b *testing.B) {
 	password := "BenchmarkTest123!"
 
 	for b.Loop() {
-		ValidatePasswordManual(password)
+		PasswordFormatRule{}.Validate(password)
 	}
 }
 
@@ -243,7 +248,7 @@ func TestPasswordLengths(t *testing.T) {
 		}
 
 		t.Run(fmt.Sprintf("length_%d", tt.length), func(t *testing.T) {
-			err := ValidatePasswordManual(password)
+			err := PasswordFormatRule{}.Validate(password)
 			if (err == nil) != tt.expectedError {
 				t.Errorf("ValidatePasswordManual(%q) = %v, expected %v", password, err == nil, tt.expectedError)
 			} else if err != nil && tt.expectedError {
@@ -257,13 +262,13 @@ func TestPasswordLengths(t *testing.T) {
 
 // Test special characters individually
 func TestSpecialCharacters(t *testing.T) {
-	allowedSpecial := "@$!%*?&"
+	allowedSpecial := "@$!%*?&+-=_[]{}|\\:;\"'<>,./~`"
 	basePassword := "Password1"
 
 	for _, char := range allowedSpecial {
 		t.Run(fmt.Sprintf("special_char_%c", char), func(t *testing.T) {
 			password := basePassword + string(char)
-			err := ValidatePasswordManual(password)
+			err := PasswordFormatRule{}.Validate(password)
 			if err != nil {
 				t.Errorf("Password with allowed special char '%c' should be valid: %q, got error: %v", char, password, err)
 			} else {
@@ -272,16 +277,112 @@ func TestSpecialCharacters(t *testing.T) {
 		})
 	}
 
-	// Test disallowed special characters
-	disallowedSpecial := "+-=_[]{}|\\:;\"'<>,./~`"
-	for _, char := range disallowedSpecial {
-		t.Run(fmt.Sprintf("invalid_special_%c", char), func(t *testing.T) {
-			password := basePassword + string(char)
-			err := ValidatePasswordManual(password)
+}
+
+type uuidEmbed struct{ uuid.UUID }
+
+type aliasUUID uuid.UUID
+
+func TestRequiredUUID(t *testing.T) {
+	tests := []struct {
+		name          string
+		uuid          any
+		expectedError bool
+	}{
+		{
+			name:          "valid string UUID",
+			uuid:          "123e4567-e89b-12d3-a456-426614174000",
+			expectedError: false,
+		},
+		{
+			name:          "valid UUID object",
+			uuid:          uuid.MustParse("123e4567-e89b-12d3-a456-426614174001"),
+			expectedError: false,
+		},
+		{
+			name:          "valid alias UUID",
+			uuid:          aliasUUID(uuid.MustParse("123e4567-e89b-12d3-a456-426614174002")),
+			expectedError: false,
+		},
+		{
+			name:          "valid UUID in struct",
+			uuid:          uuidEmbed{UUID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174003")},
+			expectedError: false,
+		},
+		{
+			name:          "empty string UUID",
+			uuid:          "",
+			expectedError: true,
+		},
+		{
+			name:          "empty alias UUID",
+			uuid:          aliasUUID{},
+			expectedError: true,
+		},
+		{
+			name:          "empty UUID object",
+			uuid:          uuid.UUID{},
+			expectedError: true,
+		},
+		{
+			name:          "nil UUID",
+			uuid:          nil,
+			expectedError: true,
+		},
+		{
+			name:          "uuid.Nil",
+			uuid:          uuid.Nil,
+			expectedError: true,
+		},
+		{
+			name:          "empty UUID in struct",
+			uuid:          uuidEmbed{UUID: uuid.Nil},
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := Required.Validate(tt.uuid)
+			if (err == nil) != !tt.expectedError {
+				t.Errorf("ValidateGroupID(%v) = %v, expected error: %v", tt.uuid, err, tt.expectedError)
+			} else if err != nil && !tt.expectedError {
+				t.Errorf("ValidateGroupID(%v) returned unexpected error: %v", tt.uuid, err)
+			} else if err == nil && tt.expectedError {
+				t.Logf("UUID is valid: %v", tt.uuid)
+			}
+
+			t.Logf("Test %s completed successfully", tt.name)
+			t.Logf("\n")
+		})
+	}
+}
+
+func TestRequired(t *testing.T) {
+	s1 := "123"
+	s2 := ""
+	var time1 time.Time
+	tests := []struct {
+		tag   string
+		value interface{}
+		err   string
+	}{
+		{"t1", 123, ""},
+		{"t2", "", "cannot be blank"},
+		{"t3", &s1, ""},
+		{"t4", &s2, "cannot be blank"},
+		{"t5", nil, "cannot be blank"},
+		{"t6", time1, "cannot be blank"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.tag, func(t *testing.T) {
+			r := Required
+			err := r.Validate(tt.value)
 			if err == nil {
-				t.Errorf("Password with disallowed special char '%c' should be invalid: %q", char, password)
+				assert.Empty(t, tt.err, tt.tag)
 			} else {
-				t.Logf("Password with disallowed special char '%c' is correctly invalid: %q, error: %v", char, password, err)
+				assert.Equal(t, tt.err, err.Error(), tt.tag)
 			}
 		})
 	}

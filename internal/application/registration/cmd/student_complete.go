@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
@@ -29,11 +28,12 @@ type StudentComplete struct {
 }
 
 type StudentCompleteHandler struct {
-	tracer      trace.Tracer
-	logger      *slog.Logger
-	usergetter  UserGetter
-	groupgetter GroupGetter
-	regRepo     Repo
+	tracer       trace.Tracer
+	logger       *slog.Logger
+	usergetter   UserGetter
+	groupgetter  GroupGetter
+	regRepo      Repo
+	studentSaver StudentSaver
 }
 
 type StudentCompleteHandlerArgs struct {
@@ -42,6 +42,7 @@ type StudentCompleteHandlerArgs struct {
 	UserGetter       UserGetter
 	GroupGetter      GroupGetter
 	RegistrationRepo Repo
+	StudentSaver     StudentSaver
 }
 
 func NewStudentCompleteHandler(args StudentCompleteHandlerArgs) *StudentCompleteHandler {
@@ -53,11 +54,12 @@ func NewStudentCompleteHandler(args StudentCompleteHandlerArgs) *StudentComplete
 	}
 
 	return &StudentCompleteHandler{
-		tracer:      args.Trace,
-		logger:      args.Logger,
-		usergetter:  args.UserGetter,
-		groupgetter: args.GroupGetter,
-		regRepo:     args.RegistrationRepo,
+		tracer:       args.Trace,
+		logger:       args.Logger,
+		usergetter:   args.UserGetter,
+		groupgetter:  args.GroupGetter,
+		regRepo:      args.RegistrationRepo,
+		studentSaver: args.StudentSaver,
 	}
 }
 
@@ -101,30 +103,35 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 		return err
 	}
 
-	err = h.regRepo.UpdateRegistrationByEmail(ctx, cmd.Email, func(ctx context.Context, r *registration.Registration) error {
-		span := trace.SpanFromContext(ctx)
-		span.SetAttributes(
-			attribute.String("registration.id", r.ID().String()),
-			attribute.String("registration.email", logging.RedactEmail(r.Email())),
-		)
-
-		err := r.CompleteStudentRegistration(registration.StudentArgs{
-			VerificationCode: cmd.VerificationCode,
-			Barcode:          cmd.Barcode,
-			FirstName:        cmd.FirstName,
-			LastName:         cmd.LastName,
-			Password:         cmd.Password,
-			GroupID:          cmd.GroupID,
-		})
-		if err != nil {
-			span.AddEvent("failed to complete student registration")
-			return err
-		}
-		return nil
-	})
+	reg, err := h.regRepo.GetRegistrationByEmail(ctx, cmd.Email)
 	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to update registration")
+		span.SetStatus(codes.Error, "failed to get registration by email")
+		return err
+	}
+
+	err = reg.CheckCode(cmd.VerificationCode)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to check verification code")
+		return err
+	}
+
+	student, err := user.RegisterStudent(user.RegisterStudentArgs{
+		ID:             user.ID(cmd.Barcode),
+		RegistrationID: reg.ID(),
+		FirstName:      cmd.FirstName,
+		LastName:       cmd.LastName,
+		AvatarURL:      "",
+		Email:          cmd.Email,
+		Password:       cmd.Password,
+		GroupID:        cmd.GroupID,
+	})
+
+	err = h.studentSaver.SaveStudent(ctx, student)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to save student")
 		return err
 	}
 

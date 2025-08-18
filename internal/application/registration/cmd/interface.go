@@ -24,6 +24,10 @@ type GroupGetter interface {
 	GetGroupByID(ctx context.Context, id group.ID) (*group.Group, error)
 }
 
+type StudentSaver interface {
+	SaveStudent(ctx context.Context, student *user.Student) error
+}
+
 // type StaffSignUpTokenGetter interface {
 //     GetStaffSignUpToken(ctx context.Context, token string) (*)
 // }

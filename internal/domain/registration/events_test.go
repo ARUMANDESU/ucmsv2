@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -57,41 +56,5 @@ func TestRegistrationStartedEvent_JSONMarshaling(t *testing.T) {
 	assert.Equal(t, originalEvent.RegistrationID, unmarshaledEvent.RegistrationID)
 	assert.Equal(t, originalEvent.Email, unmarshaledEvent.Email)
 	assert.Equal(t, originalEvent.VerificationCode, unmarshaledEvent.VerificationCode)
-	assert.Equal(t, originalEvent.Carrier, unmarshaledEvent.Carrier)
-}
-
-func TestStudentRegistrationCompletedEvent_JSONMarshaling(t *testing.T) {
-	groupID := uuid.New()
-
-	// Create an event
-	originalEvent := &StudentRegistrationCompleted{
-		Header:         event.NewEventHeader(),
-		Otel:           event.Otel{Carrier: map[string]string{"trace": "456"}},
-		RegistrationID: NewID(),
-		Barcode:        "STU123",
-		Email:          "student@example.com",
-		FirstName:      "John",
-		LastName:       "Doe",
-		PassHash:       []byte("hashedpassword"),
-		GroupID:        groupID,
-	}
-
-	// Marshal to JSON
-	data, err := json.Marshal(originalEvent)
-	require.NoError(t, err)
-
-	// Unmarshal back
-	var unmarshaledEvent StudentRegistrationCompleted
-	err = json.Unmarshal(data, &unmarshaledEvent)
-	require.NoError(t, err)
-
-	// Should have the same values
-	assert.Equal(t, originalEvent.RegistrationID, unmarshaledEvent.RegistrationID)
-	assert.Equal(t, originalEvent.Barcode, unmarshaledEvent.Barcode)
-	assert.Equal(t, originalEvent.Email, unmarshaledEvent.Email)
-	assert.Equal(t, originalEvent.FirstName, unmarshaledEvent.FirstName)
-	assert.Equal(t, originalEvent.LastName, unmarshaledEvent.LastName)
-	assert.Equal(t, originalEvent.PassHash, unmarshaledEvent.PassHash)
-	assert.Equal(t, originalEvent.GroupID, unmarshaledEvent.GroupID)
 	assert.Equal(t, originalEvent.Carrier, unmarshaledEvent.Carrier)
 }

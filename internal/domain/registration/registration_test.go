@@ -7,10 +7,8 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ARUMANDESU/ucms/pkg/env"
 )
@@ -81,7 +79,7 @@ func TestNewRegistration(t *testing.T) {
 			email:       "test@localhost",
 			mode:        env.Dev,
 			expectError: true,
-            errorType:   is.ErrEmail,
+			errorType:   is.ErrEmail,
 		},
 	}
 
@@ -94,8 +92,8 @@ func TestNewRegistration(t *testing.T) {
 				assert.Nil(t, reg)
 				if tt.errorType != nil {
 					assert.ErrorAs(t, err, &tt.errorType)
-                } else {
-                    assert.ErrorIs(t, err, validation.ErrEmpty)
+				} else {
+					assert.ErrorIs(t, err, validation.ErrEmpty)
 				}
 			} else {
 				require.NoError(t, err)
@@ -195,167 +193,50 @@ func TestRegistration_VerifyCode(t *testing.T) {
 	})
 }
 
-func TestRegistration_CompleteStudentRegistration(t *testing.T) {
-	t.Run("successful completion", func(t *testing.T) {
+func TestRegistration_CheckCode(t *testing.T) {
+	t.Run("successful check", func(t *testing.T) {
 		reg := validRegistration(t)
+		reg.status = StatusVerified
 
-		args := StudentArgs{
-			Barcode:          "STU123456",
-			FirstName:        "John",
-			LastName:         "Doe",
-			Password:         "H4rdP@ssw0rd",
-			GroupID:          uuid.New(),
-			VerificationCode: reg.verificationCode,
-		}
-
-		err := reg.CompleteStudentRegistration(args)
-		require.NoError(t, err)
-		assert.Equal(t, StatusCompleted, reg.status)
-
-		events := reg.GetUncommittedEvents()
-		assert.Len(t, events, 2)
-		completedEvent, ok := events[1].(*StudentRegistrationCompleted)
-		require.True(t, ok)
-		assert.Equal(t, reg.id, completedEvent.RegistrationID)
-		assert.Equal(t, args.Barcode, completedEvent.Barcode)
-		assert.Equal(t, reg.email, completedEvent.Email)
-		assert.Equal(t, args.FirstName, completedEvent.FirstName)
-		assert.Equal(t, args.LastName, completedEvent.LastName)
-		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
+		err := reg.CheckCode(reg.verificationCode)
 		assert.NoError(t, err)
-		assert.Equal(t, args.GroupID, completedEvent.GroupID)
+
+		NewRegistrationAssertion(reg).
+			AssertStatus(t, reg.status).
+			AssertCodeAttempts(t, 0).
+			AssertEventsCount(t, 0)
 	})
 
-	t.Run("already verified", func(t *testing.T) {
+	t.Run("invalid code", func(t *testing.T) {
 		reg := validRegistration(t)
+		reg.status = StatusVerified
 
-		err := reg.VerifyCode(reg.verificationCode)
-		require.NoError(t, err)
-		reg.MarkEventsAsCommitted()
+		err := reg.CheckCode("wrongcode")
+		assert.ErrorIs(t, err, ErrInvalidVerificationCode)
 
-		args := StudentArgs{
-			Barcode:          "STU123456",
-			FirstName:        "John",
-			LastName:         "Doe",
-			Password:         "H4rdP@ssw0rd",
-			GroupID:          uuid.New(),
-			VerificationCode: reg.verificationCode,
-		}
-
-		err = reg.CompleteStudentRegistration(args)
-		require.NoError(t, err)
-		assert.Equal(t, StatusCompleted, reg.status)
-
-		events := reg.GetUncommittedEvents()
-		assert.Len(t, events, 1)
-		completedEvent, ok := events[0].(*StudentRegistrationCompleted)
-		require.True(t, ok)
-		assert.Equal(t, reg.id, completedEvent.RegistrationID)
-		assert.Equal(t, args.Barcode, completedEvent.Barcode)
-		assert.Equal(t, reg.email, completedEvent.Email)
-		assert.Equal(t, args.FirstName, completedEvent.FirstName)
-		assert.Equal(t, args.LastName, completedEvent.LastName)
-		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
-		assert.NoError(t, err)
-		assert.Equal(t, args.GroupID, completedEvent.GroupID)
+		NewRegistrationAssertion(reg).
+			AssertStatus(t, reg.status).
+			AssertCodeAttempts(t, 0).
+			AssertEventsCount(t, 0)
 	})
 
-	t.Run("not pending status", func(t *testing.T) {
+	t.Run("expired code", func(t *testing.T) {
 		reg := validRegistration(t)
+		reg.status = StatusVerified
 
-		reg.status = StatusExpired
+		reg.codeExpiresAt = time.Now().Add(-1 * time.Minute)
 
-		args := StudentArgs{
-			VerificationCode: reg.verificationCode,
-			Barcode:          "STU123456",
-			FirstName:        "John",
-			LastName:         "Doe",
-			Password:         "H4rdP@ssw0rd",
-			GroupID:          uuid.New(),
-		}
-
-		err := reg.CompleteStudentRegistration(args)
-		assert.ErrorIs(t, err, ErrInvalidStatus)
-	})
-}
-
-func TestRegistration_CompleteStaffRegistration(t *testing.T) {
-	t.Run("successful completion", func(t *testing.T) {
-		reg := validRegistration(t)
-
-		args := StaffArgs{
-			VerificationCode: reg.verificationCode,
-			Barcode:          "STAFF123",
-			FirstName:        "Jane",
-			LastName:         "Smith",
-			Password:         "H4rdP@ssw0rd",
-		}
-
-		err := reg.CompleteStaffRegistration(args)
-		require.NoError(t, err)
-		assert.Equal(t, StatusCompleted, reg.status)
-
-		events := reg.GetUncommittedEvents()
-		assert.Len(t, events, 2)
-		completedEvent, ok := events[1].(*StaffRegistrationCompleted)
-		require.True(t, ok)
-		assert.Equal(t, reg.id, completedEvent.RegistrationID)
-		assert.Equal(t, args.Barcode, completedEvent.Barcode)
-		assert.Equal(t, reg.email, completedEvent.Email)
-		assert.Equal(t, args.FirstName, completedEvent.FirstName)
-		assert.Equal(t, args.LastName, completedEvent.LastName)
-		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
-		assert.NoError(t, err)
+		err := reg.CheckCode(reg.verificationCode)
+		assert.ErrorIs(t, err, ErrCodeExpired)
 	})
 
-	t.Run("already verified", func(t *testing.T) {
+	t.Run("not verified status", func(t *testing.T) {
 		reg := validRegistration(t)
 
-		err := reg.VerifyCode(reg.verificationCode)
-		require.NoError(t, err)
-		reg.MarkEventsAsCommitted()
+		reg.status = StatusPending
 
-		args := StaffArgs{
-			VerificationCode: reg.verificationCode,
-			Barcode:          "STAFF123",
-			FirstName:        "Jane",
-			LastName:         "Smith",
-			Password:         "H4rdP@ssw0rd",
-		}
-		require.NoError(t, err)
-
-		err = reg.CompleteStaffRegistration(args)
-		require.NoError(t, err)
-		assert.Equal(t, StatusCompleted, reg.status)
-
-		events := reg.GetUncommittedEvents()
-		assert.Len(t, events, 1)
-		completedEvent, ok := events[0].(*StaffRegistrationCompleted)
-		require.True(t, ok)
-		assert.Equal(t, reg.id, completedEvent.RegistrationID)
-		assert.Equal(t, args.Barcode, completedEvent.Barcode)
-		assert.Equal(t, reg.email, completedEvent.Email)
-		assert.Equal(t, args.FirstName, completedEvent.FirstName)
-		assert.Equal(t, args.LastName, completedEvent.LastName)
-		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
-		assert.NoError(t, err)
-	})
-
-	t.Run("not pending status", func(t *testing.T) {
-		reg := validRegistration(t)
-
-		reg.status = StatusExpired
-
-		args := StaffArgs{
-			VerificationCode: reg.verificationCode,
-			Barcode:          "STAFF123",
-			FirstName:        "Jane",
-			LastName:         "Smith",
-			Password:         "H4rdP@ssw0rd",
-		}
-
-		err := reg.CompleteStaffRegistration(args)
-		assert.ErrorIs(t, err, ErrInvalidStatus)
+		err := reg.CheckCode(reg.verificationCode)
+		assert.ErrorIs(t, err, ErrVerifyFirst)
 	})
 }
 
@@ -372,7 +253,7 @@ func TestRegistration_ResendCode(t *testing.T) {
 			AssertEmail(t, reg.email).
 			AssertVerificationCodeIsNot(t, originalCode).
 			AssertCodeAttempts(t, 0).
-            AssertResendNotAvailable(t).
+			AssertResendNotAvailable(t).
 			AssertEventsCount(t, 1)
 
 		events := reg.GetUncommittedEvents()
@@ -390,6 +271,71 @@ func TestRegistration_ResendCode(t *testing.T) {
 		err := reg.ResendCode()
 		assert.ErrorIs(t, err, ErrWaitUntilResend)
 	})
+}
+
+func TestRegistration_Complete(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func(*Registration)
+		expectError bool
+		errorType   error
+	}{
+		{
+			name:        "successful completion",
+			setup:       func(reg *Registration) { reg.status = StatusVerified },
+			expectError: false,
+		},
+		{
+			name:        "not verified status",
+			setup:       func(reg *Registration) { reg.status = StatusPending },
+			expectError: true,
+			errorType:   ErrInvalidStatus,
+		},
+		{
+			name:        "already completed",
+			setup:       func(reg *Registration) { reg.status = StatusCompleted },
+			expectError: false,
+		},
+		{
+			name:        "expired registration",
+			setup:       func(reg *Registration) { reg.status = StatusExpired },
+			expectError: true,
+			errorType:   ErrInvalidStatus,
+		},
+		{
+			name:        "nil registration",
+			setup:       func(reg *Registration) {},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var reg *Registration
+			if tt.name != "nil registration" {
+				reg = validRegistration(t)
+				tt.setup(reg)
+			}
+
+			err := reg.Complete()
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorType != nil {
+					assert.ErrorAs(t, err, &tt.errorType)
+				}
+			} else {
+				require.NoError(t, err)
+				NewRegistrationAssertion(reg).
+					AssertStatus(t, StatusCompleted).
+					AssertEmail(t, reg.email).
+					AssertVerificationCodeNotEmpty(t).
+					AssertCodeAttempts(t, 0).
+					AssertResendNotAvailable(t).
+					AssertEventsCount(t, 0)
+			}
+		})
+	}
 }
 
 func TestRegistration_IsStatus(t *testing.T) {
@@ -410,115 +356,6 @@ func TestRegistration_IsCompleted(t *testing.T) {
 
 	reg.status = StatusCompleted
 	assert.True(t, reg.IsCompleted())
-}
-
-func TestEmailRegex(t *testing.T) {
-	validEmails := []string{
-		"test@example.com",
-		"user.name@domain.com",
-		"user+tag@example.org",
-		"user-name@example-domain.com",
-	}
-
-	invalidEmails := []string{
-		"test",
-		"test@",
-		"@example.com",
-		"test@example",
-		"test@example..com",
-	}
-
-	for _, email := range validEmails {
-		t.Run("valid_"+email, func(t *testing.T) {
-			assert.True(t, emailRx.MatchString(email), "Expected %s to be valid", email)
-		})
-	}
-
-	for _, email := range invalidEmails {
-		t.Run("invalid_"+email, func(t *testing.T) {
-			assert.False(t, emailRx.MatchString(email), "Expected %s to be invalid", email)
-		})
-	}
-}
-
-func TestRegistrationWorkflow(t *testing.T) {
-	t.Run("complete student registration workflow", func(t *testing.T) {
-		// 1. Create registration
-		reg, err := NewRegistration("student@example.com", env.Test)
-		require.NoError(t, err)
-		reg.MarkEventsAsCommitted()
-
-		regAss := NewRegistrationAssertion(reg).
-			AssertStatus(t, StatusPending)
-
-		// 2. Verify email
-		err = reg.VerifyCode(reg.verificationCode)
-		require.NoError(t, err)
-		regAss.
-			AssertStatus(t, StatusVerified).
-			AssertEmail(t, reg.email).
-			AssertVerificationCode(t, reg.verificationCode).
-			AssertCodeAttempts(t, 0)
-
-		// 3. Complete student registration
-		args := StudentArgs{
-            VerificationCode: reg.verificationCode,
-			Barcode:   "ST123456",
-			FirstName: "John",
-			LastName:  "Doe",
-			Password:  "H4rdP@ssw0rd",
-			GroupID:   uuid.New(),
-		}
-
-		err = reg.CompleteStudentRegistration(args)
-		require.NoError(t, err)
-		regAss.
-			AssertStatus(t, StatusCompleted).
-			AssertEmail(t, reg.email).
-			AssertVerificationCodeNotEmpty(t).
-			AssertCodeAttempts(t, 0).
-			AssertCodeExpiresAt(t, time.Now().Add(ExpiresAt)).
-			AssertResendTimeout(t, time.Now().Add(ResendTimeout)).
-			AssertEventsCount(t, 2)
-
-		events := reg.GetUncommittedEvents()
-		assert.Len(t, events, 2)
-		completedEvent, ok := events[1].(*StudentRegistrationCompleted)
-		require.True(t, ok)
-		assert.Equal(t, reg.id, completedEvent.RegistrationID)
-		assert.Equal(t, args.Barcode, completedEvent.Barcode)
-		assert.Equal(t, reg.email, completedEvent.Email)
-		assert.Equal(t, args.FirstName, completedEvent.FirstName)
-		assert.Equal(t, args.LastName, completedEvent.LastName)
-		err = bcrypt.CompareHashAndPassword(completedEvent.PassHash, []byte(args.Password))
-		assert.NoError(t, err)
-		assert.Equal(t, args.GroupID, completedEvent.GroupID)
-	})
-
-	t.Run("complete staff registration workflow", func(t *testing.T) {
-		// 1. Create registration
-		reg, err := NewRegistration("staff@example.com", env.Test)
-		require.NoError(t, err)
-		assert.Equal(t, StatusPending, reg.status)
-
-		// 2. Verify email
-		err = reg.VerifyCode(reg.verificationCode)
-		require.NoError(t, err)
-
-		// 3. Complete staff registration
-		args := StaffArgs{
-            VerificationCode: reg.verificationCode,
-			Barcode:   "STAFF123",
-			FirstName: "Jane",
-			LastName:  "Smith",
-			Password:  "H4rdP@ssw0rd",
-		}
-
-		err = reg.CompleteStaffRegistration(args)
-		require.NoError(t, err)
-		assert.Equal(t, StatusCompleted, reg.status)
-		assert.True(t, reg.IsCompleted())
-	})
 }
 
 func validRegistration(t *testing.T) *Registration {

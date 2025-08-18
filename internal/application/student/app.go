@@ -6,7 +6,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/application/student/event"
 	"github.com/ARUMANDESU/ucms/internal/application/student/studentquery"
 )
 
@@ -15,30 +14,21 @@ type App struct {
 	Query Query
 }
 
-type Event struct {
-	StudentRegistrationCompleted *event.StudentRegistrationCompletedHandler
-}
+type Event struct{}
 
 type Query struct {
 	GetStudent *studentquery.GetStudentHandler
 }
 
 type Args struct {
-	StudentRepo event.Repo
-	PgxPool     *pgxpool.Pool
-	Tracer      trace.Tracer
-	Logger      *slog.Logger
+	PgxPool *pgxpool.Pool
+	Tracer  trace.Tracer
+	Logger  *slog.Logger
 }
 
 func NewApp(args Args) *App {
 	return &App{
-		Event: Event{
-			StudentRegistrationCompleted: event.NewStudentRegistrationCompletedHandler(event.StudentRegistrationCompletedHandlerArgs{
-				Tracer:      args.Tracer,
-				Logger:      args.Logger,
-				StudentRepo: args.StudentRepo,
-			}),
-		},
+		Event: Event{},
 		Query: Query{
 			GetStudent: studentquery.NewGetStudentHandler(studentquery.GetStudentHandlerArgs{
 				Tracer: args.Tracer,

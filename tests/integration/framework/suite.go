@@ -151,10 +151,11 @@ func (s *IntegrationTestSuite) createApplication() {
 	s.Require().NotNil(s.MockMailSender, "MockMailSender should be initialized")
 
 	regApp := registrationapp.NewApp(registrationapp.Args{
-		Mode:        env.Test,
-		Repo:        registrationRepo,
-		UserGetter:  userRepo,
-		GroupGetter: groupRepo,
+		Mode:         env.Test,
+		Repo:         registrationRepo,
+		UserGetter:   userRepo,
+		GroupGetter:  groupRepo,
+		StudentSaver: studentRepo,
 	})
 	mailApp := mail.NewApp(mail.Args{
 		Tracer:     nil,
@@ -163,9 +164,9 @@ func (s *IntegrationTestSuite) createApplication() {
 	})
 
 	studentApp := studentapp.NewApp(studentapp.Args{
-		Tracer:      nil,
-		Logger:      s.logger,
-		StudentRepo: studentRepo,
+		Tracer:  nil,
+		Logger:  s.logger,
+		PgxPool: s.pgPool,
 	})
 
 	s.app = &Application{

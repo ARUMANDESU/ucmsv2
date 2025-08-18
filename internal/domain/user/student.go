@@ -8,8 +8,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/validationx"
 )
 
 type Student struct {
@@ -19,25 +20,32 @@ type Student struct {
 }
 
 type RegisterStudentArgs struct {
-	ID        ID        `json:"id"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	AvatarURL string    `json:"avatar_url"`
-	Email     string    `json:"email"`
-	PassHash  []byte    `json:"pass_hash"`
-	GroupID   uuid.UUID `json:"group_id"`
+	ID             ID              `json:"id"`
+	RegistrationID registration.ID `json:"registration_id"`
+	FirstName      string          `json:"first_name"`
+	LastName       string          `json:"last_name"`
+	AvatarURL      string          `json:"avatar_url"`
+	Email          string          `json:"email"`
+	Password       string          `json:"password"`
+	GroupID        uuid.UUID       `json:"group_id"`
 }
 
 func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 	err := validation.ValidateStruct(&p,
-		validation.Field(&p.ID, validation.Required),
-		validation.Field(&p.Email, validation.Required),
-		validation.Field(&p.FirstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen), is.Alphanumeric),
-		validation.Field(&p.LastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen), is.Alphanumeric),
-		validation.Field(&p.PassHash, validation.Required),
-		validation.Field(&p.GroupID, validation.Required, validation.By(errorx.ValidateGroupID)),
+		validation.Field(&p.ID, validation.Required, is.Alphanumeric),
+		validation.Field(&p.RegistrationID, validationx.Required),
+		validation.Field(&p.Email, validation.Required, is.EmailFormat),
+		validation.Field(&p.FirstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen)),
+		validation.Field(&p.LastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen)),
+		validation.Field(&p.Password, validationx.PasswordRules...),
+		validation.Field(&p.GroupID, validationx.Required),
 		validation.Field(&p.AvatarURL, validation.Length(0, 1000)),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	passhash, err := NewPasswordHash(p.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +60,7 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 			avatarURL: p.AvatarURL,
 			role:      role.Student,
 			email:     p.Email,
-			passHash:  p.PassHash,
+			passHash:  passhash,
 			createdAt: now,
 			updatedAt: now,
 		},
@@ -60,12 +68,13 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 	}
 
 	student.AddEvent(&StudentRegistered{
-		Header:    event.NewEventHeader(),
-		StudentID: p.ID,
-		Email:     p.Email,
-		FirstName: p.FirstName,
-		LastName:  p.LastName,
-		GroupID:   p.GroupID,
+		Header:         event.NewEventHeader(),
+		StudentID:      p.ID,
+		RegistrationID: p.RegistrationID,
+		Email:          p.Email,
+		FirstName:      p.FirstName,
+		LastName:       p.LastName,
+		GroupID:        p.GroupID,
 	})
 
 	return student, nil
@@ -84,7 +93,7 @@ func RehydrateStudent(p RehydrateStudentArgs) *Student {
 }
 
 func (s *Student) SetGroupID(groupID uuid.UUID) error {
-	err := validation.Validate(groupID, validation.Required, validation.By(errorx.ValidateGroupID))
+	err := validation.Validate(groupID, validationx.Required)
 	if err != nil {
 		return err
 	}

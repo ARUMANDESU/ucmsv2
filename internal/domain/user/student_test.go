@@ -4,16 +4,20 @@ import (
 	"testing"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/validationx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 )
 
 func TestRegisterStudent_ArgValidation(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		args    user.RegisterStudentArgs
@@ -35,14 +39,24 @@ func TestRegisterStudent_ArgValidation(t *testing.T) {
 			wantErr: validation.Errors{"email": validation.ErrRequired},
 		},
 		{
-			name:    "missing PassHash",
-			args:    builders.NewStudentBuilder().WithPassHash(nil).BuildRegisterArgs(),
-			wantErr: validation.Errors{"pass_hash": validation.ErrRequired},
+			name:    "invalid Email format",
+			args:    builders.NewStudentBuilder().WithEmail("invalid-email").BuildRegisterArgs(),
+			wantErr: validation.Errors{"email": is.ErrEmail},
 		},
 		{
-			name:    "empty PassHash",
-			args:    builders.NewStudentBuilder().WithPassHash([]byte{}).BuildRegisterArgs(),
-			wantErr: validation.Errors{"pass_hash": validation.ErrRequired},
+			name:    "missing RegistrationID",
+			args:    builders.NewStudentBuilder().WithRegistrationID(registration.ID(uuid.Nil)).BuildRegisterArgs(),
+			wantErr: validation.Errors{"registration_id": validation.ErrRequired},
+		},
+		{
+			name:    "missing Password",
+			args:    builders.NewStudentBuilder().WithPassword("").BuildRegisterArgs(),
+			wantErr: validation.Errors{"password": validation.ErrRequired},
+		},
+		{
+			name:    "invalid Password format",
+			args:    builders.NewStudentBuilder().WithPassword("short").BuildRegisterArgs(),
+			wantErr: validation.Errors{"password": validation.ErrLengthOutOfRange},
 		},
 		{
 			name:    "missing FirstName",
@@ -85,10 +99,11 @@ func TestRegisterStudent_ArgValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			student, err := user.RegisterStudent(tt.args)
 			if tt.wantErr == nil {
+				require.NoError(t, err, "expected no error for valid args")
 				user.NewStudentAssertions(student).
 					AssertByRegistrationArgs(t, tt.args)
 			} else {
-				errorx.AssertValidationErrors(t, err, tt.wantErr)
+				validationx.AssertValidationErrors(t, err, tt.wantErr)
 				assert.Nil(t, student, "expected student to be nil on error")
 			}
 		})
@@ -97,18 +112,21 @@ func TestRegisterStudent_ArgValidation(t *testing.T) {
 
 func TestRegisterStudent_EmptyArgs(t *testing.T) {
 	student, err := user.RegisterStudent(user.RegisterStudentArgs{})
-	errorx.AssertValidationErrors(t, err, validation.Errors{
-		"id":         validation.ErrRequired,
-		"email":      validation.ErrRequired,
-		"pass_hash":  validation.ErrRequired,
-		"first_name": validation.ErrRequired,
-		"last_name":  validation.ErrRequired,
-		"group_id":   validation.ErrRequired,
+	validationx.AssertValidationErrors(t, err, validation.Errors{
+		"id":              validation.ErrRequired,
+		"registration_id": validation.ErrRequired,
+		"email":           validation.ErrRequired,
+		"password":        validation.ErrRequired,
+		"first_name":      validation.ErrRequired,
+		"last_name":       validation.ErrRequired,
+		"group_id":        validation.ErrRequired,
 	})
 	assert.Nil(t, student, "expected student to be nil on error")
 }
 
 func TestStudent_SetGroupID(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		student    *user.Student
@@ -144,7 +162,7 @@ func TestStudent_SetGroupID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.student.SetGroupID(tt.newGroupID)
 			if tt.wantErr != nil {
-				errorx.AssertValidationError(t, err, tt.wantErr)
+				validationx.AssertValidationError(t, err, tt.wantErr)
 			} else {
 				require.NoError(t, err, "expected no error")
 				assert.Equal(t, tt.newGroupID, tt.student.GroupID(), "expected group ID to be updated")

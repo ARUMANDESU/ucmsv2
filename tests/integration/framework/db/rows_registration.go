@@ -34,6 +34,15 @@ func (a *RegistrationAssertion) HasStatus(expected registration.Status) *Registr
 	return a
 }
 
+func (a *RegistrationAssertion) EventuallyHasStatus(expected registration.Status) *RegistrationAssertion {
+	a.t.Helper()
+	// time.Sleep(time.Hour)
+	assert.Eventually(a.t, func() bool {
+		return a.row.Status == string(expected)
+	}, 5*time.Second, 100*time.Millisecond, "expected registration status to eventually be %s", expected)
+	return a
+}
+
 func (a *RegistrationAssertion) HasVerificationCode() *RegistrationAssertion {
 	a.t.Helper()
 	assert.NotEmpty(a.t, a.row.VerificationCode, "expected verification code to be set")

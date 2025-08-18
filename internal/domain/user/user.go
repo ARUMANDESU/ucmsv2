@@ -2,15 +2,17 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 )
+
+const PasswordCostFactor = 12 // Future-proofing; default is 10 in 2025.08.18
 
 const (
 	MaxFirstNameLen = 100
@@ -74,7 +76,7 @@ func (u *User) SetFirstName(firstName string) error {
 	if u == nil {
 		return errors.New("user is nil")
 	}
-	err := validation.Validate(firstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen), is.Alphanumeric)
+	err := validation.Validate(firstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen))
 	if err != nil {
 		return err
 	}
@@ -88,7 +90,7 @@ func (u *User) SetLastName(lastName string) error {
 	if u == nil {
 		return errors.New("user is nil")
 	}
-	err := validation.Validate(lastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen), is.Alphanumeric)
+	err := validation.Validate(lastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen))
 	if err != nil {
 		return err
 	}
@@ -186,4 +188,12 @@ func (u *User) UpdatedAt() time.Time {
 	}
 
 	return u.updatedAt
+}
+
+func NewPasswordHash(password string) ([]byte, error) {
+	passhash, err := bcrypt.GenerateFromPassword([]byte(password), PasswordCostFactor)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate password hash from password: %w", err)
+	}
+	return passhash, nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -16,6 +17,16 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
 
 	ucmsv2 "github.com/ARUMANDESU/ucms"
 	"github.com/ARUMANDESU/ucms/internal/adapters/repos/postgres"
@@ -58,7 +69,14 @@ func main() {
 	setupLogging(config.LogPath, config.Mode)
 
 	// Set up tracing (in production you'd configure a proper tracing provider)
-	setupTracing()
+	shutdownOTel, err := setupOTelSDK(ctx)
+	defer func() {
+		if shutdownOTel != nil {
+			if err := shutdownOTel(ctx); err != nil {
+				slog.ErrorContext(ctx, "Failed to shutdown OpenTelemetry SDK", "error", err)
+			}
+		}
+	}()
 
 	slog.InfoContext(ctx, "Starting UCMS API server",
 		"mode", config.Mode,
@@ -175,11 +193,6 @@ func setupLogging(_ string, mode env.Mode) {
 	_ = cleanup
 }
 
-func setupTracing() {
-	// In production, you would set up a proper tracing provider (Jaeger, etc.)
-	// For now, we use the default no-op tracer
-}
-
 func setupDatabase(ctx context.Context, config *Config) (*pgxpool.Pool, error) {
 	// Create connection pool
 	pool, err := pgpkg.NewPgxPool(ctx, config.PgDSN, config.Mode)
@@ -239,10 +252,11 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 
 	// Registration application
 	regApp := registration.NewApp(registration.Args{
-		Mode:        config.Mode,
-		Repo:        repos.Registration,
-		UserGetter:  repos.User,
-		GroupGetter: repos.Group,
+		Mode:         config.Mode,
+		Repo:         repos.Registration,
+		UserGetter:   repos.User,
+		GroupGetter:  repos.Group,
+		StudentSaver: repos.Student,
 	})
 
 	// Mail application
@@ -252,8 +266,7 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 
 	// Student application
 	studentApp := studentapp.NewApp(studentapp.Args{
-		StudentRepo: repos.Student,
-		PgxPool:     repos.PgxPool,
+		PgxPool: repos.PgxPool,
 	})
 
 	authApp := authapp.NewApp(authapp.Args{
@@ -277,6 +290,7 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 	router := chi.NewRouter()
 
 	// Add middleware
+	router.Use(otelhttp.NewMiddleware("ucmsv2-api"))
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
@@ -342,4 +356,109 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
+}
+
+// setupOTelSDK bootstraps the OpenTelemetry pipeline.
+// If it does not return an error, make sure to call shutdown for proper cleanup.
+func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
+	var shutdownFuncs []func(context.Context) error
+
+	// shutdown calls cleanup functions registered via shutdownFuncs.
+	// The errors from the calls are joined.
+	// Each registered cleanup will be invoked once.
+	shutdown = func(ctx context.Context) error {
+		var err error
+		for _, fn := range shutdownFuncs {
+			err = errors.Join(err, fn(ctx))
+		}
+		shutdownFuncs = nil
+		return err
+	}
+
+	// handleErr calls shutdown for cleanup and makes sure that all errors are returned.
+	handleErr := func(inErr error) {
+		err = errors.Join(inErr, shutdown(ctx))
+	}
+
+	// Set up propagator.
+	prop := newPropagator()
+	otel.SetTextMapPropagator(prop)
+
+	// Set up trace provider.
+	tracerProvider, err := newTracerProvider()
+	if err != nil {
+		handleErr(err)
+		return
+	}
+	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
+	otel.SetTracerProvider(tracerProvider)
+
+	// Set up meter provider.
+	meterProvider, err := newMeterProvider()
+	if err != nil {
+		handleErr(err)
+		return
+	}
+	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+	otel.SetMeterProvider(meterProvider)
+
+	// Set up logger provider.
+	loggerProvider, err := newLoggerProvider()
+	if err != nil {
+		handleErr(err)
+		return
+	}
+	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
+	global.SetLoggerProvider(loggerProvider)
+
+	return
+}
+
+func newPropagator() propagation.TextMapPropagator {
+	return propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	)
+}
+
+func newTracerProvider() (*trace.TracerProvider, error) {
+	traceExporter, err := stdouttrace.New(
+		stdouttrace.WithPrettyPrint())
+	if err != nil {
+		return nil, err
+	}
+
+	tracerProvider := trace.NewTracerProvider(
+		trace.WithBatcher(traceExporter,
+			// Default is 5s. Set to 1s for demonstrative purposes.
+			trace.WithBatchTimeout(5*time.Second)),
+	)
+	return tracerProvider, nil
+}
+
+func newMeterProvider() (*metric.MeterProvider, error) {
+	metricExporter, err := stdoutmetric.New()
+	if err != nil {
+		return nil, err
+	}
+
+	meterProvider := metric.NewMeterProvider(
+		metric.WithReader(metric.NewPeriodicReader(metricExporter,
+			// Default is 1m. Set to 3s for demonstrative purposes.
+			metric.WithInterval(1*time.Minute),
+		)),
+	)
+	return meterProvider, nil
+}
+
+func newLoggerProvider() (*log.LoggerProvider, error) {
+	logExporter, err := stdoutlog.New()
+	if err != nil {
+		return nil, err
+	}
+
+	loggerProvider := log.NewLoggerProvider(
+		log.WithProcessor(log.NewBatchProcessor(logExporter)),
+	)
+	return loggerProvider, nil
 }

@@ -19,6 +19,13 @@ const (
 )
 
 var (
+	ValidStudentRegistrationID  = uuid.MustParse("660e8400-e29b-41d4-a716-446655440000")
+	ValidStudent2RegistrationID = uuid.MustParse("660e8400-e29b-41d4-a716-446655440001")
+	ValidStaffRegistrationID    = uuid.MustParse("770e8400-e29b-41d4-a716-446655440001")
+	ValidStaff2RegistrationID   = uuid.MustParse("770e8400-e29b-41d4-a716-446655440002")
+)
+
+var (
 	InvalidLongFirstName  = strings.Repeat("A", user.MaxFirstNameLen+1)
 	InvalidLongLastName   = strings.Repeat("B", user.MaxLastNameLen+1)
 	InvalidShortFirstName = strings.Repeat("C", user.MinFirstNameLen-1)

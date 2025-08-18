@@ -134,3 +134,12 @@ other = "Этот адрес электронной почты уже зарег
 
 [error_barcode_not_available]
 other = "Этот баркод уже используется"
+
+[business_error_code_expired]
+other = "Срок действия кода подтверждения истек"
+
+[business_error_verify_first]
+other = "Пожалуйста, сначала подтвердите вашу электронную почту"
+
+[business_error_invalid_verification_code]
+other = "Неверный код подтверждения"

@@ -1,12 +1,14 @@
-package errorx
+package validationx
 
 import (
 	"errors"
-	"strings"
+	"reflect"
+	"regexp"
 	"testing"
+	"time"
+	"unicode"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/google/uuid"
 )
 
 var ErrInvalidPasswordFormat = validation.NewError(
@@ -14,9 +16,35 @@ var ErrInvalidPasswordFormat = validation.NewError(
 	"must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one digit, and one special character",
 )
 
-// ValidatePassword validates a password string against the defined rules.
+var ErrInvalidNameFormat = validation.NewError(
+	"validation_is_name",
+	"must be a valid name containing only letters, spaces, hyphens, apostrophes, and periods")
+
+var (
+	PasswordFormat = PasswordFormatRule{}
+	// Required is a validation rule that checks if a value is not empty. Use it for uuid verification, otherwise use validation.Required.
+	Required = RequiredRule{}
+)
+
+var IsPersonName = validation.By(func(value interface{}) error {
+	s, _ := value.(string)
+	if s == "" {
+		return nil // Let Required handle emptiness
+	}
+
+	// Allow Unicode letters, spaces, hyphens, apostrophes, periods
+	nameRegex := regexp.MustCompile(`^[\p{L}\p{M}\s'\-\.]+$`)
+	if !nameRegex.MatchString(s) {
+		return errors.New("must be a valid name")
+	}
+	return nil
+})
+
+type PasswordFormatRule struct{}
+
+// Validate validates a password string against the defined rules.
 // It checks for minimum length, presence of uppercase, lowercase, digit, and special character.
-func ValidatePasswordManual(value any) error {
+func (r PasswordFormatRule) Validate(value any) error {
 	password, ok := value.(string)
 	if !ok {
 		return errors.New("value is not a string")
@@ -27,7 +55,6 @@ func ValidatePasswordManual(value any) error {
 	}
 
 	var hasLower, hasUpper, hasDigit, hasSpecial bool
-	allowedSpecial := "@$!%*?&"
 
 	for _, char := range password {
 		switch {
@@ -37,7 +64,7 @@ func ValidatePasswordManual(value any) error {
 			hasUpper = true
 		case char >= '0' && char <= '9':
 			hasDigit = true
-		case strings.ContainsRune(allowedSpecial, char):
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
 			hasSpecial = true
 		default:
 			// Invalid character found
@@ -52,17 +79,49 @@ func ValidatePasswordManual(value any) error {
 	return nil
 }
 
-func ValidateGroupID(value any) error {
-	groupID, ok := value.(uuid.UUID)
-	if !ok {
-		return errors.New("value is not a uuid.UUID")
-	}
+type RequiredRule struct{}
 
-	if groupID == uuid.Nil {
+func (r RequiredRule) Validate(value any) error {
+	value, isNil := validation.Indirect(value)
+	if isNil || isEmpty(value) {
 		return validation.ErrRequired
 	}
 
 	return nil
+}
+
+func isEmpty(value any) bool {
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Array:
+		return v.Equal(reflect.Zero(v.Type())) || v.Len() == 0
+	case reflect.String:
+		return v.Len() == 0 || v.String() == "" || v.String() == "00000000-0000-0000-0000-000000000000" // for uuid empty string
+	case reflect.Map, reflect.Slice:
+		return v.Equal(reflect.Zero(v.Type())) || v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Invalid:
+		return true
+	case reflect.Interface, reflect.Ptr:
+		if v.IsNil() {
+			return true
+		}
+		return isEmpty(v.Elem().Interface())
+	case reflect.Struct:
+		v, ok := value.(time.Time)
+		if ok && v.IsZero() {
+			return true
+		}
+	}
+
+	return false
 }
 
 func AssertValidationErrors(t *testing.T, err error, expected error) {
