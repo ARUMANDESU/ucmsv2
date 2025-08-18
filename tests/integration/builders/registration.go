@@ -118,7 +118,6 @@ func (b *RegistrationBuilder) Completed() *RegistrationBuilder {
 }
 
 func (b *RegistrationBuilder) Expired() *RegistrationBuilder {
-	b.status = registration.StatusExpired
 	b.codeExpiresAt = time.Now().Add(-1 * time.Hour)
 	return b
 }

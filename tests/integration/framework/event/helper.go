@@ -151,11 +151,13 @@ func (h *Helper) ClearAllEvents(t *testing.T) {
 	tables := []string{
 		"watermill_events_registration",
 		"watermill_events_student",
+		"watermill_events_staff",
 	}
 
 	offsetTables := []string{
 		"watermill_offsets_events_registration",
 		"watermill_offsets_events_student",
+		"watermill_offsets_events_staff",
 	}
 
 	for _, table := range tables {

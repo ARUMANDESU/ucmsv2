@@ -66,7 +66,7 @@ func DomainToRegistrationDTO(r *registration.Registration) RegistrationDTO {
 
 func DomainToUserDTO(u *user.User, roleID int) UserDTO {
 	return UserDTO{
-		ID:        string(u.ID()),
+		ID:        string(u.Barcode()),
 		RoleID:    roleID,
 		FirstName: u.FirstName(),
 		LastName:  u.LastName(),
@@ -80,7 +80,7 @@ func DomainToUserDTO(u *user.User, roleID int) UserDTO {
 
 func UserToDomain(dto UserDTO, roleDTO GlobalRoleDTO) *user.User {
 	return user.RehydrateUser(user.RehydrateUserArgs{
-		ID:        user.ID(dto.ID),
+		Barcode:   user.Barcode(dto.ID),
 		FirstName: dto.FirstName,
 		LastName:  dto.LastName,
 		Role:      role.Global(roleDTO.Name),

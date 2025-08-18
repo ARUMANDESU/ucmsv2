@@ -69,8 +69,8 @@ func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*user.User
 	return UserToDomain(dto, roleDTO), nil
 }
 
-func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, error) {
-	ctx, span := r.tracer.Start(ctx, "UserRepo.GetUserByID")
+func (r *UserRepo) GetUserByBarcode(ctx context.Context, barcode user.Barcode) (*user.User, error) {
+	ctx, span := r.tracer.Start(ctx, "UserRepo.GetUserByBarcode")
 	defer span.End()
 
 	query := `
@@ -82,12 +82,12 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, err
 
 	var dto UserDTO
 	var roleDTO GlobalRoleDTO
-	err := r.pool.QueryRow(ctx, query, id).
+	err := r.pool.QueryRow(ctx, query, barcode).
 		Scan(&dto.ID, &dto.RoleID, &dto.FirstName, &dto.LastName, &dto.AvatarURL, &dto.Email, &dto.Passhash, &dto.CreatedAt, &dto.UpdatedAt,
 			&roleDTO.ID, &roleDTO.Name)
 	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by ID")
+		span.SetStatus(codes.Error, "failed to get user by barcode")
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errorx.NewNotFound().WithCause(err)
 		}

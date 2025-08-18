@@ -13,7 +13,7 @@ import (
 type StudentRepo struct {
 	*EventRepo
 	dbByEmail map[string]*user.Student
-	dbByID    map[user.ID]*user.Student
+	dbByID    map[user.Barcode]*user.Student
 	mu        sync.Mutex
 }
 
@@ -21,7 +21,7 @@ func NewStudentRepo() *StudentRepo {
 	return &StudentRepo{
 		EventRepo: NewEventRepo(),
 		dbByEmail: make(map[string]*user.Student),
-		dbByID:    make(map[user.ID]*user.Student),
+		dbByID:    make(map[user.Barcode]*user.Student),
 		mu:        sync.Mutex{},
 	}
 }
@@ -36,11 +36,11 @@ func (r *StudentRepo) GetStudentByEmail(ctx context.Context, email string) (*use
 	return nil, errorx.NewNotFound()
 }
 
-func (r *StudentRepo) GetStudentByID(ctx context.Context, id user.ID) (*user.Student, error) {
+func (r *StudentRepo) GetStudentByBarcode(ctx context.Context, barcode user.Barcode) (*user.Student, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if student, exists := r.dbByID[id]; exists {
+	if student, exists := r.dbByID[barcode]; exists {
 		return student, nil
 	}
 	return nil, errorx.NewNotFound()
@@ -58,12 +58,12 @@ func (r *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) er
 		return errorx.NewDuplicateEntry()
 	}
 
-	if _, exists := r.dbByID[student.User().ID()]; exists {
+	if _, exists := r.dbByID[student.User().Barcode()]; exists {
 		return errorx.NewDuplicateEntry()
 	}
 
 	r.dbByEmail[student.User().Email()] = student
-	r.dbByID[student.User().ID()] = student
+	r.dbByID[student.User().Barcode()] = student
 
 	r.EventRepo.appendEvents(student.GetUncommittedEvents()...)
 
@@ -76,28 +76,28 @@ func (r *StudentRepo) SeedStudent(t *testing.T, student *user.Student) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.dbByID[student.User().ID()]; exists {
-		t.Fatalf("student with ID %s already exists", student.User().ID())
+	if _, exists := r.dbByID[student.User().Barcode()]; exists {
+		t.Fatalf("student with barcode %s already exists", student.User().Barcode())
 	}
 
 	if _, exists := r.dbByEmail[student.User().Email()]; exists {
 		t.Fatalf("student with email %s already exists", student.User().Email())
 	}
 
-	r.dbByID[student.User().ID()] = student
+	r.dbByID[student.User().Barcode()] = student
 	r.dbByEmail[student.User().Email()] = student
 	r.EventRepo.appendEvents(student.GetUncommittedEvents()...)
 }
 
-func (r *StudentRepo) RequireStudentByID(t *testing.T, id user.ID) *user.StudentAssertions {
+func (r *StudentRepo) RequireStudentByBarcode(t *testing.T, barcode user.Barcode) *user.StudentAssertions {
 	t.Helper()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	student, exists := r.dbByID[id]
+	student, exists := r.dbByID[barcode]
 	if !exists {
-		t.Fatalf("student with ID %s does not exist", id)
+		t.Fatalf("student with barcode %s does not exist", barcode)
 	}
 
 	return user.NewStudentAssertions(student)
@@ -117,14 +117,14 @@ func (r *StudentRepo) RequireStudentByEmail(t *testing.T, email string) *user.St
 	return user.NewStudentAssertions(student)
 }
 
-func (r *StudentRepo) AssertStudentNotExistsByID(t *testing.T, id user.ID) *StudentRepo {
+func (r *StudentRepo) AssertStudentNotExistsByBarcode(t *testing.T, barcode user.Barcode) *StudentRepo {
 	t.Helper()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.dbByID[id]; exists {
-		t.Errorf("expected student with ID %s to not exist, but it does", id)
+	if _, exists := r.dbByID[barcode]; exists {
+		t.Errorf("expected student with barcode %s to not exist, but it does", barcode)
 	}
 	return r
 }

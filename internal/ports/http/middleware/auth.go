@@ -91,9 +91,9 @@ func AuthMiddleware(secret []byte, exp time.Duration) func(next http.Handler) ht
 			}
 			uid, ok := accessClaims["uid"].(string)
 			if !ok {
-				err = fmt.Errorf("user ID not found or type assertion failed in access token claims: %T", accessClaims["uid"])
+				err = fmt.Errorf("user barcode not found or type assertion failed in access token claims: %T", accessClaims["uid"])
 				span.RecordError(err)
-				span.SetStatus(codes.Error, "user ID not found or type assertion failed in access token claims")
+				span.SetStatus(codes.Error, "user barcode not found or type assertion failed in access token claims")
 				httpx.NewErrorHandler().HandleError(w, r, errorx.NewInvalidCredentials().WithCause(err))
 				return
 			}
@@ -113,8 +113,8 @@ func AuthMiddleware(secret []byte, exp time.Duration) func(next http.Handler) ht
 			}
 
 			ctx = ctxs.WithUser(ctx, &ctxs.User{
-				ID:   uid,
-				Role: role.Global(userRole),
+				Barcode: uid,
+				Role:    role.Global(userRole),
 			})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

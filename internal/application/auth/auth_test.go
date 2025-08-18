@@ -81,24 +81,24 @@ func TestLoginHandle_HappyPath(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotEmpty(t, res.AccessToken)
-		s.assertAccessToken(t, res.AccessToken, u.ID().String(), u.Role().String())
+		s.assertAccessToken(t, res.AccessToken, u.Barcode().String(), u.Role().String())
 
 		require.NotEmpty(t, res.RefreshToken)
-		s.assertRefreshToken(t, res.RefreshToken, u.ID().String())
+		s.assertRefreshToken(t, res.RefreshToken, u.Barcode().String())
 	})
 
 	t.Run("with barcode", func(t *testing.T) {
 		res, err := s.App.LoginHandle(t.Context(), Login{
-			EmailOrBarcode: u.ID().String(),
+			EmailOrBarcode: u.Barcode().String(),
 			IsEmail:        false,
 			Password:       password,
 		})
 		require.NoError(t, err)
 		require.NotEmpty(t, res.AccessToken)
-		s.assertAccessToken(t, res.AccessToken, u.ID().String(), u.Role().String())
+		s.assertAccessToken(t, res.AccessToken, u.Barcode().String(), u.Role().String())
 
 		require.NotEmpty(t, res.RefreshToken)
-		s.assertRefreshToken(t, res.RefreshToken, u.ID().String())
+		s.assertRefreshToken(t, res.RefreshToken, u.Barcode().String())
 	})
 }
 
@@ -154,7 +154,7 @@ func TestLoginHandle_FailPath(t *testing.T) {
 		{
 			name: "valid barcode, but IsEmail is true",
 			cmd: Login{
-				EmailOrBarcode: u.ID().String(),
+				EmailOrBarcode: u.Barcode().String(),
 				IsEmail:        true,
 				Password:       password,
 			},
@@ -172,7 +172,7 @@ func TestLoginHandle_FailPath(t *testing.T) {
 		{
 			name: "invalid password, but valid barcode",
 			cmd: Login{
-				EmailOrBarcode: u.ID().String(),
+				EmailOrBarcode: u.Barcode().String(),
 				IsEmail:        false,
 				Password:       wrongPassword,
 			},
@@ -208,7 +208,7 @@ func TestLoginHandle_FailPath(t *testing.T) {
 		{
 			name: "empty password with barcode",
 			cmd: Login{
-				EmailOrBarcode: u.ID().String(),
+				EmailOrBarcode: u.Barcode().String(),
 				IsEmail:        false,
 				Password:       "",
 			},
@@ -253,15 +253,15 @@ func TestRefreshHandle_HappyPath(t *testing.T) {
 
 		assert.Equal(t, loginRes.RefreshToken, res.RefreshToken)
 
-		s.assertAccessToken(t, res.AccessToken, u.ID().String(), u.Role().String())
+		s.assertAccessToken(t, res.AccessToken, u.Barcode().String(), u.Role().String())
 	})
 }
 
 func TestRefreshHandle_FailPath(t *testing.T) {
 	s := NewSuite(t)
-	uid := fixtures.TestStudent.ID
+	uid := fixtures.TestStudent.Barcode
 	password := fixtures.TestStudent.Password
-	u := builders.NewUserBuilder().WithID(uid).WithPassword(password).Build()
+	u := builders.NewUserBuilder().WithBarcode(uid).WithPassword(password).Build()
 	s.MockUserRepo.SeedUser(t, u)
 
 	assertInvalidCredential := func(t *testing.T, err error) {
@@ -301,7 +301,7 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 		{
 			name: "user not found",
 			refreshToken: builders.JWTFactory{}.
-				RefreshTokenBuilder(fixtures.TestStudent2.ID).
+				RefreshTokenBuilder(fixtures.TestStudent2.Barcode).
 				BuildSignedStringT(t),
 			errAssertionFn: func(t *testing.T, err error) {
 				assert.True(t, errorx.IsCode(err, errorx.CodeInternal), "expected internal error for user not found, got: %v", err)

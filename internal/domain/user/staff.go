@@ -18,7 +18,7 @@ type Staff struct {
 }
 
 type RegisterStaffArgs struct {
-	ID             ID              `json:"id"`
+	Barcode        Barcode         `json:"barcode"`
 	RegistrationID registration.ID `json:"registration_id"`
 	FirstName      string          `json:"first_name"`
 	LastName       string          `json:"last_name"`
@@ -29,7 +29,7 @@ type RegisterStaffArgs struct {
 
 func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
 	err := validation.ValidateStruct(&p,
-		validation.Field(&p.ID, validation.Required),
+		validation.Field(&p.Barcode, validation.Required),
 		validation.Field(&p.RegistrationID, validationx.Required),
 		validation.Field(&p.Email, validation.Required, is.EmailFormat),
 		validation.Field(&p.FirstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen)),
@@ -50,7 +50,7 @@ func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
 
 	staff := &Staff{
 		user: User{
-			id:        p.ID,
+			barcode:   p.Barcode,
 			firstName: p.FirstName,
 			lastName:  p.LastName,
 			avatarURL: p.AvatarURL,
@@ -64,7 +64,7 @@ func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
 
 	staff.AddEvent(&StaffRegistered{
 		Header:         event.NewEventHeader(),
-		StaffID:        p.ID,
+		StaffBarcode:   p.Barcode,
 		RegistrationID: p.RegistrationID,
 		FirstName:      p.FirstName,
 		LastName:       p.LastName,

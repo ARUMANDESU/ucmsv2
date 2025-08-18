@@ -91,6 +91,33 @@ func (r *Response) AssertStatus(expected int) *Response {
 	return r
 }
 
+func (r *Response) AssertMessage(expected string) *Response {
+	r.t.Helper()
+
+	var resp map[string]any
+	r.ParseJSON(&resp)
+	message, ok := resp["message"].(string)
+	require.True(r.t, ok, "expected message to be a string")
+	assert.Equal(r.t, expected, message, "unexpected message in response")
+
+	return r
+}
+
+func (r *Response) AssertContainsMessage(expected string) *Response {
+	r.t.Helper()
+	if expected == "" {
+		return r
+	}
+
+	var resp map[string]any
+	r.ParseJSON(&resp)
+	message, ok := resp["message"].(string)
+	require.True(r.t, ok, "expected message to be a string")
+	assert.Contains(r.t, message, expected, "message does not contain expected text")
+
+	return r
+}
+
 func (r *Response) AssertSuccess() *Response {
 	r.t.Helper()
 	r.AssertStatus(http.StatusOK)

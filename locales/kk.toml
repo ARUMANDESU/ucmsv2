@@ -28,7 +28,7 @@ other = "Рұқсат жеткіліксіз"
 [not_found]
 other = "Ресурс табылмады"
 [not_found_with_type]
-other = "{{.ResourceType}} табылмады"
+other = "{{.Locale_ResourceType}} табылмады"
 
 [method_not_allowed]
 other = "HTTP әдісіне рұқсат берілмеген"

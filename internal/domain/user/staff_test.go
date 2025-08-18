@@ -26,9 +26,9 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name:    "missing ID",
-			args:    builders.NewStaffBuilder().WithID("").BuildRegisterArgs(),
-			wantErr: validation.Errors{"id": validation.ErrRequired},
+			name:    "missing Barcode",
+			args:    builders.NewStaffBuilder().WithBarcode("").BuildRegisterArgs(),
+			wantErr: validation.Errors{"barcode": validation.ErrRequired},
 		},
 		{
 			name:    "missing RegistrationID",
@@ -109,7 +109,7 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 func TestRegisterStaff_EmptyArgs(t *testing.T) {
 	staff, err := user.RegisterStaff(user.RegisterStaffArgs{})
 	validationx.AssertValidationErrors(t, err, validation.Errors{
-		"id":              validation.ErrRequired,
+		"barcode":         validation.ErrRequired,
 		"registration_id": validation.ErrRequired,
 		"email":           validation.ErrRequired,
 		"first_name":      validation.ErrRequired,

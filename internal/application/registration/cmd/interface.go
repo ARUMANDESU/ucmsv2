@@ -17,7 +17,7 @@ type Repo interface {
 
 type UserGetter interface {
 	GetUserByEmail(ctx context.Context, email string) (*user.User, error)
-	GetUserByID(ctx context.Context, id user.ID) (*user.User, error)
+	GetUserByBarcode(ctx context.Context, barcode user.Barcode) (*user.User, error)
 }
 
 type GroupGetter interface {

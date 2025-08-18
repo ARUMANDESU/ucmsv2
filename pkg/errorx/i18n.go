@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"strings"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
@@ -27,6 +28,16 @@ func (e *I18nError) Error() string {
 }
 
 func (e *I18nError) Localize(localizer *i18n.Localizer) string {
+	for key, value := range e.MessageArgs {
+		if !strings.HasPrefix(key, "Locale_") {
+			continue
+		}
+		if str, ok := value.(string); ok {
+			e.MessageArgs[key] = localizer.MustLocalize(&i18n.LocalizeConfig{
+				MessageID: str,
+			})
+		}
+	}
 	return localizer.MustLocalize(&i18n.LocalizeConfig{
 		MessageID:    e.MessageKey,
 		TemplateData: e.MessageArgs,
@@ -207,7 +218,7 @@ func NewNotFound() *I18nError {
 func NewResourceNotFound(resourceType string) *I18nError {
 	return &I18nError{
 		MessageKey:  "not_found_with_type",
-		MessageArgs: map[string]any{"ResourceType": resourceType},
+		MessageArgs: map[string]any{"Locale_ResourceType": resourceType},
 		Code:        CodeNotFound,
 		HTTPCode:    http.StatusNotFound,
 	}

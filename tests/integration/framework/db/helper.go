@@ -224,13 +224,13 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
         INSERT INTO users (id, email, role_id, first_name, last_name, 
                           avatar_url, pass_hash, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    `, string(u.ID()), u.Email(), roleID, u.FirstName(), u.LastName(),
+    `, string(u.Barcode()), u.Email(), roleID, u.FirstName(), u.LastName(),
 		u.AvatarUrl(), u.PassHash(), u.CreatedAt(), u.UpdatedAt())
 
 	require.NoError(t, err)
 }
 
-func (h *Helper) SeedStudent(t *testing.T, userID user.ID, groupID uuid.UUID) {
+func (h *Helper) SeedStudent(t *testing.T, userID user.Barcode, groupID uuid.UUID) {
 	t.Helper()
 
 	_, err := h.pool.Exec(context.Background(), `

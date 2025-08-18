@@ -58,13 +58,13 @@ func (h *RegistrationCompletedHandler) StudentHandle(ctx context.Context, e *use
 
 	l := h.logger.With(
 		slog.String("event", "StudentRegistered"),
-		slog.String("student.id", e.StudentID.String()),
+		slog.String("student.barcode", e.StudentBarcode.String()),
 		slog.String("registration.id", e.RegistrationID.String()),
 		slog.String("student.email", logging.RedactEmail(e.Email)),
 	)
 	ctx, span := h.tracer.Start(ctx, "RegistrationCompletedHandler.StudentHandle",
 		trace.WithAttributes(
-			attribute.String("student.id", e.StudentID.String()),
+			attribute.String("student.barcode", e.StudentBarcode.String()),
 			attribute.String("registration.id", e.RegistrationID.String()),
 			attribute.String("student.email", logging.RedactEmail(e.Email)),
 		))
@@ -94,13 +94,13 @@ func (h *RegistrationCompletedHandler) StaffHandle(ctx context.Context, e *user.
 
 	l := h.logger.With(
 		slog.String("event", "StaffRegistered"),
-		slog.String("staff.id", e.StaffID.String()),
+		slog.String("staff.barcode", e.StaffBarcode.String()),
 		slog.String("staff.email", logging.RedactEmail(e.Email)),
 		slog.String("registration.id", e.RegistrationID.String()),
 	)
 	ctx, span := h.tracer.Start(ctx, "RegistrationCompletedHandler.StaffHandle",
 		trace.WithAttributes(
-			attribute.String("staff.id", e.StaffID.String()),
+			attribute.String("staff.barcode", e.StaffBarcode.String()),
 			attribute.String("staff.email", logging.RedactEmail(e.Email)),
 			attribute.String("registration.id", e.RegistrationID.String()),
 		))

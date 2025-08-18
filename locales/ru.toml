@@ -28,7 +28,7 @@ other = "Недостаточно прав доступа"
 [not_found]
 other = "Ресурс не найден"
 [not_found_with_type]
-other = "{{.ResourceType}} не найден"
+other = "{{.Locale_ResourceType}} не найден"
 
 [method_not_allowed]
 other = "HTTP метод не разрешен"

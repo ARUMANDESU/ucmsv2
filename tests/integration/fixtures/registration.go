@@ -34,12 +34,13 @@ var (
 
 // Test users
 var (
-	TestStudentID  = "210107"
-	TestStudent2ID = "210108"
-	TestStaffID    = "STAFF001"
+	TestStudentBarcode  = "210107"
+	TestStudent2Barcode = "210108"
+	TestStaffBarcode    = "STAFF001"
+	TestStaff2Barcode   = "STAFF002"
 
 	TestStudent = struct {
-		ID        string
+		Barcode   string
 		Email     string
 		FirstName string
 		LastName  string
@@ -47,7 +48,7 @@ var (
 		GroupID   uuid.UUID
 		Major     major.Major
 	}{
-		ID:        TestStudentID,
+		Barcode:   TestStudentBarcode,
 		Email:     ValidStudentEmail,
 		FirstName: "Test",
 		LastName:  "Student",
@@ -57,7 +58,7 @@ var (
 	}
 
 	TestStudent2 = struct {
-		ID        string
+		Barcode   string
 		Email     string
 		FirstName string
 		LastName  string
@@ -65,7 +66,7 @@ var (
 		GroupID   uuid.UUID
 		Major     major.Major
 	}{
-		ID:        TestStudent2ID,
+		Barcode:   TestStudent2Barcode,
 		Email:     ValidStudent2Email,
 		FirstName: "Test",
 		LastName:  "Student2",
@@ -75,13 +76,13 @@ var (
 	}
 
 	TestStaff = struct {
-		ID        string
+		Barcode   string
 		Email     string
 		FirstName string
 		LastName  string
 		Password  string
 	}{
-		ID:        TestStaffID,
+		Barcode:   TestStaffBarcode,
 		Email:     ValidStaffEmail,
 		FirstName: "Test",
 		LastName:  "Staff",

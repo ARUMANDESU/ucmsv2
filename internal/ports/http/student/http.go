@@ -77,7 +77,7 @@ func (h *HTTP) GetStudent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.app.Query.GetStudent.Handle(ctx, studentquery.GetStudent{ID: ctxUser.ID})
+	res, err := h.app.Query.GetStudent.Handle(ctx, studentquery.GetStudent{Barcode: ctxUser.Barcode})
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to get student")

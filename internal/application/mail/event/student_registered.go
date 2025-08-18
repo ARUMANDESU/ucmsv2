@@ -50,7 +50,7 @@ func (h *StudentRegisteredHandler) Handle(ctx context.Context, e *user.StudentRe
 
 	l := h.logger.With(
 		slog.String("event", "StudentRegistered"),
-		slog.String("student.id", e.StudentID.String()),
+		slog.String("student.barcode", e.StudentBarcode.String()),
 		slog.String("student.email", logging.RedactEmail(e.Email)),
 		slog.String("student.group.id", e.GroupID.String()))
 
@@ -60,7 +60,7 @@ func (h *StudentRegisteredHandler) Handle(ctx context.Context, e *user.StudentRe
 		trace.WithNewRoot(),
 		trace.WithLinks(trace.LinkFromContext(e.Extract())),
 		trace.WithAttributes(
-			attribute.String("student.id", e.StudentID.String()),
+			attribute.String("student.barcode", e.StudentBarcode.String()),
 			attribute.String("student.email", logging.RedactEmail(e.Email)),
 			attribute.String("student.group.id", e.GroupID.String())),
 	)

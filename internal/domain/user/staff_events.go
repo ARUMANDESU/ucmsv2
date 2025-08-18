@@ -9,7 +9,7 @@ const StaffEventStreamName = "events_staff"
 
 type StaffRegistered struct {
 	event.Header
-	StaffID        ID
+	StaffBarcode   Barcode
 	RegistrationID registration.ID
 	FirstName      string
 	LastName       string

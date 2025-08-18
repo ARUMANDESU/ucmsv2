@@ -24,18 +24,18 @@ const (
 	MaxAvatarURLLen = 1000
 )
 
-type ID string
+type Barcode string
 
-func (id ID) String() string {
-	if id == "" {
+func (barcode Barcode) String() string {
+	if barcode == "" {
 		return ""
 	}
-	return string(id)
+	return string(barcode)
 }
 
 type User struct {
 	event.Recorder
-	id        ID
+	barcode   Barcode
 	firstName string
 	lastName  string
 	avatarURL string
@@ -47,7 +47,7 @@ type User struct {
 }
 
 type RehydrateUserArgs struct {
-	ID        ID
+	Barcode   Barcode
 	FirstName string
 	LastName  string
 	Role      role.Global
@@ -60,7 +60,7 @@ type RehydrateUserArgs struct {
 
 func RehydrateUser(p RehydrateUserArgs) *User {
 	return &User{
-		id:        p.ID,
+		barcode:   p.Barcode,
 		firstName: p.FirstName,
 		lastName:  p.LastName,
 		role:      p.Role,
@@ -118,12 +118,12 @@ func (u *User) ComparePassword(password string) error {
 	return bcrypt.CompareHashAndPassword(u.passHash, []byte(password))
 }
 
-func (u *User) ID() ID {
+func (u *User) Barcode() Barcode {
 	if u == nil {
 		return ""
 	}
 
-	return u.id
+	return u.barcode
 }
 
 func (u *User) FirstName() string {

@@ -64,7 +64,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: reg.VerificationCode(),
-			Barcode:          fixtures.TestStudent.ID,
+			Barcode:          fixtures.TestStudent.Barcode,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -72,7 +72,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		s.MockStudent.RequireStudentByID(t, user.ID(fixtures.TestStudent.ID)).
+		s.MockStudent.RequireStudentByBarcode(t, user.Barcode(fixtures.TestStudent.Barcode)).
 			AssertEmail(t, fixtures.ValidStudentEmail).
 			AssertAvatarURL(t, "").
 			AssertFirstName(t, fixtures.TestStudent.FirstName).
@@ -84,7 +84,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 		s.MockStudent.AssertEventCount(t, 1)
 		e := mocks.RequireEventExists(t, s.MockStudent.EventRepo, &user.StudentRegistered{})
 		user.NewStudentRegistrationAssertions(t, e).
-			AssertStudentID(user.ID(fixtures.TestStudent.ID)).
+			AssertStudentBarcode(user.Barcode(fixtures.TestStudent.Barcode)).
 			AssertRegistrationID(reg.ID()).
 			AssertEmail(fixtures.TestStudent.Email).
 			AssertFirstName(fixtures.TestStudent.FirstName).
@@ -106,7 +106,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: reg.VerificationCode(),
-			Barcode:          fixtures.TestStudent.ID,
+			Barcode:          fixtures.TestStudent.Barcode,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -124,7 +124,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            u.Email(),
 			VerificationCode: fixtures.ValidVerificationCode,
-			Barcode:          string(u.ID()),
+			Barcode:          string(u.Barcode()),
 			FirstName:        u.FirstName(),
 			LastName:         u.LastName(),
 			Password:         fixtures.TestStudent.Password,
@@ -142,7 +142,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: fixtures.ValidVerificationCode,
-			Barcode:          string(u.ID()),
+			Barcode:          string(u.Barcode()),
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -159,7 +159,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            u.Email(),
 			VerificationCode: fixtures.ValidVerificationCode,
-			Barcode:          string(u.ID()),
+			Barcode:          string(u.Barcode()),
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -179,7 +179,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: reg.VerificationCode(),
-			Barcode:          fixtures.TestStudent.ID,
+			Barcode:          fixtures.TestStudent.Barcode,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -205,7 +205,7 @@ func TestStudentCompleteHandler_Verified(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: fixtures.InvalidVerificationCode,
-			Barcode:          fixtures.TestStudent.ID,
+			Barcode:          fixtures.TestStudent.Barcode,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -229,7 +229,7 @@ func TestStudentCompleteHandler_AlreadyCompleted_ShouldFail(t *testing.T) {
 	err := s.Handler.Handle(t.Context(), StudentComplete{
 		Email:            fixtures.TestStudent.Email,
 		VerificationCode: reg.VerificationCode(),
-		Barcode:          fixtures.TestStudent.ID,
+		Barcode:          fixtures.TestStudent.Barcode,
 		FirstName:        fixtures.TestStudent.FirstName,
 		LastName:         fixtures.TestStudent.LastName,
 		Password:         fixtures.TestStudent.Password,
@@ -252,7 +252,7 @@ func TestStudentCompleteHandler_Pending_InvalidVerificationCode_ShouldFail(t *te
 	err := s.Handler.Handle(t.Context(), StudentComplete{
 		Email:            fixtures.TestStudent.Email,
 		VerificationCode: fixtures.InvalidVerificationCode,
-		Barcode:          fixtures.TestStudent.ID,
+		Barcode:          fixtures.TestStudent.Barcode,
 		FirstName:        fixtures.TestStudent.FirstName,
 		LastName:         fixtures.TestStudent.LastName,
 		Password:         fixtures.TestStudent.Password,
@@ -270,7 +270,7 @@ func TestStudentCompleteHandler_RegistrationNotFound_ShouldFail(t *testing.T) {
 	err := s.Handler.Handle(t.Context(), StudentComplete{
 		Email:            fixtures.TestStudent.Email,
 		VerificationCode: fixtures.ValidVerificationCode,
-		Barcode:          fixtures.TestStudent.ID,
+		Barcode:          fixtures.TestStudent.Barcode,
 		FirstName:        fixtures.TestStudent.FirstName,
 		LastName:         fixtures.TestStudent.LastName,
 		Password:         fixtures.TestStudent.Password,

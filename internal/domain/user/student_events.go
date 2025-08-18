@@ -14,7 +14,7 @@ const (
 type StudentRegistered struct {
 	event.Header
 	event.Otel
-	StudentID      ID
+	StudentBarcode Barcode
 	RegistrationID registration.ID
 	Email          string
 	FirstName      string

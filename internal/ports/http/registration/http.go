@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
-	"github.com/oapi-codegen/runtime/types"
+	"github.com/google/uuid"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
@@ -63,6 +63,37 @@ func (h *HTTP) Route(r chi.Router) {
 	r.Post("/v1/registrations/resend", h.ResendVerificationCode)
 }
 
+type PostV1RegistrationsResendJSONBody struct {
+	Email string `json:"email"`
+}
+
+type PostV1RegistrationsStudentsCompleteJSONBody struct {
+	Barcode          string    `json:"barcode"`
+	Email            string    `json:"email"`
+	FirstName        string    `json:"first_name"`
+	GroupId          uuid.UUID `json:"group_id"`
+	LastName         string    `json:"last_name"`
+	Password         string    `json:"password"`
+	VerificationCode string    `json:"verification_code"`
+}
+
+type PostV1RegistrationsStudentsStartJSONBody struct {
+	Email string `json:"email"`
+}
+
+type PostV1RegistrationsVerifyJSONBody struct {
+	Email            string `json:"email"`
+	VerificationCode string `json:"verification_code"`
+}
+
+type PostV1RegistrationsResendJSONRequestBody PostV1RegistrationsResendJSONBody
+
+type PostV1RegistrationsStudentsCompleteJSONRequestBody PostV1RegistrationsStudentsCompleteJSONBody
+
+type PostV1RegistrationsStudentsStartJSONRequestBody PostV1RegistrationsStudentsStartJSONBody
+
+type PostV1RegistrationsVerifyJSONRequestBody PostV1RegistrationsVerifyJSONBody
+
 func (h *HTTP) StartStudentRegistration(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.tracer.Start(r.Context(), "StartStudentRegistration")
 	defer span.End()
@@ -75,7 +106,7 @@ func (h *HTTP) StartStudentRegistration(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
+	req.Email = sanitizex.CleanSingleLine(req.Email)
 
 	err := validation.ValidateStruct(&req,
 		validation.Field(&req.Email, validationx.EmailRules...),
@@ -87,7 +118,7 @@ func (h *HTTP) StartStudentRegistration(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.cmd.StartStudent.Handle(ctx, cmd.StartStudent{Email: string(req.Email)}); err != nil {
+	if err := h.cmd.StartStudent.Handle(ctx, cmd.StartStudent{Email: req.Email}); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to start studen registration")
 		h.errhandler.HandleError(w, r, err)
@@ -109,7 +140,7 @@ func (h *HTTP) Verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
+	req.Email = sanitizex.CleanSingleLine(req.Email)
 	req.VerificationCode = sanitizex.CleanSingleLine(req.VerificationCode)
 
 	err := validation.ValidateStruct(
@@ -129,8 +160,8 @@ func (h *HTTP) Verify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cmd := cmd.Verify{
-		Email: string(req.Email),
-		Code:  string(req.VerificationCode),
+		Email: req.Email,
+		Code:  req.VerificationCode,
 	}
 	if err := h.cmd.Verify.Handle(ctx, cmd); err != nil {
 		span.RecordError(err)
@@ -154,8 +185,8 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
-	req.Barcode = Barcode(sanitizex.CleanSingleLine(string(req.Barcode)))
+	req.Email = sanitizex.CleanSingleLine(req.Email)
+	req.Barcode = sanitizex.CleanSingleLine(req.Barcode)
 	req.VerificationCode = sanitizex.CleanSingleLine(req.VerificationCode)
 	req.FirstName = sanitizex.CleanSingleLine(req.FirstName)
 	req.LastName = sanitizex.CleanSingleLine(req.LastName)
@@ -182,12 +213,12 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 	}
 
 	cmd := cmd.StudentComplete{
-		Email:            string(req.Email),
-		VerificationCode: string(req.VerificationCode),
-		Barcode:          string(req.Barcode),
-		FirstName:        string(req.FirstName),
-		LastName:         string(req.LastName),
-		Password:         string(req.Password),
+		Email:            req.Email,
+		VerificationCode: req.VerificationCode,
+		Barcode:          req.Barcode,
+		FirstName:        req.FirstName,
+		LastName:         req.LastName,
+		Password:         req.Password,
 		GroupID:          req.GroupId,
 	}
 	if err := h.cmd.StudentComplete.Handle(ctx, cmd); err != nil {
@@ -212,7 +243,7 @@ func (h *HTTP) ResendVerificationCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.Email = types.Email(sanitizex.CleanSingleLine(string(req.Email)))
+	req.Email = sanitizex.CleanSingleLine(req.Email)
 
 	err := validation.ValidateStruct(&req,
 		validation.Field(&req.Email, validationx.EmailRules...),
@@ -224,7 +255,7 @@ func (h *HTTP) ResendVerificationCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := cmd.ResendCode{Email: string(req.Email)}
+	cmd := cmd.ResendCode{Email: req.Email}
 	if err := h.cmd.ResendCode.Handle(ctx, cmd); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to resend registration email verification code")

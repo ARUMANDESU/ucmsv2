@@ -30,8 +30,8 @@ func TestRegisterStudent_ArgValidation(t *testing.T) {
 		},
 		{
 			name:    "missing ID",
-			args:    builders.NewStudentBuilder().WithID("").BuildRegisterArgs(),
-			wantErr: validation.Errors{"id": validation.ErrRequired},
+			args:    builders.NewStudentBuilder().WithBarcode("").BuildRegisterArgs(),
+			wantErr: validation.Errors{"barcode": validation.ErrRequired},
 		},
 		{
 			name:    "missing Email",
@@ -113,7 +113,7 @@ func TestRegisterStudent_ArgValidation(t *testing.T) {
 func TestRegisterStudent_EmptyArgs(t *testing.T) {
 	student, err := user.RegisterStudent(user.RegisterStudentArgs{})
 	validationx.AssertValidationErrors(t, err, validation.Errors{
-		"id":              validation.ErrRequired,
+		"barcode":         validation.ErrRequired,
 		"registration_id": validation.ErrRequired,
 		"email":           validation.ErrRequired,
 		"password":        validation.ErrRequired,

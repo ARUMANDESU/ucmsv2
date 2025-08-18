@@ -3,8 +3,6 @@ package http
 import (
 	"testing"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
 )
 
@@ -21,7 +19,7 @@ func (h *Helper) VerifyRegistrationCode(t *testing.T, email, code string) *Respo
 		Method: "POST",
 		Path:   "/v1/registrations/verify",
 		Body: registrationhttp.PostV1RegistrationsVerifyJSONRequestBody{
-			Email:            openapi_types.Email(email),
+			Email:            email,
 			VerificationCode: code,
 		},
 	})

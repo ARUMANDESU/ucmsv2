@@ -84,7 +84,7 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 		return ErrEmailNotAvailable
 	}
 
-	u, err = h.usergetter.GetUserByID(ctx, user.ID(cmd.Barcode))
+	u, err = h.usergetter.GetUserByBarcode(ctx, user.Barcode(cmd.Barcode))
 	if err != nil && !errorx.IsNotFound(err) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to get user by barcode")
@@ -100,6 +100,9 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to get group by id")
+		if errorx.IsNotFound(err) {
+			return errorx.NewResourceNotFound("group").WithCause(err)
+		}
 		return err
 	}
 
@@ -118,7 +121,7 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 	}
 
 	student, err := user.RegisterStudent(user.RegisterStudentArgs{
-		ID:             user.ID(cmd.Barcode),
+		Barcode:        user.Barcode(cmd.Barcode),
 		RegistrationID: reg.ID(),
 		FirstName:      cmd.FirstName,
 		LastName:       cmd.LastName,
@@ -127,6 +130,11 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 		Password:       cmd.Password,
 		GroupID:        cmd.GroupID,
 	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to register student")
+		return err
+	}
 
 	err = h.studentSaver.SaveStudent(ctx, student)
 	if err != nil {

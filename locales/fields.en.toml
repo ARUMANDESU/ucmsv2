@@ -26,3 +26,6 @@ other = "Last Name"
 
 [group_id]
 other = "Academic Group"
+
+[group]
+other = "Academic Group"

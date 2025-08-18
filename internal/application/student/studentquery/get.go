@@ -23,7 +23,7 @@ var (
 )
 
 type GetStudent struct {
-	ID string `json:"id"`
+	Barcode string `json:"barcode"`
 }
 
 type GetStudentResponse struct {
@@ -72,7 +72,7 @@ func NewGetStudentHandler(args GetStudentHandlerArgs) *GetStudentHandler {
 
 func (h *GetStudentHandler) Handle(ctx context.Context, query GetStudent) (*GetStudentResponse, error) {
 	ctx, span := h.tracer.Start(ctx, "GetStudentHandler.Handle",
-		trace.WithAttributes(attribute.String("student.id", query.ID)),
+		trace.WithAttributes(attribute.String("student.barcode", query.Barcode)),
 	)
 	defer span.End()
 
@@ -84,7 +84,7 @@ func (h *GetStudentHandler) Handle(ctx context.Context, query GetStudent) (*GetS
         JOIN groups g ON s.group_id = g.id
         JOIN global_roles gr ON u.role_id = gr.id
         WHERE u.id = $1
-    `, query.ID).Scan(
+    `, query.Barcode).Scan(
 		&res.Barcode, &res.Email, &res.FirstName, &res.LastName, &res.AvatarURL,
 		&res.RegisteredAt, &res.Role, &res.Group.ID, &res.Group.Major, &res.Group.Name, &res.Group.Year,
 	)
@@ -92,7 +92,7 @@ func (h *GetStudentHandler) Handle(ctx context.Context, query GetStudent) (*GetS
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to query student data")
 		if errors.Is(err, pgx.ErrNoRows) {
-			h.logger.Warn("student not found", "id", query.ID)
+			h.logger.Warn("student not found", "barcode", query.Barcode)
 			return nil, errorx.NewNotFound().WithCause(err)
 		}
 		return nil, err

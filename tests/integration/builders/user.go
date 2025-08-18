@@ -39,7 +39,7 @@ func (f *UserFactory) AITUSA(email string) *user.AITUSA {
 }
 
 type UserBuilder struct {
-	id        user.ID
+	barcode   user.Barcode
 	firstName string
 	lastName  string
 	email     string
@@ -56,7 +56,7 @@ func NewUserBuilder() *UserBuilder {
 	now := time.Now()
 
 	return &UserBuilder{
-		id:        user.ID(fixtures.TestStudentID),
+		barcode:   user.Barcode(fixtures.TestStudentBarcode),
 		firstName: fixtures.TestStudent.FirstName,
 		lastName:  fixtures.TestStudent.LastName,
 		email:     fixtures.ValidStudentEmail,
@@ -69,8 +69,8 @@ func NewUserBuilder() *UserBuilder {
 	}
 }
 
-func (b *UserBuilder) WithID(id string) *UserBuilder {
-	b.id = user.ID(id)
+func (b *UserBuilder) WithBarcode(barcode string) *UserBuilder {
+	b.barcode = user.Barcode(barcode)
 	return b
 }
 
@@ -119,7 +119,7 @@ func (b *UserBuilder) AsAITUSA() *UserBuilder {
 
 func (b *UserBuilder) Build() *user.User {
 	return user.RehydrateUser(user.RehydrateUserArgs{
-		ID:        b.id,
+		Barcode:   b.barcode,
 		FirstName: b.firstName,
 		LastName:  b.lastName,
 		Role:      b.role,
@@ -133,7 +133,7 @@ func (b *UserBuilder) Build() *user.User {
 
 func (b *UserBuilder) RehydrateArgs() user.RehydrateUserArgs {
 	return user.RehydrateUserArgs{
-		ID:        b.id,
+		Barcode:   b.barcode,
 		FirstName: b.firstName,
 		LastName:  b.lastName,
 		Role:      b.role,
@@ -147,7 +147,7 @@ func (b *UserBuilder) RehydrateArgs() user.RehydrateUserArgs {
 
 func (b *UserBuilder) BuildNew() *user.User {
 	return user.RehydrateUser(user.RehydrateUserArgs{
-		ID:        b.id,
+		Barcode:   b.barcode,
 		FirstName: b.firstName,
 		LastName:  b.lastName,
 		AvatarURL: b.avatarURL,
@@ -180,8 +180,8 @@ func (b *StudentBuilder) WithGroupID(groupID uuid.UUID) *StudentBuilder {
 }
 
 // Override UserBuilder methods to return *StudentBuilder for proper chaining
-func (b *StudentBuilder) WithID(id string) *StudentBuilder {
-	b.UserBuilder.WithID(id)
+func (b *StudentBuilder) WithBarcode(barcode string) *StudentBuilder {
+	b.UserBuilder.WithBarcode(barcode)
 	return b
 }
 
@@ -263,7 +263,7 @@ func (b *StudentBuilder) WithInvalidShortLastName() *StudentBuilder {
 func (b *StudentBuilder) Build() *user.Student {
 	return user.RehydrateStudent(user.RehydrateStudentArgs{
 		RehydrateUserArgs: user.RehydrateUserArgs{
-			ID:        b.id,
+			Barcode:   b.barcode,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
 			Role:      role.Student,
@@ -286,7 +286,7 @@ func (b *StudentBuilder) RehydrateStudentArgs() user.RehydrateStudentArgs {
 
 func (b *StudentBuilder) BuildNew() (*user.Student, error) {
 	return user.RegisterStudent(user.RegisterStudentArgs{
-		ID:             b.id,
+		Barcode:        b.barcode,
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,
@@ -299,7 +299,7 @@ func (b *StudentBuilder) BuildNew() (*user.Student, error) {
 
 func (b *StudentBuilder) BuildRegisterArgs() user.RegisterStudentArgs {
 	return user.RegisterStudentArgs{
-		ID:             b.id,
+		Barcode:        b.barcode,
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,
@@ -324,8 +324,8 @@ func NewStaffBuilder() *StaffBuilder {
 }
 
 // Override UserBuilder methods to return *StaffBuilder for proper chaining
-func (b *StaffBuilder) WithID(id string) *StaffBuilder {
-	b.UserBuilder.WithID(id)
+func (b *StaffBuilder) WithBarcode(barcode string) *StaffBuilder {
+	b.UserBuilder.WithBarcode(barcode)
 	return b
 }
 
@@ -407,7 +407,7 @@ func (b *StaffBuilder) WithInvalidShortLastName() *StaffBuilder {
 func (b *StaffBuilder) Build() *user.Staff {
 	return user.RehydrateStaff(user.RehydrateStaffArgs{
 		RehydrateUserArgs: user.RehydrateUserArgs{
-			ID:        b.id,
+			Barcode:   b.barcode,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
 			Role:      role.Staff,
@@ -428,7 +428,7 @@ func (b *StaffBuilder) RehydrateStaffArgs() user.RehydrateStaffArgs {
 
 func (b *StaffBuilder) BuildNew() (*user.Staff, error) {
 	return user.RegisterStaff(user.RegisterStaffArgs{
-		ID:             b.id,
+		Barcode:        b.barcode,
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,
@@ -440,7 +440,7 @@ func (b *StaffBuilder) BuildNew() (*user.Staff, error) {
 
 func (b *StaffBuilder) BuildRegisterArgs() user.RegisterStaffArgs {
 	return user.RegisterStaffArgs{
-		ID:             b.id,
+		Barcode:        b.barcode,
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,

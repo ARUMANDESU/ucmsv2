@@ -28,7 +28,7 @@ other = "Insufficient permissions"
 [not_found]
 other = "Resource not found"
 [not_found_with_type]
-other = "{{.ResourceType}} not found"
+other = "{{.Locale_ResourceType}} not found"
 
 [method_not_allowed]
 other = "HTTP method not allowed"

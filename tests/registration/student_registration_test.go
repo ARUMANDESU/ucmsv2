@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -81,13 +80,13 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 
 	s.T().Run("Complete Student Registration", func(t *testing.T) {
 		s.HTTP.CompleteStudentRegistration(t, registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-			Email:            openapi_types.Email(email),
+			Email:            email,
 			VerificationCode: reg.GetVerificationCode(),
 			Password:         fixtures.TestStudent.Password,
-			Barcode:          fixtures.TestStudent.ID,
+			Barcode:          fixtures.TestStudent.Barcode,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
-			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+			GroupId:          fixtures.SEGroup.ID,
 		}).AssertSuccess()
 	})
 
@@ -285,13 +284,13 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 		s.setupVerifiedRegistration(email)
 
 		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-			Email:            openapi_types.Email(email),
+			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         "weak",
 			Barcode:          "STU001",
 			FirstName:        "Test",
 			LastName:         "Student",
-			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+			GroupId:          fixtures.SEGroup.ID,
 		}).AssertBadRequest()
 	})
 
@@ -301,16 +300,16 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 		student := s.Builder.User.Student("existing@test.com")
 
 		s.DB.SeedUser(s.T(), student.User())
-		s.DB.SeedStudent(s.T(), student.User().ID(), fixtures.SEGroup.ID)
+		s.DB.SeedStudent(s.T(), student.User().Barcode(), fixtures.SEGroup.ID)
 
 		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-			Email:            openapi_types.Email(email),
+			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         fixtures.TestStudent.Password,
-			Barcode:          string(student.User().ID()),
+			Barcode:          string(student.User().Barcode()),
 			FirstName:        "Test",
 			LastName:         "Student",
-			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+			GroupId:          fixtures.SEGroup.ID,
 		}).AssertStatus(http.StatusConflict)
 	})
 
@@ -320,13 +319,13 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 		invalidGroupID := uuid.New()
 
 		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-			Email:            openapi_types.Email(email),
+			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         fixtures.TestStudent.Password,
 			Barcode:          "STU002",
 			FirstName:        "Test",
 			LastName:         "Student",
-			GroupId:          registrationhttp.GroupID(invalidGroupID),
+			GroupId:          invalidGroupID,
 		}).AssertStatus(http.StatusNotFound)
 	})
 }
@@ -340,13 +339,13 @@ func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
 		reg := s.DB.RequireRegistrationExists(t, email)
 
 		s.HTTP.CompleteStudentRegistration(t, registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-			Email:            openapi_types.Email(email),
+			Email:            email,
 			VerificationCode: reg.GetVerificationCode(),
 			Password:         fixtures.TestStudent.Password,
 			Barcode:          "STU003",
 			FirstName:        "Test",
 			LastName:         "Student",
-			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+			GroupId:          fixtures.SEGroup.ID,
 		}).AssertBadRequest()
 	})
 
@@ -355,13 +354,13 @@ func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
 		s.setupCompletedRegistration(email)
 
 		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-			Email:            openapi_types.Email(email),
+			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         fixtures.TestStudent.Password,
 			Barcode:          "STU004",
 			FirstName:        "Test",
 			LastName:         "Student",
-			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+			GroupId:          fixtures.SEGroup.ID,
 		}).AssertStatus(http.StatusConflict)
 	})
 }
@@ -378,15 +377,505 @@ func (s *RegistrationIntegrationSuite) TestBusinessRules() {
 		s.setupVerifiedRegistration(email)
 
 		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-			Email:            openapi_types.Email(email),
+			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         fixtures.TestStudent.Password,
 			Barcode:          "STU005",
 			FirstName:        "X",
 			LastName:         strings.Repeat("A", 101),
-			GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+			GroupId:          fixtures.SEGroup.ID,
 		}).AssertBadRequest()
 	})
+}
+
+func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestValidation() {
+	s.DB.SeedGroup(s.T(), fixtures.SEGroup.ID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
+
+	tests := []struct {
+		name           string
+		setup          func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody)
+		expectedStatus int
+		message        string
+		setupBefore    bool
+	}{
+		{
+			name: "Empty Email",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = ""
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Email Address cannot be blank",
+		},
+		{
+			name: "Invalid Email Format",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = "invalid-email"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Email Address must be a valid email address",
+		},
+		{
+			name: "Empty Verification Code",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.VerificationCode = ""
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Verification Code cannot be blank",
+		},
+		{
+			name: "Empty Password",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Password = ""
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Password cannot be blank",
+		},
+		{
+			name: "Empty Barcode",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = ""
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Barcode cannot be blank",
+		},
+		{
+			name: "Invalid Barcode Format",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "INVALID-BARCODE"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Barcode must contain English letters and digits only",
+		},
+		{
+			name: "Empty First Name",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = ""
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "First Name cannot be blank",
+		},
+		{
+			name: "Empty Last Name",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = ""
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Last Name cannot be blank",
+		},
+		{
+			name: "Invalid Group ID",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.GroupId = uuid.New()
+			},
+			expectedStatus: http.StatusNotFound,
+			message:        "Academic Group not found",
+		},
+		{
+			name: "Group ID Not Provided",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.GroupId = uuid.Nil
+			},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "Group ID Not Found",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.GroupId = uuid.New()
+			},
+			expectedStatus: http.StatusNotFound,
+			message:        "Academic Group not found",
+		},
+		// Password validation test cases
+		{
+			name: "Password Too Short",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Password = "Pass1!"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Password the length must be between 8 and 128",
+		},
+		{
+			name: "Password Too Long",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Password = strings.Repeat("Password1!", 15) // 150 characters
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Password the length must be between 8 and 128",
+		},
+		{
+			name: "Password Missing Uppercase",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Password = "password123!"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Password must contain at least 8 characters with uppercase, lowercase, number, and special character",
+		},
+		{
+			name: "Password Missing Lowercase",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Password = "PASSWORD123!"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Password must contain at least 8 characters with uppercase, lowercase, number, and special character",
+		},
+		{
+			name: "Password Missing Number",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Password = "Password!"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Password must contain at least 8 characters with uppercase, lowercase, number, and special character",
+		},
+		{
+			name: "Password Missing Special Character",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Password = "Password123"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Password must contain at least 8 characters with uppercase, lowercase, number, and special character",
+		},
+		// Name validation test cases
+		{
+			name: "First Name Too Long",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = strings.Repeat("A", 151)
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "First Name the length must be between 1 and 150",
+		},
+		{
+			name: "Last Name Too Long",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = strings.Repeat("B", 151)
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Last Name the length must be between 1 and 150",
+		},
+		{
+			name: "First Name Invalid Characters",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "John123"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "must be a valid name",
+		},
+		{
+			name: "Last Name Invalid Characters",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "Smith@#$"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "must be a valid name",
+		},
+		// valid names with special characters
+		{
+			name: "First Name With Valid Special Characters",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "STU001"
+				req.Email = "valid-firstname-1@test.com"
+				req.FirstName = "Jean-Pierre"
+			},
+			expectedStatus: http.StatusOK,
+			setupBefore:    true,
+		},
+		{
+			name: "Last Name With Apostrophe",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "STU002"
+				req.Email = "valid-lastname-1@test.com"
+				req.LastName = "O'Connor"
+			},
+			expectedStatus: http.StatusOK,
+			setupBefore:    true,
+		},
+		// Email validation edge cases
+		{
+			name: "Email Too Long",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				longEmail := strings.Repeat("a", 250) + "@test.com"
+				req.Email = longEmail
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Email Address must be a valid email address",
+		},
+		{
+			name: "Email Too Short",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = "a@b"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Email Address must be a valid email address",
+		},
+		// Barcode validation edge cases
+		{
+			name: "Barcode Too Long",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = strings.Repeat("A", 21) // Over typical barcode length
+				req.Email = "barcode-too-long@test.com"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Barcode the length must be between 6 and 20",
+			setupBefore:    true,
+		},
+		{
+			name: "Barcode With Spaces",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "STU 001"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Barcode must contain English letters and digits only",
+		},
+		{
+			name: "Barcode With Unicode Characters",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "STUদেন্ট001"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Barcode must contain English letters and digits only",
+		},
+		// Verification code edge cases
+		{
+			name: "Verification Code Too Long",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.VerificationCode = strings.Repeat("1", 20)
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Verification Code",
+		},
+		{
+			name: "Verification Code With Special Characters",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.VerificationCode = "123@#$"
+			},
+			expectedStatus: http.StatusBadRequest,
+			message:        "Verification Code",
+		},
+	}
+
+	for _, tt := range tests {
+		s.T().Run(tt.name, func(t *testing.T) {
+			request := registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+				Email:            fixtures.TestStudent.Email,
+				VerificationCode: "123456",
+				Password:         fixtures.TestStudent.Password,
+				Barcode:          fixtures.TestStudent.Barcode,
+				FirstName:        fixtures.TestStudent.FirstName,
+				LastName:         fixtures.TestStudent.LastName,
+				GroupId:          fixtures.SEGroup.ID,
+			}
+			tt.setup(&request)
+			if tt.setupBefore {
+				s.setupVerifiedRegistration(request.Email)
+				request.VerificationCode = s.getVerificationCode(request.Email)
+			}
+			response := s.HTTP.CompleteStudentRegistration(t, request)
+			response.AssertStatus(tt.expectedStatus).AssertContainsMessage(tt.message)
+		})
+	}
+}
+
+func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_BusinessErrors() {
+	s.DB.SeedGroup(s.T(), fixtures.SEGroup.ID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
+
+	tests := []struct {
+		name            string
+		setup           func(t *testing.T) (email, verificationCode, barcode string)
+		expectedStatus  int
+		expectedMessage string
+	}{
+		{
+			name: "Registration Not Found",
+			setup: func(t *testing.T) (string, string, string) {
+				return "nonexistent@test.com", "123456", "STU001"
+			},
+			expectedStatus:  http.StatusNotFound,
+			expectedMessage: "Resource not found",
+		},
+		{
+			name: "Email Not Verified First",
+			setup: func(t *testing.T) (string, string, string) {
+				email := "not-verified@test.com"
+				s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
+				reg := s.DB.RequireRegistrationExists(t, email)
+				return email, reg.GetVerificationCode(), "STU002"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Please verify your email first",
+		},
+		{
+			name: "Invalid Verification Code",
+			setup: func(t *testing.T) (string, string, string) {
+				email := "invalid-code@test.com"
+				s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
+				s.DB.RequireRegistrationExists(t, email)
+				return email, "WRONG1", "STU003"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Please verify your email first", // Since email not verified, it should fail with verify first
+		},
+		{
+			name: "Invalid Verification Code Length",
+			setup: func(t *testing.T) (string, string, string) {
+				email := "invalid-code-length@test.com"
+				s.setupVerifiedRegistration(email)
+				return email, "WRONG123", "STU004"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Verification Code the length must be exactly 6",
+		},
+		{
+			name: "Registration Already Completed",
+			setup: func(t *testing.T) (string, string, string) {
+				email := "completed@test.com"
+				s.setupCompletedRegistration(email)
+				return email, s.getVerificationCode(email), "STU005"
+			},
+			expectedStatus:  http.StatusConflict,
+			expectedMessage: "This email address is already registered",
+		},
+		{
+			name: "Duplicate Student Barcode",
+			setup: func(t *testing.T) (string, string, string) {
+				email := "duplicate-barcode@test.com"
+				s.setupVerifiedRegistration(email)
+
+				// Create an existing student with the same barcode
+				existingStudent := s.Builder.User.Student("existing@test.com")
+				s.DB.SeedUser(t, existingStudent.User())
+				s.DB.SeedStudent(t, existingStudent.User().Barcode(), fixtures.SEGroup.ID)
+
+				return email, s.getVerificationCode(email), existingStudent.User().Barcode().String()
+			},
+			expectedStatus:  http.StatusConflict,
+			expectedMessage: "This barcode is already in use",
+		},
+		{
+			name: "User Already Exists With Email",
+			setup: func(t *testing.T) (string, string, string) {
+				email := "existing-user@test.com"
+				s.setupVerifiedRegistration(email)
+
+				// Create an existing user with the same email
+				existingUser := builders.NewStudentBuilder().WithEmail(email).WithBarcode("STU006").Build()
+				s.DB.SeedUser(t, existingUser.User())
+				s.DB.SeedStudent(t, existingUser.User().Barcode(), fixtures.SEGroup.ID)
+
+				return email, s.getVerificationCode(email), "STU007"
+			},
+			expectedStatus:  http.StatusConflict,
+			expectedMessage: "This email address is already registered",
+		},
+	}
+
+	for _, tt := range tests {
+		s.T().Run(tt.name, func(t *testing.T) {
+			email, verificationCode, barcode := tt.setup(t)
+
+			response := s.HTTP.CompleteStudentRegistration(t, registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+				Email:            email,
+				VerificationCode: verificationCode,
+				Password:         fixtures.TestStudent.Password,
+				Barcode:          barcode,
+				FirstName:        fixtures.TestStudent.FirstName,
+				LastName:         fixtures.TestStudent.LastName,
+				GroupId:          fixtures.SEGroup.ID,
+			})
+
+			response.AssertStatus(tt.expectedStatus)
+			if tt.expectedMessage != "" {
+				response.AssertContainsMessage(tt.expectedMessage)
+			}
+		})
+	}
+}
+
+func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_VerificationCodeExpired() {
+	s.T().Run("Expired Verification Code", func(t *testing.T) {
+		email := "expired-code@test.com"
+		s.DB.SeedGroup(t, fixtures.SEGroup.ID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
+
+		// Create an expired registration
+		expiredReg := s.Builder.Registration.ExpiredRegistration(email)
+		s.DB.SeedRegistration(t, expiredReg)
+
+		response := s.HTTP.CompleteStudentRegistration(t, registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+			Email:            email,
+			VerificationCode: expiredReg.VerificationCode(),
+			Password:         fixtures.TestStudent.Password,
+			Barcode:          "EXPSTU001",
+			FirstName:        fixtures.TestStudent.FirstName,
+			LastName:         fixtures.TestStudent.LastName,
+			GroupId:          fixtures.SEGroup.ID,
+		})
+
+		response.AssertStatus(http.StatusBadRequest).
+			AssertContainsMessage("Please verify your email first")
+	})
+}
+
+// TestRegistration_StudentComplete_SecurityValidation tests security-related validation
+func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_SecurityValidation() {
+	s.DB.SeedGroup(s.T(), fixtures.SEGroup.ID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
+
+	tests := []struct {
+		name    string
+		setup   func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody)
+		message string
+	}{
+		{
+			name: "SQL Injection in Email",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = "test'; DROP TABLE users; --@test.com"
+			},
+			message: "Email Address must be a valid email address",
+		},
+		{
+			name: "XSS in First Name",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "<script>alert('xss')</script>"
+			},
+			message: "must be a valid name",
+		},
+		{
+			name: "XSS in Last Name",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "<img src=x onerror=alert('xss')>"
+			},
+			message: "must be a valid name",
+		},
+		{
+			name: "HTML Entities in Name",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "&lt;script&gt;alert('test')&lt;/script&gt;"
+			},
+			message: "must be a valid name",
+		},
+		{
+			name: "Null Bytes in Barcode",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "STU001\x00admin"
+			},
+			message: "Barcode must contain English letters and digits only",
+		},
+	}
+
+	for _, tt := range tests {
+		s.T().Run(tt.name, func(t *testing.T) {
+			request := registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+				Email:            fixtures.TestStudent.Email,
+				VerificationCode: "123456",
+				Password:         fixtures.TestStudent.Password,
+				Barcode:          fixtures.TestStudent.Barcode,
+				FirstName:        fixtures.TestStudent.FirstName,
+				LastName:         fixtures.TestStudent.LastName,
+				GroupId:          fixtures.SEGroup.ID,
+			}
+			tt.setup(&request)
+
+			response := s.HTTP.CompleteStudentRegistration(t, request)
+			response.AssertBadRequest().AssertContainsMessage(tt.message)
+		})
+	}
 }
 
 func (s *RegistrationIntegrationSuite) setupVerifiedRegistration(email string) {
@@ -401,13 +890,26 @@ func (s *RegistrationIntegrationSuite) setupVerifiedRegistration(email string) {
 func (s *RegistrationIntegrationSuite) setupCompletedRegistration(email string) {
 	s.setupVerifiedRegistration(email)
 	s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-		Email:            openapi_types.Email(email),
+		Email:            email,
 		VerificationCode: s.getVerificationCode(email),
 		Password:         fixtures.TestStudent.Password,
 		Barcode:          "STU999",
 		FirstName:        "Test",
 		LastName:         "Student",
-		GroupId:          registrationhttp.GroupID(fixtures.SEGroup.ID),
+		GroupId:          fixtures.SEGroup.ID,
+	}).AssertSuccess()
+}
+
+func (s *RegistrationIntegrationSuite) setupCompletedRegistrationWith(email, barcode string, groupID uuid.UUID) {
+	s.setupVerifiedRegistration(email)
+	s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+		Email:            email,
+		VerificationCode: s.getVerificationCode(email),
+		Password:         fixtures.TestStudent.Password,
+		Barcode:          barcode,
+		FirstName:        fixtures.TestStudent.FirstName,
+		LastName:         fixtures.TestStudent.LastName,
+		GroupId:          groupID,
 	}).AssertSuccess()
 }
 

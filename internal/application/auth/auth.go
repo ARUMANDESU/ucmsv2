@@ -32,7 +32,7 @@ var (
 var ErrWrongEmailOrBarcodeOrPassword = errorx.NewInvalidRequest().WithKey("wrong_email_or_barcode_or_password")
 
 type UserGetter interface {
-	GetUserByID(ctx context.Context, id user.ID) (*user.User, error)
+	GetUserByBarcode(ctx context.Context, barcode user.Barcode) (*user.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*user.User, error)
 }
 
@@ -123,8 +123,8 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 		span.SetAttributes(attribute.String("user.email", logging.RedactEmail(cmd.EmailOrBarcode)))
 		u, err = a.usergetter.GetUserByEmail(ctx, cmd.EmailOrBarcode)
 	} else {
-		span.SetAttributes(attribute.String("user.id", cmd.EmailOrBarcode))
-		u, err = a.usergetter.GetUserByID(ctx, user.ID(cmd.EmailOrBarcode))
+		span.SetAttributes(attribute.String("user.Barcode", cmd.EmailOrBarcode))
+		u, err = a.usergetter.GetUserByBarcode(ctx, user.Barcode(cmd.EmailOrBarcode))
 	}
 	if err != nil {
 		span.RecordError(err)
@@ -147,7 +147,7 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 		"sub":       "user",
 		"exp":       time.Now().Add(a.accessTokenExpDuration).Unix(),
 		"iat":       time.Now().Unix(),
-		"uid":       u.ID().String(),
+		"uid":       u.Barcode().String(),
 		"user_role": u.Role().String(),
 	})
 	refreshToken := jwt.NewWithClaims(a.signingMethod, jwt.MapClaims{
@@ -156,7 +156,7 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 		"exp":   time.Now().Add(a.refreshTokenExpDuration).Unix(),
 		"iat":   time.Now().Unix(),
 		"jti":   uuid.New().String(),
-		"uid":   u.ID().String(),
+		"uid":   u.Barcode().String(),
 		"scope": "refresh",
 	})
 
@@ -230,19 +230,19 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 		span.SetStatus(codes.Error, "refresh token expired")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
-	userID, ok := refreshClaims["uid"].(string)
+	userBarcode, ok := refreshClaims["uid"].(string)
 	if !ok {
-		err := errors.New("missing or invalid user ID in refresh token claims")
+		err := errors.New("missing or invalid user barcode in refresh token claims")
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "invalid refresh token user ID")
+		span.SetStatus(codes.Error, "invalid refresh token user barcode")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
-	span.SetAttributes(attribute.String("user.id", userID))
+	span.SetAttributes(attribute.String("user.barcode", userBarcode))
 
-	u, err := a.usergetter.GetUserByID(ctx, user.ID(userID))
+	u, err := a.usergetter.GetUserByBarcode(ctx, user.Barcode(userBarcode))
 	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by ID")
+		span.SetStatus(codes.Error, "failed to get user by barcode")
 		return LoginResponse{}, errorx.NewInternalError().WithCause(err)
 	}
 
@@ -251,7 +251,7 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 		"sub":       "user",
 		"exp":       time.Now().Add(a.accessTokenExpDuration).Unix(),
 		"iat":       time.Now().Unix(),
-		"uid":       u.ID().String(),
+		"uid":       u.Barcode().String(),
 		"user_role": u.Role().String(),
 	})
 

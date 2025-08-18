@@ -14,7 +14,7 @@ import (
 )
 
 type StaffAssertions struct {
-	ID        ID
+	Barcode   Barcode
 	FirstName string
 	LastName  string
 	AvatarURL string
@@ -27,7 +27,7 @@ type StaffAssertions struct {
 func NewStaffAssertions(s *Staff) *StaffAssertions {
 	u := s.User()
 	return &StaffAssertions{
-		ID:        u.ID(),
+		Barcode:   u.Barcode(),
 		FirstName: u.FirstName(),
 		LastName:  u.LastName(),
 		AvatarURL: u.AvatarUrl(),
@@ -40,7 +40,7 @@ func NewStaffAssertions(s *Staff) *StaffAssertions {
 
 func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterStaffArgs) *StaffAssertions {
 	t.Helper()
-	assert.Equal(t, args.ID, s.ID, "ID mismatch")
+	assert.Equal(t, args.Barcode, s.Barcode, "Barcode mismatch")
 	assert.Equal(t, args.FirstName, s.FirstName, "FirstName mismatch")
 	assert.Equal(t, args.LastName, s.LastName, "LastName mismatch")
 	assert.Equal(t, args.AvatarURL, s.AvatarURL, "AvatarURL mismatch")
@@ -52,7 +52,7 @@ func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterSt
 	require.Len(t, s.Events, 1, "expected one event")
 	assert.IsType(t, &StaffRegistered{}, s.Events[0], "expected StaffRegistered event type")
 	staffRegisteredEvent := s.Events[0].(*StaffRegistered)
-	assert.Equal(t, args.ID, staffRegisteredEvent.StaffID, "StaffID in event mismatch")
+	assert.Equal(t, args.Barcode, staffRegisteredEvent.StaffBarcode, "StaffBarcode in event mismatch")
 	assert.Equal(t, args.Email, staffRegisteredEvent.Email, "Email in event mismatch")
 	assert.Equal(t, args.FirstName, staffRegisteredEvent.FirstName, "FirstName in event mismatch")
 	assert.Equal(t, args.LastName, staffRegisteredEvent.LastName, "LastName in event mismatch")
@@ -60,9 +60,9 @@ func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterSt
 	return s
 }
 
-func (s *StaffAssertions) AssertID(t *testing.T, expected ID) *StaffAssertions {
+func (s *StaffAssertions) AssertBarcode(t *testing.T, expected Barcode) *StaffAssertions {
 	t.Helper()
-	assert.Equal(t, expected, s.ID, "ID mismatch")
+	assert.Equal(t, expected, s.Barcode, "Barcode mismatch")
 	return s
 }
 
@@ -109,7 +109,7 @@ func (s *StaffAssertions) AssertPassHash(t *testing.T, expected []byte) *StaffAs
 }
 
 type StudentAssertions struct {
-	ID        ID
+	Barcode   Barcode
 	FirstName string
 	LastName  string
 	AvatarURL string
@@ -123,7 +123,7 @@ type StudentAssertions struct {
 func NewStudentAssertions(s *Student) *StudentAssertions {
 	u := s.User()
 	return &StudentAssertions{
-		ID:        u.ID(),
+		Barcode:   u.Barcode(),
 		FirstName: u.FirstName(),
 		LastName:  u.LastName(),
 		AvatarURL: u.AvatarUrl(),
@@ -137,7 +137,7 @@ func NewStudentAssertions(s *Student) *StudentAssertions {
 
 func (s *StudentAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterStudentArgs) *StudentAssertions {
 	t.Helper()
-	assert.Equal(t, args.ID, s.ID, "ID mismatch")
+	assert.Equal(t, args.Barcode, s.Barcode, "Barcode mismatch")
 	assert.Equal(t, args.FirstName, s.FirstName, "FirstName mismatch")
 	assert.Equal(t, args.LastName, s.LastName, "LastName mismatch")
 	assert.Equal(t, args.AvatarURL, s.AvatarURL, "AvatarURL mismatch")
@@ -149,7 +149,7 @@ func (s *StudentAssertions) AssertByRegistrationArgs(t *testing.T, args Register
 	require.Len(t, s.Events, 1, "expected one event")
 	assert.IsType(t, &StudentRegistered{}, s.Events[0], "expected StudentRegistered event type")
 	studentRegisteredEvent := s.Events[0].(*StudentRegistered)
-	assert.Equal(t, args.ID, studentRegisteredEvent.StudentID, "StudentID in event mismatch")
+	assert.Equal(t, args.Barcode, studentRegisteredEvent.StudentBarcode, "StudentBarcode in event mismatch")
 	assert.Equal(t, args.RegistrationID, studentRegisteredEvent.RegistrationID, "RegistrationID in event mismatch")
 	assert.Equal(t, args.Email, studentRegisteredEvent.Email, "Email in event mismatch")
 	assert.Equal(t, args.FirstName, studentRegisteredEvent.FirstName, "FirstName in event mismatch")
@@ -159,9 +159,9 @@ func (s *StudentAssertions) AssertByRegistrationArgs(t *testing.T, args Register
 	return s
 }
 
-func (s *StudentAssertions) AssertID(t *testing.T, expected ID) *StudentAssertions {
+func (s *StudentAssertions) AssertBarcode(t *testing.T, expected Barcode) *StudentAssertions {
 	t.Helper()
-	assert.Equal(t, expected, s.ID, "ID mismatch")
+	assert.Equal(t, expected, s.Barcode, "Barcode mismatch")
 	return s
 }
 
@@ -226,9 +226,9 @@ func NewStudentRegistrationAssertions(t *testing.T, event *StudentRegistered) *S
 	}
 }
 
-func (s *StudentRegistrationAssertions) AssertStudentID(expected ID) *StudentRegistrationAssertions {
+func (s *StudentRegistrationAssertions) AssertStudentBarcode(expected Barcode) *StudentRegistrationAssertions {
 	s.t.Helper()
-	assert.Equal(s.t, expected, s.event.StudentID, "StudentID mismatch")
+	assert.Equal(s.t, expected, s.event.StudentBarcode, "StudentBarcode mismatch")
 	return s
 }
 

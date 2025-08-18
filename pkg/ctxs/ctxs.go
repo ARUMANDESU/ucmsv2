@@ -14,8 +14,8 @@ const (
 )
 
 type User struct {
-	ID   string
-	Role role.Global
+	Barcode string
+	Role    role.Global
 }
 
 func WithTx(ctx context.Context, tx pgx.Tx) context.Context {
