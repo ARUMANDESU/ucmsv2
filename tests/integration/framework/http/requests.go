@@ -8,57 +8,54 @@ import (
 	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
 )
 
+var ApplicationJSONHeaders = map[string]string{"Content-Type": "application/json"}
+
 func (h *Helper) StartStudentRegistration(t *testing.T, email string) *Response {
-	return h.Do(t, Request{
-		Method: "POST",
-		Path:   "/v1/registrations/students/start",
-		Body:   map[string]string{"email": email},
-	})
+	return h.Do(t, NewRequest("POST", "/v1/registrations/students/start").
+		WithJSON(map[string]string{"email": email}).
+		Build(),
+	)
 }
 
 func (h *Helper) VerifyRegistrationCode(t *testing.T, email, code string) *Response {
-	return h.Do(t, Request{
-		Method: "POST",
-		Path:   "/v1/registrations/verify",
-		Body: registrationhttp.PostV1RegistrationsVerifyJSONRequestBody{
+	return h.Do(t, NewRequest("POST", "/v1/registrations/verify").
+		WithJSON(registrationhttp.PostV1RegistrationsVerifyJSONRequestBody{
 			Email:            email,
 			VerificationCode: code,
-		},
-	})
+		}).
+		Build(),
+	)
 }
 
 func (h *Helper) CompleteStudentRegistration(t *testing.T, req registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) *Response {
-	return h.Do(t, Request{
-		Method: "POST",
-		Path:   "/v1/registrations/students/complete",
-		Body:   req,
-	})
+	return h.Do(t, NewRequest("POST", "/v1/registrations/students/complete").
+		WithJSON(req).
+		Build(),
+	)
 }
 
 func (h *Helper) ResendVerificationCode(t *testing.T, email string) *Response {
-	return h.Do(t, Request{
-		Method: "POST",
-		Path:   "/v1/registrations/resend",
-		Body:   map[string]string{"email": email},
-	})
+	return h.Do(t, NewRequest("POST", "/v1/registrations/resend").
+		WithJSON(map[string]string{"email": email}).
+		Build(),
+	)
 }
 
 func (h *Helper) Login(t *testing.T, emailOrBarcode, password string) *Response {
-	return h.Do(t, Request{
-		Method: "POST",
-		Path:   "/v1/auth/login",
-		Body: map[string]string{
+	return h.Do(t, NewRequest("POST", "/v1/auth/login").
+		WithJSON(map[string]string{
 			"email_barcode": emailOrBarcode,
 			"password":      password,
-		},
-	})
+		}).
+		Build(),
+	)
 }
 
 func (h *Helper) Refresh(t *testing.T, refreshToken string) *Response {
 	return h.Do(t, NewRequest("POST", "/v1/auth/refresh").
-		WithCookies(map[string]string{
-			authhttp.RefreshJWTCookie: (&http.Cookie{
-				Name:     "ucmsv2_refresh",
+		WithCookies([]string{
+			(&http.Cookie{
+				Name:     authhttp.RefreshJWTCookie,
 				Value:    refreshToken,
 				Path:     authhttp.RefreshCookiePath,
 				Domain:   "localhost",
@@ -72,9 +69,9 @@ func (h *Helper) Refresh(t *testing.T, refreshToken string) *Response {
 
 func (h *Helper) Logout(t *testing.T, accessToken, refreshToken string) *Response {
 	return h.Do(t, NewRequest("POST", "/v1/auth/logout").
-		WithCookies(map[string]string{
-			authhttp.RefreshJWTCookie: (&http.Cookie{
-				Name:     "ucmsv2_refresh",
+		WithCookies([]string{
+			(&http.Cookie{
+				Name:     authhttp.RefreshJWTCookie,
 				Value:    refreshToken,
 				Path:     authhttp.RefreshCookiePath,
 				Domain:   "localhost",
@@ -82,8 +79,8 @@ func (h *Helper) Logout(t *testing.T, accessToken, refreshToken string) *Respons
 				HttpOnly: true,
 				SameSite: http.SameSiteStrictMode,
 			}).String(),
-			authhttp.AccessJWTCookie: (&http.Cookie{
-				Name:     "ucmsv2_access",
+			(&http.Cookie{
+				Name:     authhttp.AccessJWTCookie,
 				Value:    accessToken,
 				Path:     "/",
 				Domain:   "localhost",

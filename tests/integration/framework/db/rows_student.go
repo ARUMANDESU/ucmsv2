@@ -23,19 +23,19 @@ type StudentAssertion struct {
 	row StudentRow
 }
 
-func (a *StudentAssertion) InGroupID(groupID uuid.UUID) *StudentAssertion {
+func (a *StudentAssertion) AssertInGroupID(groupID uuid.UUID) *StudentAssertion {
 	a.t.Helper()
 	assert.Equal(a.t, groupID, a.row.GroupID, "unexpected group ID")
 	return a
 }
 
-func (a *StudentAssertion) InGroup(groupName string) *StudentAssertion {
+func (a *StudentAssertion) AssertInGroup(groupName string) *StudentAssertion {
 	a.t.Helper()
 	assert.Equal(a.t, groupName, a.row.GroupName, "unexpected group name")
 	return a
 }
 
-func (a *StudentAssertion) HasMajor(major string) *StudentAssertion {
+func (a *StudentAssertion) AssertMajor(major string) *StudentAssertion {
 	a.t.Helper()
 	assert.Equal(a.t, major, a.row.Major, "unexpected major")
 	return a

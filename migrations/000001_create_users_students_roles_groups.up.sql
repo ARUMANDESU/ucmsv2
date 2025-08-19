@@ -16,7 +16,7 @@ create table users (
     first_name text not null,
     last_name text not null,
     avatar_url text not null,
-    email text not null,
+    email text not null unique,
     pass_hash bytea not null,
     created_at timestamptz not null,
     updated_at timestamptz not null,

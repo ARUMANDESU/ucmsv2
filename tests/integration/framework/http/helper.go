@@ -80,14 +80,14 @@ func (h *Helper) Do(t *testing.T, req Request) *Response {
 func (r *Response) AssertStatus(expected int) *Response {
 	r.t.Helper()
 
-	var resp map[string]any
-	r.ParseJSON(&resp)
-	message, ok := resp["message"].(string)
-	if !ok {
-		message = "no message in response"
-	}
+	assert.Equal(r.t, expected, r.Result().StatusCode, "unexpected status code: %d, expected: %d", r.Result().StatusCode, expected)
+	return r
+}
 
-	assert.Equal(r.t, expected, r.Result().StatusCode, "unexpected status code, message: %s", message)
+func (r *Response) RequireStatus(expected int) *Response {
+	r.t.Helper()
+
+	require.Equal(r.t, expected, r.Result().StatusCode, "unexpected status code: %d, expected: %d", r.Result().StatusCode, expected)
 	return r
 }
 
@@ -137,9 +137,25 @@ func (r *Response) AssertSuccess() *Response {
 	return r
 }
 
+func (r *Response) RequireSuccess() *Response {
+	r.t.Helper()
+	r.RequireStatus(http.StatusOK)
+
+	var resp map[string]any
+	r.ParseJSON(&resp)
+	require.True(r.t, resp["success"].(bool), "expected succeeded=true")
+
+	return r
+}
+
 func (r *Response) AssertAccepted() *Response {
 	r.t.Helper()
 	return r.AssertStatus(http.StatusAccepted)
+}
+
+func (r *Response) RequireAccepted() *Response {
+	r.t.Helper()
+	return r.RequireStatus(http.StatusAccepted)
 }
 
 func (r *Response) AssertError(expectedStatus int, expectedMessage string) *Response {
@@ -162,6 +178,8 @@ func (r *Response) AssertBadRequest() *Response {
 
 func (r *Response) ParseJSON(v any) *Response {
 	r.t.Helper()
+
+	require.NotEmpty(r.t, r.Body, "response body is empty")
 
 	err := json.Unmarshal(r.Body.Bytes(), v)
 	require.NoError(r.t, err, "failed to parse JSON response: %s", r.Body.String())
@@ -206,9 +224,16 @@ func (b *RequestBuilder) WithContext(ctx context.Context) *RequestBuilder {
 
 func (b *RequestBuilder) WithJSON(body any) *RequestBuilder {
 	b.req.Body = body
+	if b.req.Headers == nil {
+		b.req.Headers = make(map[string]string)
+	}
+	b.req.Headers["Content-Type"] = "application/json"
 	return b
 }
 
+// WithHeader adds a header to the request.
+// Be aware WithJSON will automatically set the Content-Type header to application/json,
+// so call WithHeader after WithJSON if you need change Content-Type header
 func (b *RequestBuilder) WithHeader(key, value string) *RequestBuilder {
 	if b.req.Headers == nil {
 		b.req.Headers = make(map[string]string)
@@ -225,12 +250,12 @@ func (b *RequestBuilder) WithQuery(key, value string) *RequestBuilder {
 	return b
 }
 
-func (b *RequestBuilder) WithCookies(cookies map[string]string) *RequestBuilder {
+func (b *RequestBuilder) WithCookies(cookies []string) *RequestBuilder {
 	if b.req.Headers == nil {
 		b.req.Headers = make(map[string]string)
 	}
-	for key, value := range cookies {
-		b.req.Headers[http.CanonicalHeaderKey("Cookie")] += fmt.Sprintf("%s=%s; ", key, value)
+	for _, value := range cookies {
+		b.req.Headers[http.CanonicalHeaderKey("Cookie")] += value + "; "
 	}
 	return b
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -96,12 +95,17 @@ func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
 
 	req.EmailOrBarcode = sanitizex.CleanSingleLine(req.EmailOrBarcode)
 
-	var isEmail bool
-	validationRules := []validation.Rule{validation.Required}
-	if strings.Contains(req.EmailOrBarcode, "@") && strings.Contains(req.EmailOrBarcode, ".") {
-		isEmail = true
+	isEmail, isBarcode := validationx.IsEmailOrBarcode(req.EmailOrBarcode)
+	if !isEmail && !isBarcode {
+		span.RecordError(authapp.ErrWrongEmailOrBarcodeOrPassword)
+		span.SetStatus(codes.Error, "invalid email or barcode format")
+		h.errhandler.HandleError(w, r, authapp.ErrWrongEmailOrBarcodeOrPassword)
+		return
+	}
+	var validationRules []validation.Rule
+	if isEmail {
 		copy(validationRules, validationx.EmailRules)
-	} else {
+	} else if isBarcode {
 		validationRules = append(validationRules, validation.Length(0, 80), is.Alphanumeric)
 	}
 
@@ -162,6 +166,7 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to get refresh token from cookie")
+		h.resetCookies(w)
 		h.errhandler.HandleError(w, r, fmt.Errorf("failed to get cookie from request: %w", err))
 		return
 	}
@@ -214,6 +219,43 @@ func (h *HTTP) Logout(w http.ResponseWriter, r *http.Request) {
 	_, span := h.tracer.Start(r.Context(), "Logout")
 	defer span.End()
 
+	accessCookie, err := r.Cookie(AccessJWTCookie)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to get access token from cookie")
+		h.resetCookies(w)
+		h.errhandler.HandleError(w, r, fmt.Errorf("failed to get cookie from request: %w", err))
+		return
+	}
+	fmt.Printf("Access Cookie Value: '%s'\n", accessCookie.Value)
+	fmt.Printf("Access Cookie string: '%s'\n", accessCookie.String())
+	if accessCookie == nil || accessCookie.Value == "" {
+		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no access token found in cookie"))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "no access token found in cookie")
+		h.resetCookies(w)
+		h.errhandler.HandleError(w, r, err)
+		return
+	}
+	refreshCookie, err := r.Cookie(RefreshJWTCookie)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to get refresh token from cookie")
+		h.resetCookies(w)
+		h.errhandler.HandleError(w, r, fmt.Errorf("failed to get cookie from request: %w", err))
+		return
+	}
+	fmt.Printf("Refresh Cookie Value: '%s'\n", refreshCookie.Value)
+	fmt.Printf("Refresh Cookie string: '%s'\n", refreshCookie.String())
+	if refreshCookie == nil || refreshCookie.Value == "" {
+		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no refresh token found in cookie"))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "no refresh token found in cookie")
+		h.resetCookies(w)
+		h.errhandler.HandleError(w, r, err)
+		return
+	}
+
 	h.resetCookies(w)
 	span.AddEvent("User logged out", trace.WithAttributes(
 		attribute.String("cookie_domain", h.cookiedomain),
@@ -224,11 +266,19 @@ func (h *HTTP) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTP) resetCookies(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:   AccessJWTCookie,
-		MaxAge: -1,
+		Name:     AccessJWTCookie,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
 	})
 	http.SetCookie(w, &http.Cookie{
-		Name:   RefreshJWTCookie,
-		MaxAge: -1,
+		Name:     RefreshJWTCookie,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
 	})
 }

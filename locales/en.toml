@@ -14,7 +14,7 @@ other = "Invalid JSON format"
 other = "Authentication required"
 
 [invalid_credentials]
-other = "Invalid username or password"
+other = "Invalid Credentials"
 
 [token_expired]
 other = "Access token has expired"

@@ -87,7 +87,10 @@ func (b *UserBuilder) WithEmail(email string) *UserBuilder {
 
 func (b *UserBuilder) WithPassword(password string) *UserBuilder {
 	b.password = password
-	hash, _ := bcrypt.GenerateFromPassword([]byte(password), user.PasswordCostFactor)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), user.PasswordCostFactor)
+	if err != nil {
+		panic("failed to generate password hash: " + err.Error())
+	}
 	b.passHash = hash
 	return b
 }

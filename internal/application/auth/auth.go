@@ -32,7 +32,7 @@ var (
 	logger = otelslog.NewLogger("ucms/internal/application/auth")
 )
 
-var ErrWrongEmailOrBarcodeOrPassword = errorx.NewInvalidRequest().WithKey("wrong_email_or_barcode_or_password")
+var ErrWrongEmailOrBarcodeOrPassword = errorx.NewUnauthorized().WithKey("wrong_email_or_barcode_or_password")
 
 type UserGetter interface {
 	GetUserByBarcode(ctx context.Context, barcode user.Barcode) (*user.User, error)

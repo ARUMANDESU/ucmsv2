@@ -28,7 +28,7 @@ type RegistrationAssertion struct {
 	db  *Helper
 }
 
-func (a *RegistrationAssertion) HasStatus(expected registration.Status) *RegistrationAssertion {
+func (a *RegistrationAssertion) AssertStatus(expected registration.Status) *RegistrationAssertion {
 	a.t.Helper()
 	assert.Equal(a.t, string(expected), a.row.Status, "unexpected registration status")
 	return a
@@ -43,25 +43,25 @@ func (a *RegistrationAssertion) EventuallyHasStatus(expected registration.Status
 	return a
 }
 
-func (a *RegistrationAssertion) HasVerificationCode() *RegistrationAssertion {
+func (a *RegistrationAssertion) AssertVerificationCode() *RegistrationAssertion {
 	a.t.Helper()
 	assert.NotEmpty(a.t, a.row.VerificationCode, "expected verification code to be set")
 	return a
 }
 
-func (a *RegistrationAssertion) HasCodeAttempts(expected int) *RegistrationAssertion {
+func (a *RegistrationAssertion) AssertCodeAttempts(expected int) *RegistrationAssertion {
 	a.t.Helper()
 	assert.Equal(a.t, expected, int(a.row.CodeAttempts), "unexpected code attempts")
 	return a
 }
 
-func (a *RegistrationAssertion) IsNotExpired() *RegistrationAssertion {
+func (a *RegistrationAssertion) AssertIsNotExpired() *RegistrationAssertion {
 	a.t.Helper()
 	assert.True(a.t, a.row.CodeExpiresAt.After(time.Now()), "registration code is expired")
 	return a
 }
 
-func (a *RegistrationAssertion) IsExpired() *RegistrationAssertion {
+func (a *RegistrationAssertion) AssertIsExpired() *RegistrationAssertion {
 	a.t.Helper()
 	assert.True(a.t, a.row.CodeExpiresAt.Before(time.Now()), "registration code is not expired")
 	return a

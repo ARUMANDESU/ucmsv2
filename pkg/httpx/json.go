@@ -44,7 +44,10 @@ func ReadJSON(w http.ResponseWriter, r *http.Request, v any) error {
 			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
 			return fmt.Errorf("body contains unknown field %s: %w", fieldName, err)
 		case errors.As(err, &maxBytesError):
-			return fmt.Errorf("body must not be larger than %d bytes: %w", maxRequestBodySize, err)
+			if maxBytesError.Limit < 1<<20 { // 1MB
+				return fmt.Errorf("body must not be larger than %d KB: %w", maxBytesError.Limit/1024, err)
+			}
+			return fmt.Errorf("body must not be larger than %d MB: %w", maxBytesError.Limit/(1<<20), err)
 		case errors.As(err, &invalidUnmarshalError):
 			return fmt.Errorf("body contains invalid JSON: %w", err)
 		default:

@@ -28,20 +28,26 @@ type UserAssertion struct {
 	db  *Helper
 }
 
-func (a *UserAssertion) HasRole(expected role.Global) *UserAssertion {
+func (a *UserAssertion) AssertRole(expected role.Global) *UserAssertion {
 	a.t.Helper()
 	assert.Equal(a.t, expected.String(), a.row.RoleName, "unexpected user role")
 	return a
 }
 
-func (a *UserAssertion) HasFullName(firstName, lastName string) *UserAssertion {
+func (a *UserAssertion) AssertFullName(firstName, lastName string) *UserAssertion {
 	a.t.Helper()
 	assert.Equal(a.t, firstName, a.row.FirstName, "unexpected first name")
 	assert.Equal(a.t, lastName, a.row.LastName, "unexpected last name")
 	return a
 }
 
-func (a *UserAssertion) IsStudent() *StudentAssertion {
+func (a *UserAssertion) AssertFirstName(expected string) *UserAssertion {
+	a.t.Helper()
+	assert.Equal(a.t, expected, a.row.FirstName, "unexpected first name")
+	return a
+}
+
+func (a *UserAssertion) AssertIsStudent() *StudentAssertion {
 	a.t.Helper()
 	return a.db.RequireStudentExists(a.t, a.row.ID)
 }

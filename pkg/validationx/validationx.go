@@ -26,14 +26,20 @@ var (
 	Required = RequiredRule{}
 )
 
+var (
+	// Allow Unicode letters, spaces, hyphens, apostrophes, periods
+	nameRegex  = regexp.MustCompile(`^[\p{L}\p{M}\s'\-\.]+$`)
+	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	// Allow alphanumeric characters
+	barcodeRegex = regexp.MustCompile(`^[A-Z0-9]{6,20}$`)
+)
+
 var IsPersonName = validation.By(func(value interface{}) error {
 	s, _ := value.(string)
 	if s == "" {
 		return nil // Let Required handle emptiness
 	}
 
-	// Allow Unicode letters, spaces, hyphens, apostrophes, periods
-	nameRegex := regexp.MustCompile(`^[\p{L}\p{M}\s'\-\.]+$`)
 	if !nameRegex.MatchString(s) {
 		return errors.New("must be a valid name")
 	}
@@ -178,4 +184,8 @@ func AssertValidationError(t *testing.T, err error, expected error) {
 	if verrs.Code() != expectedVerrs.Code() || verrs.Message() != expectedVerrs.Message() {
 		t.Errorf("expected validation error to match, got %v and %v", verrs, expectedVerrs)
 	}
+}
+
+func IsEmailOrBarcode(emailbarcode string) (isEmail bool, isBarcode bool) {
+	return emailRegex.MatchString(emailbarcode), barcodeRegex.MatchString(emailbarcode)
 }

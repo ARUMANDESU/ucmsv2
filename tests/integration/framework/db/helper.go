@@ -224,6 +224,14 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
         INSERT INTO users (id, email, role_id, first_name, last_name, 
                           avatar_url, pass_hash, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (id) DO UPDATE SET
+            email = EXCLUDED.email,
+            role_id = EXCLUDED.role_id,
+            first_name = EXCLUDED.first_name,
+            last_name = EXCLUDED.last_name,
+            avatar_url = EXCLUDED.avatar_url,
+            pass_hash = EXCLUDED.pass_hash,
+            updated_at = EXCLUDED.updated_at
     `, string(u.Barcode()), u.Email(), roleID, u.FirstName(), u.LastName(),
 		u.AvatarUrl(), u.PassHash(), u.CreatedAt(), u.UpdatedAt())
 

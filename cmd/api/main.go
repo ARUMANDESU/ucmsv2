@@ -15,9 +15,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
@@ -289,15 +287,6 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 	// Create main router
 	router := chi.NewRouter()
 
-	// Add middleware
-	router.Use(otelhttp.NewMiddleware("ucmsv2-api"))
-	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.Timeout(60 * time.Second))
-
-	// Add CORS for development
 	if config.Mode == env.Dev {
 		router.Use(func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -332,13 +321,6 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 			})
 		})
 	}
-
-	// Health check endpoint
-	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"healthy","service":"ucms-api"}`))
-	})
 
 	// Set up HTTP ports
 	httpPort := httpport.NewPort(httpport.Args{

