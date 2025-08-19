@@ -56,12 +56,16 @@ func NewHTTP(args Args) *HTTP {
 	if args.Logger == nil {
 		args.Logger = logger
 	}
+	if args.CookieDomain == "" {
+		args.CookieDomain = "localhost"
+	}
 
 	return &HTTP{
-		tracer:     args.Tracer,
-		logger:     args.Logger,
-		app:        args.App,
-		errhandler: httpx.NewErrorHandler(),
+		tracer:       args.Tracer,
+		logger:       args.Logger,
+		app:          args.App,
+		errhandler:   httpx.NewErrorHandler(),
+		cookiedomain: args.CookieDomain,
 	}
 }
 
@@ -130,7 +134,7 @@ func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Domain:   h.cookiedomain,
 		Expires:  time.Now().Add(res.AccessTokenExp).UTC(),
-		MaxAge:   int(res.AccessTokenExp),
+		MaxAge:   int(res.AccessTokenExp.Seconds()),
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
@@ -141,7 +145,7 @@ func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     RefreshCookiePath,
 		Domain:   h.cookiedomain,
 		Expires:  time.Now().Add(res.RefreshTokenExp).UTC(),
-		MaxAge:   int(res.RefreshTokenExp),
+		MaxAge:   int(res.RefreshTokenExp.Seconds()),
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,

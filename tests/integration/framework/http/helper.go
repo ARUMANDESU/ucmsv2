@@ -91,6 +91,14 @@ func (r *Response) AssertStatus(expected int) *Response {
 	return r
 }
 
+func (r *Response) AssertHeader(key, value string) *Response {
+	r.t.Helper()
+
+	actual := r.Header().Get(key)
+	require.Equal(r.t, value, actual, fmt.Sprintf("expected header %s=%s, got %s", key, value, actual))
+	return r
+}
+
 func (r *Response) AssertMessage(expected string) *Response {
 	r.t.Helper()
 
@@ -156,17 +164,22 @@ func (r *Response) ParseJSON(v any) *Response {
 	r.t.Helper()
 
 	err := json.Unmarshal(r.Body.Bytes(), v)
-	require.NoError(r.t, err, "failed to parse JSON response")
+	require.NoError(r.t, err, "failed to parse JSON response: %s", r.Body.String())
 
 	return r
 }
 
-func (r *Response) AssertHeader(key, value string) *Response {
+func (r *Response) GetCookie(name string) *http.Cookie {
 	r.t.Helper()
 
-	actual := r.Header().Get(key)
-	require.Equal(r.t, value, actual, fmt.Sprintf("expected header %s=%s, got %s", key, value, actual))
-	return r
+	cookie := r.Result().Cookies()
+	for _, c := range cookie {
+		if c.Name == name {
+			return c
+		}
+	}
+	require.Fail(r.t, fmt.Sprintf("cookie %s not found", name))
+	return nil
 }
 
 type RequestBuilder struct {
@@ -212,6 +225,29 @@ func (b *RequestBuilder) WithQuery(key, value string) *RequestBuilder {
 	return b
 }
 
+func (b *RequestBuilder) WithCookies(cookies map[string]string) *RequestBuilder {
+	if b.req.Headers == nil {
+		b.req.Headers = make(map[string]string)
+	}
+	for key, value := range cookies {
+		b.req.Headers[http.CanonicalHeaderKey("Cookie")] += fmt.Sprintf("%s=%s; ", key, value)
+	}
+	return b
+}
+
 func (b *RequestBuilder) Build() Request {
 	return b.req
+}
+
+func SameSiteModeToString(mode http.SameSite) string {
+	switch mode {
+	case http.SameSiteStrictMode:
+		return "Strict"
+	case http.SameSiteLaxMode:
+		return "Lax"
+	case http.SameSiteNoneMode:
+		return "None"
+	default:
+		return "Unknown"
+	}
 }

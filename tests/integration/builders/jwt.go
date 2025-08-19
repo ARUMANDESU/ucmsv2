@@ -2,38 +2,50 @@ package builders
 
 import (
 	"maps"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+
+	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
+	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 )
 
 type JWTFactory struct{}
 
 func (f JWTFactory) AccessTokenBuilder(userID, userRole string) *JWTBuilder {
 	return NewJWTBuilder().
+		WithCookieName("ucmsv2_access").
+		WithCookiePath("/").
+		WithCookieDomain("localhost").
 		WithIssuer("ucmsv2_auth").
 		WithSubject("user").
 		WithIssuedAt(time.Now()).
-		WithExpiration(time.Now().Add(30 * time.Minute)).
+		WithExpiration(time.Now().Add(authapp.AccessTokenExpDuration)).
+		WithDuration(authapp.AccessTokenExpDuration).
 		WithUserID(userID).
 		WithUserRole(userRole).
-		WithSecret([]byte("secret1")).
+		WithSecret([]byte(fixtures.AccessTokenSecretKey)).
 		WithSigningMethod(jwt.SigningMethodHS256)
 }
 
 func (f JWTFactory) RefreshTokenBuilder(userID string) *JWTBuilder {
 	return NewJWTBuilder().
+		WithCookieName("ucmsv2_refresh").
+		WithCookiePath("/v1/auth/refresh").
+		WithCookieDomain("localhost").
 		WithIssuer("ucmsv2_auth").
 		WithSubject("refresh").
 		WithIssuedAt(time.Now()).
-		WithExpiration(time.Now().Add(30*24*time.Hour)). // 30 days
+		WithExpiration(time.Now().Add(authapp.RefreshTokenExpDuration)).
+		WithDuration(authapp.RefreshTokenExpDuration).
 		WithUserID(userID).
 		WithJTI(uuid.New().String()).
 		WithClaim("scope", "refresh").
-		WithSecret([]byte("secret2")).
+		WithSecret([]byte(fixtures.RefreshTokenSecretKey)).
 		WithSigningMethod(jwt.SigningMethodHS256)
 }
 
@@ -42,14 +54,17 @@ type JWTBuilder struct {
 	signingMethod jwt.SigningMethod
 	mapClaims     jwt.MapClaims
 	tokenDuration *jwt.NumericDate
+	cookieName    string
+	cookiePath    string
+	cookieDomain  string
 }
 
 func NewJWTBuilder() *JWTBuilder {
 	return &JWTBuilder{
-		secretKey:     []byte("secret1"),
+		secretKey:     []byte(fixtures.AccessTokenSecretKey),
 		signingMethod: jwt.SigningMethodHS256,
 		mapClaims:     jwt.MapClaims{},
-		tokenDuration: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+		tokenDuration: jwt.NewNumericDate(time.Now().Add(authapp.AccessTokenExpDuration)),
 	}
 }
 
@@ -151,6 +166,21 @@ func (j *JWTBuilder) WithEmptyClaims() *JWTBuilder {
 	return j
 }
 
+func (j *JWTBuilder) WithCookieName(name string) *JWTBuilder {
+	j.cookieName = name
+	return j
+}
+
+func (j *JWTBuilder) WithCookiePath(path string) *JWTBuilder {
+	j.cookiePath = path
+	return j
+}
+
+func (j *JWTBuilder) WithCookieDomain(domain string) *JWTBuilder {
+	j.cookieDomain = domain
+	return j
+}
+
 func (j *JWTBuilder) Build() *jwt.Token {
 	return jwt.NewWithClaims(j.signingMethod, j.mapClaims)
 }
@@ -164,4 +194,21 @@ func (j *JWTBuilder) BuildSignedStringT(t *testing.T) string {
 	jwt, err := j.BuildSignedString()
 	require.NoError(t, err, "failed to build signed JWT string")
 	return jwt
+}
+
+func (j *JWTBuilder) BuildHTTPCookie() *http.Cookie {
+	token, err := j.BuildSignedString()
+	if err != nil {
+		return nil
+	}
+	return &http.Cookie{
+		Name:     j.cookieName,
+		Value:    token,
+		Path:     j.cookiePath,
+		Domain:   j.cookieDomain,
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   int(time.Until(j.tokenDuration.Time).Seconds()),
+	}
 }

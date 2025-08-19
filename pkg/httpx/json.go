@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
 	"net/http"
 	"strings"
@@ -88,6 +89,7 @@ func Success(w http.ResponseWriter, r *http.Request, status int, message Envelop
 
 	err := WriteJSON(w, status, message, nil)
 	if err != nil {
-		// TODO: log
+		slog.ErrorContext(r.Context(), "failed to write success response", "status", status)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }

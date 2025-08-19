@@ -900,19 +900,6 @@ func (s *RegistrationIntegrationSuite) setupCompletedRegistration(email string) 
 	}).AssertSuccess()
 }
 
-func (s *RegistrationIntegrationSuite) setupCompletedRegistrationWith(email, barcode string, groupID uuid.UUID) {
-	s.setupVerifiedRegistration(email)
-	s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
-		Email:            email,
-		VerificationCode: s.getVerificationCode(email),
-		Password:         fixtures.TestStudent.Password,
-		Barcode:          barcode,
-		FirstName:        fixtures.TestStudent.FirstName,
-		LastName:         fixtures.TestStudent.LastName,
-		GroupId:          groupID,
-	}).AssertSuccess()
-}
-
 func (s *RegistrationIntegrationSuite) getVerificationCode(email string) string {
 	return s.DB.RequireRegistrationExists(s.T(), email).GetVerificationCode()
 }

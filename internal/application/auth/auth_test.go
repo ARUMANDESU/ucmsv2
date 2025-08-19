@@ -1,14 +1,14 @@
-package authapp
+package authapp_test
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
@@ -16,8 +16,12 @@ import (
 )
 
 type AppSuite struct {
-	App          *App
-	MockUserRepo *mocks.UserRepo
+	App                     *authapp.App
+	MockUserRepo            *mocks.UserRepo
+	AccessTokenExpDuration  time.Duration
+	RefreshTokenExpDuration time.Duration
+	AccessTokenSecretKey    []byte
+	RefreshTokenSecretKey   []byte
 }
 
 func NewSuite(t *testing.T) *AppSuite {
@@ -29,24 +33,28 @@ func NewSuite(t *testing.T) *AppSuite {
 	refreshTokenExp := 30 * 24 * time.Hour // 30 days
 
 	return &AppSuite{
-		App: NewApp(Args{
+		App: authapp.NewApp(authapp.Args{
 			UserGetter:              MockUserRepo,
-			AccessTokenSecretKey:    "secret1",
-			RefreshTokenSecretKey:   "secret2",
+			AccessTokenSecretKey:    fixtures.AccessTokenSecretKey,
+			RefreshTokenSecretKey:   fixtures.RefreshTokenSecretKey,
 			AccessTokenlExpDuration: &accessTokenExp,
 			RefreshTokenExpDuration: &refreshTokenExp,
 		}),
-		MockUserRepo: MockUserRepo,
+		MockUserRepo:            MockUserRepo,
+		AccessTokenExpDuration:  accessTokenExp,
+		RefreshTokenExpDuration: refreshTokenExp,
+		AccessTokenSecretKey:    []byte(fixtures.AccessTokenSecretKey),
+		RefreshTokenSecretKey:   []byte(fixtures.RefreshTokenSecretKey),
 	}
 }
 
 func (a *AppSuite) assertAccessToken(t *testing.T, token, uid, role string) {
 	t.Helper()
-	NewJWTTokenAssertion(t, token, a.App.accessTokenSecretKey).
+	authapp.NewJWTTokenAssertion(t, token, a.AccessTokenSecretKey).
 		AssertValid().
 		AssertISS("ucmsv2_auth").
 		AssertSub("user").
-		AssertExp(time.Now().Add(a.App.accessTokenExpDuration)).
+		AssertExp(time.Now().Add(a.AccessTokenExpDuration)).
 		AssertIAT(time.Now()).
 		AssertUID(uid).
 		AssertUserRole(role)
@@ -54,11 +62,11 @@ func (a *AppSuite) assertAccessToken(t *testing.T, token, uid, role string) {
 
 func (a *AppSuite) assertRefreshToken(t *testing.T, token, uid string) {
 	t.Helper()
-	NewJWTTokenAssertion(t, token, a.App.refreshTokenSecretKey).
+	authapp.NewJWTTokenAssertion(t, token, a.RefreshTokenSecretKey).
 		AssertValid().
 		AssertISS("ucmsv2_auth").
 		AssertSub("refresh").
-		AssertExp(time.Now().Add(a.App.refreshTokenExpDuration)).
+		AssertExp(time.Now().Add(a.RefreshTokenExpDuration)).
 		AssertIAT(time.Now()).
 		AssertUID(uid).
 		AssertJTINotEmpty().
@@ -74,7 +82,7 @@ func TestLoginHandle_HappyPath(t *testing.T) {
 	s.MockUserRepo.SeedUser(t, u)
 
 	t.Run("with email", func(t *testing.T) {
-		res, err := s.App.LoginHandle(t.Context(), Login{
+		res, err := s.App.LoginHandle(t.Context(), authapp.Login{
 			EmailOrBarcode: u.Email(),
 			IsEmail:        true,
 			Password:       password,
@@ -88,7 +96,7 @@ func TestLoginHandle_HappyPath(t *testing.T) {
 	})
 
 	t.Run("with barcode", func(t *testing.T) {
-		res, err := s.App.LoginHandle(t.Context(), Login{
+		res, err := s.App.LoginHandle(t.Context(), authapp.Login{
 			EmailOrBarcode: u.Barcode().String(),
 			IsEmail:        false,
 			Password:       password,
@@ -120,99 +128,99 @@ func TestLoginHandle_FailPath(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		cmd            Login
+		cmd            authapp.Login
 		expectedErr    error
 		errAssertionFn func(t *testing.T, err error)
 	}{
 		{
 			name: "empty email",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: "",
 				IsEmail:        true,
 				Password:       password,
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 		{
 			name: "empty barcode",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: "",
 				IsEmail:        false,
 				Password:       password,
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 		{
 			name: "valid email, but IsEmail is false",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: u.Email(),
 				IsEmail:        false,
 				Password:       password,
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 		{
 			name: "valid barcode, but IsEmail is true",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: u.Barcode().String(),
 				IsEmail:        true,
 				Password:       password,
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 		{
 			name: "invalid password, but valid email",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: u.Email(),
 				IsEmail:        true,
 				Password:       wrongPassword,
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 		{
 			name: "invalid password, but valid barcode",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: u.Barcode().String(),
 				IsEmail:        false,
 				Password:       wrongPassword,
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 		{
 			name: "non-existent user by email",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: email2,
 				IsEmail:        true,
 				Password:       password,
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 		{
 			name: "non-existent user by barcode",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: "non-existent-barcode",
 				IsEmail:        false,
 				Password:       password,
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 		{
 			name: "empty password",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: u.Email(),
 				IsEmail:        true,
 				Password:       "",
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 		{
 			name: "empty password with barcode",
-			cmd: Login{
+			cmd: authapp.Login{
 				EmailOrBarcode: u.Barcode().String(),
 				IsEmail:        false,
 				Password:       "",
 			},
-			expectedErr: ErrWrongEmailOrBarcodeOrPassword,
+			expectedErr: authapp.ErrWrongEmailOrBarcodeOrPassword,
 		},
 	}
 
@@ -239,7 +247,7 @@ func TestRefreshHandle_HappyPath(t *testing.T) {
 	u := builders.NewUserBuilder().WithPassword(password).Build()
 	s.MockUserRepo.SeedUser(t, u)
 
-	loginRes, err := s.App.LoginHandle(t.Context(), Login{
+	loginRes, err := s.App.LoginHandle(t.Context(), authapp.Login{
 		EmailOrBarcode: u.Email(),
 		IsEmail:        true,
 		Password:       password,
@@ -247,7 +255,7 @@ func TestRefreshHandle_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid refresh token", func(t *testing.T) {
-		res, err := s.App.RefreshHandle(t.Context(), Refresh{RefreshToken: loginRes.RefreshToken})
+		res, err := s.App.RefreshHandle(t.Context(), authapp.Refresh{RefreshToken: loginRes.RefreshToken})
 		require.NoError(t, err)
 		require.NotNil(t, res)
 
@@ -337,115 +345,11 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			res, err := s.App.RefreshHandle(t.Context(), Refresh{RefreshToken: tt.refreshToken})
+			res, err := s.App.RefreshHandle(t.Context(), authapp.Refresh{RefreshToken: tt.refreshToken})
 			require.Error(t, err)
 			tt.errAssertionFn(t, err)
 
 			assert.Empty(t, res)
 		})
 	}
-}
-
-type JWTTokenAssertion struct {
-	token    string
-	jwttoken *jwt.Token
-	claims   jwt.MapClaims
-	t        *testing.T
-}
-
-func NewJWTTokenAssertion(t *testing.T, token string, secretkey []byte) *JWTTokenAssertion {
-	t.Helper()
-
-	jwttoken, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
-		return secretkey, nil
-	})
-	require.NoError(t, err)
-
-	claims, ok := jwttoken.Claims.(jwt.MapClaims)
-	require.True(t, ok, "jwt token claims must be type jwt.MapClaims")
-
-	return &JWTTokenAssertion{
-		t:        t,
-		token:    token,
-		jwttoken: jwttoken,
-		claims:   claims,
-	}
-}
-
-func (a *JWTTokenAssertion) AssertValid() *JWTTokenAssertion {
-	a.t.Helper()
-	assert.NotNil(a.t, a.jwttoken, "jwt token should not be nil")
-	assert.True(a.t, a.jwttoken.Valid, "jwt token should be valid")
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertNotValid() *JWTTokenAssertion {
-	a.t.Helper()
-	assert.NotNil(a.t, a.jwttoken, "jwt token should not be nil")
-	assert.False(a.t, a.jwttoken.Valid, "jwt token should not be valid")
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertISS(expected string) *JWTTokenAssertion {
-	a.t.Helper()
-	assert.Equal(a.t, a.claims["iss"], expected)
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertSub(expected string) *JWTTokenAssertion {
-	a.t.Helper()
-	assert.Equal(a.t, a.claims["sub"], expected)
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertExp(expected time.Time) *JWTTokenAssertion {
-	a.t.Helper()
-	exp, ok := a.claims["exp"].(float64)
-	require.True(a.t, ok, "exp claim must be of type float64, got %T", a.claims["exp"])
-	assert.NotZero(a.t, exp, "exp claim should not be zero")
-	expTime := time.Unix(int64(exp), 0)
-	assert.WithinDuration(a.t, expected, expTime, time.Second, "exp claim should be within 1 second of expected time")
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertIAT(expected time.Time) *JWTTokenAssertion {
-	a.t.Helper()
-	iat, ok := a.claims["iat"].(float64)
-	require.True(a.t, ok, "iat claim must be of type float64, got %T", a.claims["iat"])
-
-	assert.NotZero(a.t, iat, "iat claim should not be zero")
-	iatTime := time.Unix(int64(iat), 0)
-
-	assert.WithinDuration(a.t, expected, iatTime, time.Second, "iat claim should be within 1 second of expected time")
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertScope(expected string) *JWTTokenAssertion {
-	a.t.Helper()
-	assert.Equal(a.t, a.claims["scope"], expected)
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertJTI(expected string) *JWTTokenAssertion {
-	a.t.Helper()
-	assert.Equal(a.t, a.claims["jti"], expected)
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertJTINotEmpty() *JWTTokenAssertion {
-	a.t.Helper()
-	assert.NotEmpty(a.t, a.claims["jti"], "jti claim should not be empty")
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertUID(expected string) *JWTTokenAssertion {
-	a.t.Helper()
-	assert.Equal(a.t, a.claims["uid"], expected)
-	return a
-}
-
-func (a *JWTTokenAssertion) AssertUserRole(expected string) *JWTTokenAssertion {
-	a.t.Helper()
-	assert.Equal(a.t, a.claims["user_role"], expected)
-	return a
 }

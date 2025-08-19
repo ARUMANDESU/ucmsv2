@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -268,4 +271,108 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 		AccessTokenExp:  a.accessTokenExpDuration,
 		RefreshTokenExp: a.refreshTokenExpDuration,
 	}, nil
+}
+
+type JWTTokenAssertion struct {
+	token    string
+	jwttoken *jwt.Token
+	claims   jwt.MapClaims
+	t        *testing.T
+}
+
+func NewJWTTokenAssertion(t *testing.T, token string, secretkey []byte) *JWTTokenAssertion {
+	t.Helper()
+
+	jwttoken, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
+		return secretkey, nil
+	})
+	require.NoError(t, err)
+
+	claims, ok := jwttoken.Claims.(jwt.MapClaims)
+	require.True(t, ok, "jwt token claims must be type jwt.MapClaims")
+
+	return &JWTTokenAssertion{
+		t:        t,
+		token:    token,
+		jwttoken: jwttoken,
+		claims:   claims,
+	}
+}
+
+func (a *JWTTokenAssertion) AssertValid() *JWTTokenAssertion {
+	a.t.Helper()
+	assert.NotNil(a.t, a.jwttoken, "jwt token should not be nil")
+	assert.True(a.t, a.jwttoken.Valid, "jwt token should be valid")
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertNotValid() *JWTTokenAssertion {
+	a.t.Helper()
+	assert.NotNil(a.t, a.jwttoken, "jwt token should not be nil")
+	assert.False(a.t, a.jwttoken.Valid, "jwt token should not be valid")
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertISS(expected string) *JWTTokenAssertion {
+	a.t.Helper()
+	assert.Equal(a.t, a.claims["iss"], expected)
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertSub(expected string) *JWTTokenAssertion {
+	a.t.Helper()
+	assert.Equal(a.t, a.claims["sub"], expected)
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertExp(expected time.Time) *JWTTokenAssertion {
+	a.t.Helper()
+	exp, ok := a.claims["exp"].(float64)
+	require.True(a.t, ok, "exp claim must be of type float64, got %T", a.claims["exp"])
+	assert.NotZero(a.t, exp, "exp claim should not be zero")
+	expTime := time.Unix(int64(exp), 0)
+	assert.WithinDuration(a.t, expected, expTime, time.Second, "exp claim should be within 1 second of expected time")
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertIAT(expected time.Time) *JWTTokenAssertion {
+	a.t.Helper()
+	iat, ok := a.claims["iat"].(float64)
+	require.True(a.t, ok, "iat claim must be of type float64, got %T", a.claims["iat"])
+
+	assert.NotZero(a.t, iat, "iat claim should not be zero")
+	iatTime := time.Unix(int64(iat), 0)
+
+	assert.WithinDuration(a.t, expected, iatTime, time.Second, "iat claim should be within 1 second of expected time")
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertScope(expected string) *JWTTokenAssertion {
+	a.t.Helper()
+	assert.Equal(a.t, a.claims["scope"], expected)
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertJTI(expected string) *JWTTokenAssertion {
+	a.t.Helper()
+	assert.Equal(a.t, a.claims["jti"], expected)
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertJTINotEmpty() *JWTTokenAssertion {
+	a.t.Helper()
+	assert.NotEmpty(a.t, a.claims["jti"], "jti claim should not be empty")
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertUID(expected string) *JWTTokenAssertion {
+	a.t.Helper()
+	assert.Equal(a.t, a.claims["uid"], expected)
+	return a
+}
+
+func (a *JWTTokenAssertion) AssertUserRole(expected string) *JWTTokenAssertion {
+	a.t.Helper()
+	assert.Equal(a.t, a.claims["user_role"], expected)
+	return a
 }

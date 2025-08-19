@@ -24,15 +24,17 @@ import (
 
 	ucmsv2 "github.com/ARUMANDESU/ucms"
 	postgresrepo "github.com/ARUMANDESU/ucms/internal/adapters/repos/postgres"
+	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
 	"github.com/ARUMANDESU/ucms/internal/application/mail"
 	registrationapp "github.com/ARUMANDESU/ucms/internal/application/registration"
 	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
-	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
+	httpport "github.com/ARUMANDESU/ucms/internal/ports/http"
 	watermillport "github.com/ARUMANDESU/ucms/internal/ports/watermill"
 	"github.com/ARUMANDESU/ucms/pkg/env"
 	postgrespkg "github.com/ARUMANDESU/ucms/pkg/postgres"
 	"github.com/ARUMANDESU/ucms/pkg/watermillx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
+	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 	"github.com/ARUMANDESU/ucms/tests/integration/framework/db"
 	"github.com/ARUMANDESU/ucms/tests/integration/framework/event"
 	"github.com/ARUMANDESU/ucms/tests/integration/framework/http"
@@ -73,6 +75,7 @@ type Application struct {
 	Registration *registrationapp.App
 	Mail         *mail.App
 	Student      *studentapp.App
+	Auth         *authapp.App
 }
 
 func (s *IntegrationTestSuite) SetupSuite() {
@@ -169,17 +172,31 @@ func (s *IntegrationTestSuite) createApplication() {
 		PgxPool: s.pgPool,
 	})
 
+	authApp := authapp.NewApp(authapp.Args{
+		Tracer:                  nil,
+		Logger:                  s.logger,
+		UserGetter:              userRepo,
+		AccessTokenSecretKey:    fixtures.AccessTokenSecretKey,
+		RefreshTokenSecretKey:   fixtures.RefreshTokenSecretKey,
+		AccessTokenlExpDuration: nil,
+		RefreshTokenExpDuration: nil,
+	})
+
 	s.app = &Application{
 		Registration: regApp,
 		Mail:         mailApp,
 		Student:      studentApp,
+		Auth:         authApp,
 	}
 
 	s.httpHandler = chi.NewRouter()
-	registrationHTTP := registrationhttp.NewHTTP(registrationhttp.Args{
-		Command: &regApp.CMD,
+	httpPort := httpport.NewPort(httpport.Args{
+		RegistrationCommand: &regApp.CMD,
+		AuthApp:             authApp,
+		StudentApp:          studentApp,
+		CookieDomain:        "localhost",
 	})
-	registrationHTTP.Route(s.httpHandler)
+	httpPort.Route(s.httpHandler)
 }
 
 func (s *IntegrationTestSuite) createWatermillPort() {
