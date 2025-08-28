@@ -9,6 +9,19 @@ const (
 	Prod  Mode = "prod"
 )
 
+var currentMode = Test
+
+func SetMode(mode Mode) {
+	if !mode.Validate() {
+		panic("invalid mode: " + mode.String())
+	}
+	currentMode = mode
+}
+
+func Current() Mode {
+	return currentMode
+}
+
 func (e Mode) String() string {
 	return string(e)
 }

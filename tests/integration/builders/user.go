@@ -9,8 +9,11 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	"github.com/ARUMANDESU/ucms/pkg/env"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 )
+
+const TestPasswordCost = 4
 
 type UserFactory struct{}
 
@@ -87,11 +90,17 @@ func (b *UserBuilder) WithEmail(email string) *UserBuilder {
 
 func (b *UserBuilder) WithPassword(password string) *UserBuilder {
 	b.password = password
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), user.PasswordCostFactor)
+
+	var err error
+	if env.Current() == env.Test {
+		b.passHash, err = bcrypt.GenerateFromPassword([]byte(password), 4)
+	} else {
+		b.passHash, err = bcrypt.GenerateFromPassword([]byte(password), user.PasswordCostFactor)
+	}
 	if err != nil {
 		panic("failed to generate password hash: " + err.Error())
 	}
-	b.passHash = hash
+
 	return b
 }
 

@@ -53,6 +53,7 @@ type IntegrationTestSuite struct {
 	logger          *slog.Logger
 
 	routerRunning atomic.Bool
+	testStartTime time.Time
 
 	// Application
 	app           *Application
@@ -278,9 +279,14 @@ func (s *IntegrationTestSuite) SetupTest() {
 }
 
 func (s *IntegrationTestSuite) BeforeTest(suiteName, testName string) {
+	s.testStartTime = time.Now()
 }
 
 func (s *IntegrationTestSuite) AfterTest(suiteName, testName string) {
+	duration := time.Since(s.testStartTime)
+	if duration > 2*time.Second {
+		s.T().Logf("SLOW TEST: %s took %v", testName, duration)
+	}
 	// s.T().Logf("Cleaning up after test: %s.%s", suiteName, testName)
 	// spans := s.traceRecorder.Ended()
 	// s.T().Logf("Total spans recorded: %d", len(spans))
