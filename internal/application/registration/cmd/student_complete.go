@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -20,11 +19,11 @@ var ErrBarcodeNotAvailable = errorx.NewDuplicateEntry().WithKey("error_barcode_n
 type StudentComplete struct {
 	Email            string
 	VerificationCode string
-	Barcode          string
+	Barcode          user.Barcode
 	FirstName        string
 	LastName         string
 	Password         string
-	GroupID          uuid.UUID
+	GroupID          group.ID
 }
 
 type StudentCompleteHandler struct {
@@ -67,7 +66,7 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 	ctx, span := h.tracer.Start(ctx, "StudentCompleteHandler.Handle",
 		trace.WithAttributes(
 			attribute.String("student.email", logging.RedactEmail(cmd.Email)),
-			attribute.String("student.barcode", cmd.Barcode),
+			attribute.String("student.barcode", cmd.Barcode.String()),
 			attribute.String("group.id", cmd.GroupID.String()),
 		))
 	defer span.End()

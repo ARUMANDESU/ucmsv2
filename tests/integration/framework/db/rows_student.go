@@ -9,7 +9,7 @@ import (
 )
 
 type StudentRow struct {
-	UserID    string
+	UserID    uuid.UUID
 	GroupID   uuid.UUID
 	GroupName string
 	Year      string

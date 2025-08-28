@@ -50,6 +50,7 @@ func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
 
 	staff := &Staff{
 		user: User{
+			id:        NewID(),
 			barcode:   p.Barcode,
 			firstName: p.FirstName,
 			lastName:  p.LastName,
@@ -64,6 +65,7 @@ func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
 
 	staff.AddEvent(&StaffRegistered{
 		Header:         event.NewEventHeader(),
+		StaffID:        staff.user.id,
 		StaffBarcode:   p.Barcode,
 		RegistrationID: p.RegistrationID,
 		FirstName:      p.FirstName,

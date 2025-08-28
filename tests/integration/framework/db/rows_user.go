@@ -4,13 +4,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 )
 
 type UserRow struct {
-	ID        string
+	ID        uuid.UUID
+	Barcode   string
 	Email     string
 	FirstName string
 	LastName  string
@@ -49,5 +52,5 @@ func (a *UserAssertion) AssertFirstName(expected string) *UserAssertion {
 
 func (a *UserAssertion) AssertIsStudent() *StudentAssertion {
 	a.t.Helper()
-	return a.db.RequireStudentExists(a.t, a.row.ID)
+	return a.db.RequireStudentExists(a.t, user.ID(a.row.ID))
 }

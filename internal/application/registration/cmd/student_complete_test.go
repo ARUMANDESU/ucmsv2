@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
@@ -124,7 +125,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            u.Email(),
 			VerificationCode: fixtures.ValidVerificationCode,
-			Barcode:          string(u.Barcode()),
+			Barcode:          u.Barcode(),
 			FirstName:        u.FirstName(),
 			LastName:         u.LastName(),
 			Password:         fixtures.TestStudent.Password,
@@ -142,7 +143,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: fixtures.ValidVerificationCode,
-			Barcode:          string(u.Barcode()),
+			Barcode:          u.Barcode(),
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -159,7 +160,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		err := s.Handler.Handle(t.Context(), StudentComplete{
 			Email:            u.Email(),
 			VerificationCode: fixtures.ValidVerificationCode,
-			Barcode:          string(u.Barcode()),
+			Barcode:          u.Barcode(),
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -183,7 +184,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
-			GroupID:          uuid.New(), // Use a non-existing group ID
+			GroupID:          group.ID(uuid.New()),
 		})
 		require.Error(t, err)
 		assert.True(t, errorx.IsNotFound(err), "expected not found error, got: %v", err)

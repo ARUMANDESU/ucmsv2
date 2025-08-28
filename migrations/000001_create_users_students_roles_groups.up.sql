@@ -11,7 +11,8 @@ insert into global_roles (name) values
     ('staff');
 
 create table users (
-    id text primary key,
+    id uuid primary key,
+    barcode text not null unique,
     role_id smallint not null,
     first_name text not null,
     last_name text not null,
@@ -33,11 +34,10 @@ create table groups (
 );
 
 create table students (
-    user_id text not null,
+    user_id uuid primary key,
     group_id uuid not null,
     created_at timestamptz not null,
     updated_at timestamptz not null,
-    primary key (user_id, group_id),
     constraint students_user_id_fkey foreign key (user_id) references users(id),
     constraint students_group_id_fkey foreign key (group_id) references groups(id)
 );

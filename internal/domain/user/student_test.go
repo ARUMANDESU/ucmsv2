@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/validationx"
@@ -29,7 +30,7 @@ func TestRegisterStudent_ArgValidation(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name:    "missing ID",
+			name:    "missing barcode",
 			args:    builders.NewStudentBuilder().WithBarcode("").BuildRegisterArgs(),
 			wantErr: validation.Errors{"barcode": validation.ErrRequired},
 		},
@@ -90,7 +91,7 @@ func TestRegisterStudent_ArgValidation(t *testing.T) {
 		},
 		{
 			name:    "missing GroupID",
-			args:    builders.NewStudentBuilder().WithGroupID(uuid.Nil).BuildRegisterArgs(),
+			args:    builders.NewStudentBuilder().WithGroupID(group.ID(uuid.Nil)).BuildRegisterArgs(),
 			wantErr: validation.Errors{"group_id": validation.ErrRequired},
 		},
 	}
@@ -130,18 +131,18 @@ func TestStudent_SetGroupID(t *testing.T) {
 	tests := []struct {
 		name       string
 		student    *user.Student
-		newGroupID uuid.UUID
+		newGroupID group.ID
 		wantErr    error
 	}{
 		{
 			name:       "given valid group ID",
 			student:    builders.NewStudentBuilder().Build(),
-			newGroupID: uuid.New(),
+			newGroupID: group.ID(uuid.New()),
 		},
 		{
 			name:       "given nil group ID",
 			student:    builders.NewStudentBuilder().Build(),
-			newGroupID: uuid.Nil,
+			newGroupID: group.ID(uuid.Nil),
 			wantErr:    validation.ErrRequired,
 		},
 		{
@@ -153,7 +154,7 @@ func TestStudent_SetGroupID(t *testing.T) {
 		{
 			name:       "given empty group ID",
 			student:    builders.NewStudentBuilder().Build(),
-			newGroupID: uuid.UUID{},
+			newGroupID: group.ID{},
 			wantErr:    validation.ErrRequired,
 		},
 	}

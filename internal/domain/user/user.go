@@ -1,11 +1,13 @@
 package user
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
@@ -24,6 +26,35 @@ const (
 	MaxAvatarURLLen = 1000
 )
 
+type ID uuid.UUID
+
+func NewID() ID {
+	return ID(uuid.New())
+}
+
+func (id ID) String() string {
+	return uuid.UUID(id).String()
+}
+
+func (id ID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(uuid.UUID(id).String())
+}
+
+func (id *ID) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	uid, err := uuid.Parse(s)
+	if err != nil {
+		return err
+	}
+
+	*id = ID(uid)
+	return nil
+}
+
 type Barcode string
 
 func (barcode Barcode) String() string {
@@ -35,6 +66,7 @@ func (barcode Barcode) String() string {
 
 type User struct {
 	event.Recorder
+	id        ID
 	barcode   Barcode
 	firstName string
 	lastName  string
@@ -47,6 +79,7 @@ type User struct {
 }
 
 type RehydrateUserArgs struct {
+	ID        ID
 	Barcode   Barcode
 	FirstName string
 	LastName  string
@@ -60,6 +93,7 @@ type RehydrateUserArgs struct {
 
 func RehydrateUser(p RehydrateUserArgs) *User {
 	return &User{
+		id:        p.ID,
 		barcode:   p.Barcode,
 		firstName: p.FirstName,
 		lastName:  p.LastName,
@@ -116,6 +150,14 @@ func (u *User) SetAvatarURL(avatarURL string) error {
 
 func (u *User) ComparePassword(password string) error {
 	return bcrypt.CompareHashAndPassword(u.passHash, []byte(password))
+}
+
+func (u *User) ID() ID {
+	if u == nil {
+		return ID{}
+	}
+
+	return u.id
 }
 
 func (u *User) Barcode() Barcode {

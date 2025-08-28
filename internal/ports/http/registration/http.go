@@ -16,7 +16,9 @@ import (
 
 	registrationapp "github.com/ARUMANDESU/ucms/internal/application/registration"
 	"github.com/ARUMANDESU/ucms/internal/application/registration/cmd"
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/httpx"
 	"github.com/ARUMANDESU/ucms/pkg/sanitizex"
 	"github.com/ARUMANDESU/ucms/pkg/validationx"
@@ -215,11 +217,11 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 	cmd := cmd.StudentComplete{
 		Email:            req.Email,
 		VerificationCode: req.VerificationCode,
-		Barcode:          req.Barcode,
+		Barcode:          user.Barcode(req.Barcode),
 		FirstName:        req.FirstName,
 		LastName:         req.LastName,
 		Password:         req.Password,
-		GroupID:          req.GroupId,
+		GroupID:          group.ID(req.GroupId),
 	}
 	if err := h.cmd.StudentComplete.Handle(ctx, cmd); err != nil {
 		span.RecordError(err)

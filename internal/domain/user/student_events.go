@@ -1,9 +1,8 @@
 package user
 
 import (
-	"github.com/google/uuid"
-
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 )
 
@@ -14,12 +13,13 @@ const (
 type StudentRegistered struct {
 	event.Header
 	event.Otel
+	StudentID      ID
 	StudentBarcode Barcode
 	RegistrationID registration.ID
 	Email          string
 	FirstName      string
 	LastName       string
-	GroupID        uuid.UUID
+	GroupID        group.ID
 }
 
 func (e *StudentRegistered) GetStreamName() string {

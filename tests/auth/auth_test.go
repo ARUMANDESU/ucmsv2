@@ -71,42 +71,42 @@ func (s *AuthIntegrationSuite) TestAuth_Login() {
 			name:         "login with student email",
 			loginField:   u.Email(),
 			password:     studentPassword,
-			expectedUID:  u.Barcode().String(),
+			expectedUID:  u.ID().String(),
 			expectedRole: u.Role().String(),
 		},
 		{
 			name:         "login with student barcode",
 			loginField:   u.Barcode().String(),
 			password:     studentPassword,
-			expectedUID:  u.Barcode().String(),
+			expectedUID:  u.ID().String(),
 			expectedRole: u.Role().String(),
 		},
 		{
 			name:         "login with aitusa student email",
 			loginField:   aitusaStudent.Email(),
 			password:     aitusaStudentPassword,
-			expectedUID:  aitusaStudent.Barcode().String(),
+			expectedUID:  aitusaStudent.ID().String(),
 			expectedRole: aitusaStudent.Role().String(),
 		},
 		{
 			name:         "login with aitusa student barcode",
 			loginField:   aitusaStudent.Barcode().String(),
 			password:     aitusaStudentPassword,
-			expectedUID:  aitusaStudent.Barcode().String(),
+			expectedUID:  aitusaStudent.ID().String(),
 			expectedRole: aitusaStudent.Role().String(),
 		},
 		{
 			name:         "login with staff email",
 			loginField:   staff.Email(),
 			password:     staffPassword,
-			expectedUID:  staff.Barcode().String(),
+			expectedUID:  staff.ID().String(),
 			expectedRole: staff.Role().String(),
 		},
 		{
 			name:         "login with staff barcode",
 			loginField:   staff.Barcode().String(),
 			password:     staffPassword,
-			expectedUID:  staff.Barcode().String(),
+			expectedUID:  staff.ID().String(),
 			expectedRole: staff.Role().String(),
 		},
 	}
@@ -153,7 +153,7 @@ func (s *AuthIntegrationSuite) TestAuth_Login_InvalidCredentials() {
 		},
 		{
 			name:            "invalid barcode",
-			loginField:      invalidBarcode,
+			loginField:      invalidBarcode.String(),
 			password:        studentPassword,
 			expectedStatus:  http.StatusUnauthorized,
 			expectedMessage: "Invalid email/barcode or password",
@@ -174,7 +174,7 @@ func (s *AuthIntegrationSuite) TestAuth_Login_InvalidCredentials() {
 		},
 		{
 			name:            "invalid password with barcode",
-			loginField:      studentBarcode,
+			loginField:      studentBarcode.String(),
 			password:        invalidPassword,
 			expectedStatus:  http.StatusUnauthorized,
 			expectedMessage: "Invalid email/barcode or password",
@@ -188,7 +188,7 @@ func (s *AuthIntegrationSuite) TestAuth_Login_InvalidCredentials() {
 		},
 		{
 			name:            "invalid barcode with invalid password",
-			loginField:      invalidBarcode,
+			loginField:      invalidBarcode.String(),
 			password:        invalidPassword,
 			expectedStatus:  http.StatusUnauthorized,
 			expectedMessage: "Invalid email/barcode or password",
@@ -202,7 +202,7 @@ func (s *AuthIntegrationSuite) TestAuth_Login_InvalidCredentials() {
 		},
 		{
 			name:            "empty password with barcode",
-			loginField:      studentBarcode,
+			loginField:      studentBarcode.String(),
 			password:        "",
 			expectedStatus:  http.StatusBadRequest,
 			expectedMessage: "Password cannot be blank",
@@ -286,7 +286,7 @@ func (s *AuthIntegrationSuite) TestAuth_Refresh() {
 		refreshResp.AssertSuccess()
 
 		// Verify new access token
-		s.assertValidAccessToken(t, refreshResp, user.Barcode().String(), user.Role().String())
+		s.assertValidAccessToken(t, refreshResp, user.ID().String(), user.Role().String())
 	})
 
 	s.T().Run("successful refresh when user role changes", func(t *testing.T) {
@@ -297,8 +297,9 @@ func (s *AuthIntegrationSuite) TestAuth_Refresh() {
 		require.NotNil(t, refreshCookie)
 
 		changedUser := builders.NewUserBuilder().
+			WithID(user.ID()).
 			WithEmail(user.Email()).
-			WithBarcode(user.Barcode().String()).
+			WithBarcode(user.Barcode()).
 			WithPassword(fixtures.TestStudent.Password).
 			WithRole(role.Staff).
 			Build()
@@ -307,7 +308,7 @@ func (s *AuthIntegrationSuite) TestAuth_Refresh() {
 		refreshResp := s.HTTP.Refresh(t, refreshCookie.Value)
 		refreshResp.AssertSuccess()
 
-		s.assertValidAccessToken(t, refreshResp, changedUser.Barcode().String(), changedUser.Role().String())
+		s.assertValidAccessToken(t, refreshResp, changedUser.ID().String(), changedUser.Role().String())
 	})
 	s.T().Run("invalid refresh token", func(t *testing.T) {
 		s.HTTP.Refresh(t, "invalid-token").
@@ -324,7 +325,7 @@ func (s *AuthIntegrationSuite) TestAuth_Refresh() {
 	s.T().Run("expired refresh token", func(t *testing.T) {
 		// Create expired token
 		expiredToken := builders.JWTFactory{}.
-			RefreshTokenBuilder(user.Barcode().String()).
+			RefreshTokenBuilder(user.ID().String()).
 			WithExpiration(time.Now().Add(-time.Hour)).
 			BuildSignedStringT(t)
 
@@ -390,7 +391,7 @@ func (s *AuthIntegrationSuite) TestAuth_TokenSecurity() {
 	s.T().Run("token signature verification", func(t *testing.T) {
 		// Create token with wrong signature
 		tamperedToken := builders.JWTFactory{}.
-			AccessTokenBuilder(user1.Barcode().String(), user1.Role().String()).
+			AccessTokenBuilder(user1.ID().String(), user1.Role().String()).
 			WithSecret([]byte("wrong-secret")).
 			BuildSignedStringT(t)
 
@@ -408,13 +409,13 @@ func (s *AuthIntegrationSuite) TestAuth_TokenSecurity() {
 		// Try to use user1's token to access user2's data (if implemented)
 		// This would be tested in protected endpoints, not auth endpoints directly
 		require.NotNil(t, user1Token)
-		require.Equal(t, user1.Barcode().String(), user1.Barcode().String())
+		require.Equal(t, user1.ID().String(), user1.ID().String())
 	})
 
 	s.T().Run("malformed token claims", func(t *testing.T) {
 		// Create token with missing required claims
 		malformedToken := builders.JWTFactory{}.
-			RefreshTokenBuilder(user1.Barcode().String()).
+			RefreshTokenBuilder(user1.ID().String()).
 			WithEmptyClaims().
 			WithClaim("invalid", "claim").
 			BuildSignedStringT(t)
@@ -602,8 +603,8 @@ func (s *AuthIntegrationSuite) TestAuth_RoleBasedAccess() {
 			resp := s.HTTP.Login(t, tc.user.Email(), tc.password)
 			resp.AssertSuccess()
 
-			s.assertValidAccessToken(t, resp, tc.user.Barcode().String(), tc.expectedRole)
-			s.assertValidRefreshToken(t, resp, tc.user.Barcode().String())
+			s.assertValidAccessToken(t, resp, tc.user.ID().String(), tc.expectedRole)
+			s.assertValidRefreshToken(t, resp, tc.user.ID().String())
 		})
 	}
 }

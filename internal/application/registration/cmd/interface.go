@@ -27,7 +27,3 @@ type GroupGetter interface {
 type StudentSaver interface {
 	SaveStudent(ctx context.Context, student *user.Student) error
 }
-
-// type StaffSignUpTokenGetter interface {
-//     GetStaffSignUpToken(ctx context.Context, token string) (*)
-// }

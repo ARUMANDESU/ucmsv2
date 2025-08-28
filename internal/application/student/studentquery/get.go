@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
@@ -23,10 +24,11 @@ var (
 )
 
 type GetStudent struct {
-	Barcode string `json:"barcode"`
+	ID user.ID `json:"id"`
 }
 
 type GetStudentResponse struct {
+	ID        string `json:"id"`
 	Barcode   string `json:"barcode"`
 	GroupID   string `json:"group_id"`
 	AvatarURL string `json:"avatar_url"`
@@ -72,27 +74,27 @@ func NewGetStudentHandler(args GetStudentHandlerArgs) *GetStudentHandler {
 
 func (h *GetStudentHandler) Handle(ctx context.Context, query GetStudent) (*GetStudentResponse, error) {
 	ctx, span := h.tracer.Start(ctx, "GetStudentHandler.Handle",
-		trace.WithAttributes(attribute.String("student.barcode", query.Barcode)),
+		trace.WithAttributes(attribute.String("student.id", query.ID.String())),
 	)
 	defer span.End()
 
 	var res GetStudentResponse
 	err := h.pool.QueryRow(ctx, `
-        SELECT u.id, u.email, u.first_name, u.last_name, u.avatar_url, u.created_at, 
+        SELECT u.id, u.barcode, u.email, u.first_name, u.last_name, u.avatar_url, u.created_at, 
             gr.name, g.id, g.major, g.name, g.year
         FROM students s JOIN users u ON s.user_id = u.id
         JOIN groups g ON s.group_id = g.id
         JOIN global_roles gr ON u.role_id = gr.id
         WHERE u.id = $1
-    `, query.Barcode).Scan(
-		&res.Barcode, &res.Email, &res.FirstName, &res.LastName, &res.AvatarURL,
+    `, query.ID).Scan(
+		&res.ID, &res.Barcode, &res.Email, &res.FirstName, &res.LastName, &res.AvatarURL,
 		&res.RegisteredAt, &res.Role, &res.Group.ID, &res.Group.Major, &res.Group.Name, &res.Group.Year,
 	)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to query student data")
 		if errors.Is(err, pgx.ErrNoRows) {
-			h.logger.Warn("student not found", "barcode", query.Barcode)
+			h.logger.Warn("student not found", "id", query.ID.String())
 			return nil, errorx.NewNotFound().WithCause(err)
 		}
 		return nil, err

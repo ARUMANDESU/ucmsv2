@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
@@ -115,16 +116,17 @@ func (h *Helper) CheckUserExists(t *testing.T, email string) bool {
 	err := h.pool.QueryRow(context.Background(),
 		"SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", email).Scan(&exists)
 
-	rows, err := h.pool.Query(t.Context(), "SELECT id, email, first_name, last_name, role_id FROM users")
+	rows, err := h.pool.Query(t.Context(), "SELECT id, barcode, email, first_name, last_name, role_id FROM users")
 	assert.NoError(t, err)
 	defer rows.Close()
 
 	for rows.Next() {
-		var id, email, firstName, lastName string
+		var id uuid.UUID
+		var barcode, email, firstName, lastName string
 		var roleID int16
-		err := rows.Scan(&id, &email, &firstName, &lastName, &roleID)
+		err := rows.Scan(&id, &barcode, &email, &firstName, &lastName, &roleID)
 		require.NoError(t, err)
-		slog.Info("user:", slog.String("id", id), slog.String("email", email),
+		slog.Info("user:", slog.String("id", id.String()), slog.String("barcode", barcode), slog.String("email", email),
 			slog.String("first_name", firstName), slog.String("last_name", lastName),
 			slog.Int("role_id", int(roleID)),
 		)
@@ -139,14 +141,14 @@ func (h *Helper) RequireUserExists(t *testing.T, email string) *UserAssertion {
 
 	var u UserRow
 	err := h.pool.QueryRow(context.Background(), `
-        SELECT u.id, u.email, u.first_name, u.last_name, u.role_id, 
+        SELECT u.id, u.barcode, u.email, u.first_name, u.last_name, u.role_id, 
                u.avatar_url, u.pass_hash, u.created_at, u.updated_at,
                gr.name as role_name
         FROM users u
         JOIN global_roles gr ON u.role_id = gr.id
         WHERE u.email = $1
     `, email).Scan(
-		&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.RoleID,
+		&u.ID, &u.Barcode, &u.Email, &u.FirstName, &u.LastName, &u.RoleID,
 		&u.AvatarURL, &u.PassHash, &u.CreatedAt, &u.UpdatedAt, &u.RoleName,
 	)
 
@@ -166,7 +168,7 @@ func (h *Helper) RequireUserNotExists(t *testing.T, email string) {
 	assert.Equal(t, 0, count, "expected no user for email %s", email)
 }
 
-func (h *Helper) RequireStudentExists(t *testing.T, userID string) *StudentAssertion {
+func (h *Helper) RequireStudentExists(t *testing.T, userID user.ID) *StudentAssertion {
 	t.Helper()
 
 	var s StudentRow
@@ -186,7 +188,7 @@ func (h *Helper) RequireStudentExists(t *testing.T, userID string) *StudentAsser
 	return &StudentAssertion{t: t, row: s}
 }
 
-func (h *Helper) CheckGroupExists(t *testing.T, groupID uuid.UUID) bool {
+func (h *Helper) CheckGroupExists(t *testing.T, groupID group.ID) bool {
 	t.Helper()
 
 	var exists bool
@@ -221,9 +223,9 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
 	require.NoError(t, err)
 
 	_, err = h.pool.Exec(context.Background(), `
-        INSERT INTO users (id, email, role_id, first_name, last_name, 
+        INSERT INTO users (id, barcode, email, role_id, first_name, last_name, 
                           avatar_url, pass_hash, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (id) DO UPDATE SET
             email = EXCLUDED.email,
             role_id = EXCLUDED.role_id,
@@ -232,13 +234,13 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
             avatar_url = EXCLUDED.avatar_url,
             pass_hash = EXCLUDED.pass_hash,
             updated_at = EXCLUDED.updated_at
-    `, string(u.Barcode()), u.Email(), roleID, u.FirstName(), u.LastName(),
+    `, u.ID(), u.Barcode().String(), u.Email(), roleID, u.FirstName(), u.LastName(),
 		u.AvatarUrl(), u.PassHash(), u.CreatedAt(), u.UpdatedAt())
 
 	require.NoError(t, err)
 }
 
-func (h *Helper) SeedStudent(t *testing.T, userID user.Barcode, groupID uuid.UUID) {
+func (h *Helper) SeedStudent(t *testing.T, userID user.ID, groupID group.ID) {
 	t.Helper()
 
 	_, err := h.pool.Exec(context.Background(), `
@@ -249,7 +251,7 @@ func (h *Helper) SeedStudent(t *testing.T, userID user.Barcode, groupID uuid.UUI
 	require.NoError(t, err)
 }
 
-func (h *Helper) SeedGroup(t *testing.T, groupID uuid.UUID, name string, year string, major major.Major) {
+func (h *Helper) SeedGroup(t *testing.T, groupID group.ID, name string, year string, major major.Major) {
 	t.Helper()
 
 	_, err := h.pool.Exec(context.Background(), `

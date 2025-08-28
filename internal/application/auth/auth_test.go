@@ -89,10 +89,10 @@ func TestLoginHandle_HappyPath(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotEmpty(t, res.AccessToken)
-		s.assertAccessToken(t, res.AccessToken, u.Barcode().String(), u.Role().String())
+		s.assertAccessToken(t, res.AccessToken, u.ID().String(), u.Role().String())
 
 		require.NotEmpty(t, res.RefreshToken)
-		s.assertRefreshToken(t, res.RefreshToken, u.Barcode().String())
+		s.assertRefreshToken(t, res.RefreshToken, u.ID().String())
 	})
 
 	t.Run("with barcode", func(t *testing.T) {
@@ -103,10 +103,10 @@ func TestLoginHandle_HappyPath(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotEmpty(t, res.AccessToken)
-		s.assertAccessToken(t, res.AccessToken, u.Barcode().String(), u.Role().String())
+		s.assertAccessToken(t, res.AccessToken, u.ID().String(), u.Role().String())
 
 		require.NotEmpty(t, res.RefreshToken)
-		s.assertRefreshToken(t, res.RefreshToken, u.Barcode().String())
+		s.assertRefreshToken(t, res.RefreshToken, u.ID().String())
 	})
 }
 
@@ -261,15 +261,15 @@ func TestRefreshHandle_HappyPath(t *testing.T) {
 
 		assert.Equal(t, loginRes.RefreshToken, res.RefreshToken)
 
-		s.assertAccessToken(t, res.AccessToken, u.Barcode().String(), u.Role().String())
+		s.assertAccessToken(t, res.AccessToken, u.ID().String(), u.Role().String())
 	})
 }
 
 func TestRefreshHandle_FailPath(t *testing.T) {
 	s := NewSuite(t)
-	uid := fixtures.TestStudent.Barcode
+	uid := fixtures.TestStudent.ID
 	password := fixtures.TestStudent.Password
-	u := builders.NewUserBuilder().WithBarcode(uid).WithPassword(password).Build()
+	u := builders.NewUserBuilder().WithID(uid).WithPassword(password).Build()
 	s.MockUserRepo.SeedUser(t, u)
 
 	assertInvalidCredential := func(t *testing.T, err error) {
@@ -285,7 +285,7 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 		{
 			name: "invalid signature",
 			refreshToken: builders.JWTFactory{}.
-				RefreshTokenBuilder(uid).
+				RefreshTokenBuilder(uid.String()).
 				WithSecret([]byte("wrong-secret")).
 				BuildSignedStringT(t),
 			errAssertionFn: assertInvalidCredential,
@@ -293,7 +293,7 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 		{
 			name: "expired token",
 			refreshToken: builders.JWTFactory{}.
-				RefreshTokenBuilder(uid).
+				RefreshTokenBuilder(uid.String()).
 				WithExpiration(time.Now().Add(-time.Hour)).
 				BuildSignedStringT(t),
 			errAssertionFn: assertInvalidCredential,
@@ -301,7 +301,7 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 		{
 			name: "empty claims",
 			refreshToken: builders.JWTFactory{}.
-				RefreshTokenBuilder(uid).
+				RefreshTokenBuilder(uid.String()).
 				WithEmptyClaims().
 				BuildSignedStringT(t),
 			errAssertionFn: assertInvalidCredential,
@@ -309,7 +309,7 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 		{
 			name: "user not found",
 			refreshToken: builders.JWTFactory{}.
-				RefreshTokenBuilder(fixtures.TestStudent2.Barcode).
+				RefreshTokenBuilder(fixtures.TestStudent2.ID.String()).
 				BuildSignedStringT(t),
 			errAssertionFn: func(t *testing.T, err error) {
 				assert.True(t, errorx.IsCode(err, errorx.CodeInternal), "expected internal error for user not found, got: %v", err)
@@ -318,7 +318,7 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 		{
 			name: "invalid iss claim",
 			refreshToken: builders.JWTFactory{}.
-				RefreshTokenBuilder(uid).
+				RefreshTokenBuilder(uid.String()).
 				WithClaim("iss", "invalid_issuer").
 				BuildSignedStringT(t),
 			errAssertionFn: assertInvalidCredential,
@@ -326,7 +326,7 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 		{
 			name: "invalid sub claim",
 			refreshToken: builders.JWTFactory{}.
-				RefreshTokenBuilder(uid).
+				RefreshTokenBuilder(uid.String()).
 				WithClaim("sub", "invalid_subject").
 				BuildSignedStringT(t),
 			errAssertionFn: assertInvalidCredential,
@@ -334,7 +334,7 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 		{
 			name: "missing uid claim",
 			refreshToken: builders.JWTFactory{}.
-				RefreshTokenBuilder(uid).
+				RefreshTokenBuilder(uid.String()).
 				WithClaimEmpty("uid").
 				BuildSignedStringT(t),
 			errAssertionFn: assertInvalidCredential,

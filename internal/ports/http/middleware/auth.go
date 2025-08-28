@@ -8,9 +8,11 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
 	"github.com/ARUMANDESU/ucms/pkg/ctxs"
@@ -111,10 +113,17 @@ func AuthMiddleware(secret []byte, exp time.Duration) func(next http.Handler) ht
 				httpx.NewErrorHandler().HandleError(w, r, errorx.NewInvalidCredentials().WithCause(errors.New("access token expired")))
 				return
 			}
+			userID, err := uuid.Parse(uid)
+			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "invalid user id in access token claims")
+				httpx.NewErrorHandler().HandleError(w, r, errorx.NewInvalidCredentials().WithCause(err))
+				return
+			}
 
 			ctx = ctxs.WithUser(ctx, &ctxs.User{
-				Barcode: uid,
-				Role:    role.Global(userRole),
+				ID:   user.ID(userID),
+				Role: role.Global(userRole),
 			})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
 )
@@ -34,54 +35,60 @@ var (
 
 // Test users
 var (
-	TestStudentBarcode  = "210107"
-	TestStudent2Barcode = "210108"
-	TestStaffBarcode    = "STAFF001"
-	TestStaff2Barcode   = "STAFF002"
+	TestStudentBarcode  = user.Barcode("210107")
+	TestStudent2Barcode = user.Barcode("210108")
+	TestStaffBarcode    = user.Barcode("230001")
+	TestStaff2Barcode   = user.Barcode("230002")
 
 	TestStudent = struct {
-		Barcode   string
+		ID        user.ID
+		Barcode   user.Barcode
 		Email     string
 		FirstName string
 		LastName  string
 		Password  string
-		GroupID   uuid.UUID
+		GroupID   group.ID
 		Major     major.Major
 	}{
+		ID:        user.ID(uuid.MustParse("990e8400-e29b-41d4-a716-446655440000")),
 		Barcode:   TestStudentBarcode,
 		Email:     ValidStudentEmail,
 		FirstName: "Test",
 		LastName:  "Student",
 		Password:  "SecurePass123!",
-		GroupID:   uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+		GroupID:   SEGroup.ID,
 		Major:     major.SE,
 	}
 
 	TestStudent2 = struct {
-		Barcode   string
+		ID        user.ID
+		Barcode   user.Barcode
 		Email     string
 		FirstName string
 		LastName  string
 		Password  string
-		GroupID   uuid.UUID
+		GroupID   group.ID
 		Major     major.Major
 	}{
+		ID:        user.ID(uuid.MustParse("990e8400-e29b-41d4-a716-446655440001")),
 		Barcode:   TestStudent2Barcode,
 		Email:     ValidStudent2Email,
 		FirstName: "Test",
 		LastName:  "Student2",
 		Password:  "AnotherPass123!",
-		GroupID:   uuid.MustParse("660e8400-e29b-41d4-a716-446655440001"),
+		GroupID:   ITGroup.ID,
 		Major:     major.IT,
 	}
 
 	TestStaff = struct {
-		Barcode   string
+		ID        user.ID
+		Barcode   user.Barcode
 		Email     string
 		FirstName string
 		LastName  string
 		Password  string
 	}{
+		ID:        user.ID(uuid.MustParse("880e8400-e29b-41d4-a716-446655440000")),
 		Barcode:   TestStaffBarcode,
 		Email:     ValidStaffEmail,
 		FirstName: "Test",
@@ -99,36 +106,36 @@ const (
 // Test groups
 var (
 	SEGroup = struct {
-		ID    uuid.UUID
+		ID    group.ID
 		Name  string
 		Year  string
 		Major major.Major
 	}{
-		ID:    uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+		ID:    group.ID(uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")),
 		Name:  "SE-2301",
 		Year:  "2023",
 		Major: major.SE,
 	}
 
 	ITGroup = struct {
-		ID    uuid.UUID
+		ID    group.ID
 		Name  string
 		Year  string
 		Major major.Major
 	}{
-		ID:    uuid.MustParse("660e8400-e29b-41d4-a716-446655440001"),
+		ID:    group.ID(uuid.MustParse("660e8400-e29b-41d4-a716-446655440001")),
 		Name:  "CS-2301",
 		Year:  "2023",
 		Major: major.IT,
 	}
 
 	CSGroup = struct {
-		ID    uuid.UUID
+		ID    group.ID
 		Name  string
 		Year  string
 		Major major.Major
 	}{
-		ID:    uuid.MustParse("770e8400-e29b-41d4-a716-446655440002"),
+		ID:    group.ID(uuid.MustParse("770e8400-e29b-41d4-a716-446655440002")),
 		Name:  "CS-2301",
 		Year:  "2023",
 		Major: major.CS,

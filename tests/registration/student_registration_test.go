@@ -84,10 +84,10 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 			Email:            email,
 			VerificationCode: reg.GetVerificationCode(),
 			Password:         fixtures.TestStudent.Password,
-			Barcode:          fixtures.TestStudent.Barcode,
+			Barcode:          fixtures.TestStudent.Barcode.String(),
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
-			GroupId:          fixtures.SEGroup.ID,
+			GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 		}).AssertSuccess()
 	})
 
@@ -100,7 +100,7 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 			AssertRole(role.Student).
 			AssertFullName(fixtures.TestStudent.FirstName, fixtures.TestStudent.LastName).
 			AssertIsStudent().
-			AssertInGroupID(fixtures.SEGroup.ID).
+			AssertInGroupID(uuid.UUID(fixtures.SEGroup.ID)).
 			AssertMajor(fixtures.SEGroup.Major.String())
 	})
 
@@ -291,7 +291,7 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 			Barcode:          "STU001",
 			FirstName:        "Test",
 			LastName:         "Student",
-			GroupId:          fixtures.SEGroup.ID,
+			GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 		}).AssertBadRequest()
 	})
 
@@ -301,7 +301,7 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 		student := s.Builder.User.Student("existing@test.com")
 
 		s.DB.SeedUser(s.T(), student.User())
-		s.DB.SeedStudent(s.T(), student.User().Barcode(), fixtures.SEGroup.ID)
+		s.DB.SeedStudent(s.T(), student.User().ID(), fixtures.SEGroup.ID)
 
 		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
 			Email:            email,
@@ -310,7 +310,7 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 			Barcode:          string(student.User().Barcode()),
 			FirstName:        "Test",
 			LastName:         "Student",
-			GroupId:          fixtures.SEGroup.ID,
+			GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 		}).AssertStatus(http.StatusConflict)
 	})
 
@@ -346,7 +346,7 @@ func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
 			Barcode:          "STU003",
 			FirstName:        "Test",
 			LastName:         "Student",
-			GroupId:          fixtures.SEGroup.ID,
+			GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 		}).AssertBadRequest()
 	})
 
@@ -361,7 +361,7 @@ func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
 			Barcode:          "STU004",
 			FirstName:        "Test",
 			LastName:         "Student",
-			GroupId:          fixtures.SEGroup.ID,
+			GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 		}).AssertStatus(http.StatusConflict)
 	})
 }
@@ -384,7 +384,7 @@ func (s *RegistrationIntegrationSuite) TestBusinessRules() {
 			Barcode:          "STU005",
 			FirstName:        "X",
 			LastName:         strings.Repeat("A", 101),
-			GroupId:          fixtures.SEGroup.ID,
+			GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 		}).AssertBadRequest()
 	})
 }
@@ -659,10 +659,10 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 				Email:            fixtures.TestStudent.Email,
 				VerificationCode: "123456",
 				Password:         fixtures.TestStudent.Password,
-				Barcode:          fixtures.TestStudent.Barcode,
+				Barcode:          string(fixtures.TestStudent.Barcode),
 				FirstName:        fixtures.TestStudent.FirstName,
 				LastName:         fixtures.TestStudent.LastName,
-				GroupId:          fixtures.SEGroup.ID,
+				GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 			}
 			tt.setup(&request)
 			if tt.setupBefore {
@@ -743,7 +743,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 				// Create an existing student with the same barcode
 				existingStudent := s.Builder.User.Student("existing@test.com")
 				s.DB.SeedUser(t, existingStudent.User())
-				s.DB.SeedStudent(t, existingStudent.User().Barcode(), fixtures.SEGroup.ID)
+				s.DB.SeedStudent(t, existingStudent.User().ID(), fixtures.SEGroup.ID)
 
 				return email, s.getVerificationCode(email), existingStudent.User().Barcode().String()
 			},
@@ -759,7 +759,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 				// Create an existing user with the same email
 				existingUser := builders.NewStudentBuilder().WithEmail(email).WithBarcode("STU006").Build()
 				s.DB.SeedUser(t, existingUser.User())
-				s.DB.SeedStudent(t, existingUser.User().Barcode(), fixtures.SEGroup.ID)
+				s.DB.SeedStudent(t, existingUser.User().ID(), fixtures.SEGroup.ID)
 
 				return email, s.getVerificationCode(email), "STU007"
 			},
@@ -779,7 +779,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 				Barcode:          barcode,
 				FirstName:        fixtures.TestStudent.FirstName,
 				LastName:         fixtures.TestStudent.LastName,
-				GroupId:          fixtures.SEGroup.ID,
+				GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 			})
 
 			response.AssertStatus(tt.expectedStatus)
@@ -806,7 +806,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Verifica
 			Barcode:          "EXPSTU001",
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
-			GroupId:          fixtures.SEGroup.ID,
+			GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 		})
 
 		response.AssertStatus(http.StatusBadRequest).
@@ -866,10 +866,10 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Security
 				Email:            fixtures.TestStudent.Email,
 				VerificationCode: "123456",
 				Password:         fixtures.TestStudent.Password,
-				Barcode:          fixtures.TestStudent.Barcode,
+				Barcode:          string(fixtures.TestStudent.Barcode),
 				FirstName:        fixtures.TestStudent.FirstName,
 				LastName:         fixtures.TestStudent.LastName,
-				GroupId:          fixtures.SEGroup.ID,
+				GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 			}
 			tt.setup(&request)
 
@@ -1331,10 +1331,10 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 				Email:            fixtures.TestStudent.Email,
 				VerificationCode: "123456",
 				Password:         fixtures.TestStudent.Password,
-				Barcode:          fixtures.TestStudent.Barcode,
+				Barcode:          string(fixtures.TestStudent.Barcode),
 				FirstName:        fixtures.TestStudent.FirstName,
 				LastName:         fixtures.TestStudent.LastName,
-				GroupId:          fixtures.SEGroup.ID,
+				GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 			}
 
 			if tt.setupBefore {
@@ -1377,7 +1377,7 @@ func (s *RegistrationIntegrationSuite) setupCompletedRegistration(email string) 
 		Barcode:          "STU999",
 		FirstName:        "Test",
 		LastName:         "Student",
-		GroupId:          fixtures.SEGroup.ID,
+		GroupId:          uuid.UUID(fixtures.SEGroup.ID),
 	}).AssertSuccess()
 }
 

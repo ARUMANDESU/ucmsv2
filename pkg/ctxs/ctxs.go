@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 )
 
@@ -14,8 +15,8 @@ const (
 )
 
 type User struct {
-	Barcode string
-	Role    role.Global
+	ID   user.ID
+	Role role.Global
 }
 
 func WithTx(ctx context.Context, tx pgx.Tx) context.Context {

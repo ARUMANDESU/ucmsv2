@@ -5,9 +5,9 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
-	"github.com/google/uuid"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 	"github.com/ARUMANDESU/ucms/pkg/validationx"
@@ -16,7 +16,7 @@ import (
 type Student struct {
 	event.Recorder
 	user    User
-	groupID uuid.UUID
+	groupID group.ID
 }
 
 type RegisterStudentArgs struct {
@@ -27,7 +27,7 @@ type RegisterStudentArgs struct {
 	AvatarURL      string          `json:"avatar_url"`
 	Email          string          `json:"email"`
 	Password       string          `json:"password"`
-	GroupID        uuid.UUID       `json:"group_id"`
+	GroupID        group.ID        `json:"group_id"`
 }
 
 func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
@@ -54,6 +54,7 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 
 	student := &Student{
 		user: User{
+			id:        NewID(),
 			barcode:   p.Barcode,
 			firstName: p.FirstName,
 			lastName:  p.LastName,
@@ -69,6 +70,7 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 
 	student.AddEvent(&StudentRegistered{
 		Header:         event.NewEventHeader(),
+		StudentID:      student.user.id,
 		StudentBarcode: p.Barcode,
 		RegistrationID: p.RegistrationID,
 		Email:          p.Email,
@@ -82,7 +84,7 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 
 type RehydrateStudentArgs struct {
 	RehydrateUserArgs
-	GroupID uuid.UUID
+	GroupID group.ID
 }
 
 func RehydrateStudent(p RehydrateStudentArgs) *Student {
@@ -92,7 +94,7 @@ func RehydrateStudent(p RehydrateStudentArgs) *Student {
 	}
 }
 
-func (s *Student) SetGroupID(groupID uuid.UUID) error {
+func (s *Student) SetGroupID(groupID group.ID) error {
 	err := validation.Validate(groupID, validationx.Required)
 	if err != nil {
 		return err
@@ -110,9 +112,9 @@ func (s *Student) User() *User {
 	return &s.user
 }
 
-func (s *Student) GroupID() uuid.UUID {
+func (s *Student) GroupID() group.ID {
 	if s == nil {
-		return uuid.Nil
+		return group.ID{}
 	}
 
 	return s.groupID

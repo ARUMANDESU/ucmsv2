@@ -11,17 +11,29 @@ import (
 )
 
 type UserRepo struct {
-	dbbyID    map[user.Barcode]*user.User
-	dbbyEmail map[string]*user.User
-	events    []event.Event
-	mu        sync.Mutex
+	dbbyID      map[user.ID]*user.User
+	dbbyEmail   map[string]*user.User
+	dbbyBarcode map[user.Barcode]*user.User
+	events      []event.Event
+	mu          sync.Mutex
 }
 
 func NewUserRepo() *UserRepo {
 	return &UserRepo{
-		dbbyID:    make(map[user.Barcode]*user.User),
-		dbbyEmail: make(map[string]*user.User),
+		dbbyID:      make(map[user.ID]*user.User),
+		dbbyEmail:   make(map[string]*user.User),
+		dbbyBarcode: make(map[user.Barcode]*user.User),
 	}
+}
+
+func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if u, ok := r.dbbyID[id]; ok {
+		return u, nil
+	}
+	return nil, errorx.NewNotFound()
 }
 
 func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*user.User, error) {
@@ -38,7 +50,7 @@ func (r *UserRepo) GetUserByBarcode(ctx context.Context, barcode user.Barcode) (
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if u, ok := r.dbbyID[barcode]; ok {
+	if u, ok := r.dbbyBarcode[barcode]; ok {
 		return u, nil
 	}
 	return nil, errorx.NewNotFound()
@@ -50,7 +62,15 @@ func (r *UserRepo) SeedUser(t *testing.T, u *user.User) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.dbbyID[u.Barcode()]; exists {
+	if u == nil {
+		t.Fatal("cannot seed nil user")
+	}
+
+	if _, exists := r.dbbyID[u.ID()]; exists {
+		t.Fatalf("user with ID %s already exists", u.ID().String())
+	}
+
+	if _, exists := r.dbbyBarcode[u.Barcode()]; exists {
 		t.Fatalf("user with barcode %s already exists", u.Barcode())
 	}
 
@@ -58,6 +78,7 @@ func (r *UserRepo) SeedUser(t *testing.T, u *user.User) {
 		t.Fatalf("user with email %s already exists", u.Email())
 	}
 
-	r.dbbyID[u.Barcode()] = u
+	r.dbbyID[u.ID()] = u
+	r.dbbyBarcode[u.Barcode()] = u
 	r.dbbyEmail[u.Email()] = u
 }

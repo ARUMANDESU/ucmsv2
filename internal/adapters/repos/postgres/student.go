@@ -48,12 +48,13 @@ func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) e
 
 	return postgres.WithTx(ctx, st.pool, func(ctx context.Context, tx pgx.Tx) error {
 		insertUserQuery := `
-            INSERT INTO users (id, role_id, email, first_name, last_name, avatar_url, pass_hash, created_at, updated_at)
-            VALUES ($1, (SELECT id FROM global_roles WHERE name = $2), $3, $4, $5, $6, $7, $8, $9);
+            INSERT INTO users (id, barcode, role_id, email, first_name, last_name, avatar_url, pass_hash, created_at, updated_at)
+            VALUES ($1, $2, (SELECT id FROM global_roles WHERE name = $3), $4, $5, $6, $7, $8, $9, $10);
         `
 		dto := DomainToUserDTO(student.User(), 0)
 		res, err := tx.Exec(ctx, insertUserQuery,
 			dto.ID,
+			dto.Barcode,
 			student.User().Role().String(),
 			dto.Email,
 			dto.FirstName,

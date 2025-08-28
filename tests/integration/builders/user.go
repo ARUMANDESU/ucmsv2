@@ -3,9 +3,9 @@ package builders
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
@@ -42,6 +42,7 @@ func (f *UserFactory) AITUSA(email string) *user.AITUSA {
 }
 
 type UserBuilder struct {
+	id        user.ID
 	barcode   user.Barcode
 	firstName string
 	lastName  string
@@ -59,7 +60,8 @@ func NewUserBuilder() *UserBuilder {
 	now := time.Now()
 
 	return &UserBuilder{
-		barcode:   user.Barcode(fixtures.TestStudentBarcode),
+		id:        user.NewID(),
+		barcode:   fixtures.TestStudent.Barcode,
 		firstName: fixtures.TestStudent.FirstName,
 		lastName:  fixtures.TestStudent.LastName,
 		email:     fixtures.ValidStudentEmail,
@@ -72,8 +74,13 @@ func NewUserBuilder() *UserBuilder {
 	}
 }
 
-func (b *UserBuilder) WithBarcode(barcode string) *UserBuilder {
-	b.barcode = user.Barcode(barcode)
+func (b *UserBuilder) WithID(id user.ID) *UserBuilder {
+	b.id = id
+	return b
+}
+
+func (b *UserBuilder) WithBarcode(barcode user.Barcode) *UserBuilder {
+	b.barcode = barcode
 	return b
 }
 
@@ -131,6 +138,7 @@ func (b *UserBuilder) AsAITUSA() *UserBuilder {
 
 func (b *UserBuilder) Build() *user.User {
 	return user.RehydrateUser(user.RehydrateUserArgs{
+		ID:        b.id,
 		Barcode:   b.barcode,
 		FirstName: b.firstName,
 		LastName:  b.lastName,
@@ -145,6 +153,7 @@ func (b *UserBuilder) Build() *user.User {
 
 func (b *UserBuilder) RehydrateArgs() user.RehydrateUserArgs {
 	return user.RehydrateUserArgs{
+		ID:        b.id,
 		Barcode:   b.barcode,
 		FirstName: b.firstName,
 		LastName:  b.lastName,
@@ -159,6 +168,7 @@ func (b *UserBuilder) RehydrateArgs() user.RehydrateUserArgs {
 
 func (b *UserBuilder) BuildNew() *user.User {
 	return user.RehydrateUser(user.RehydrateUserArgs{
+		ID:        b.id,
 		Barcode:   b.barcode,
 		FirstName: b.firstName,
 		LastName:  b.lastName,
@@ -174,7 +184,7 @@ func (b *UserBuilder) BuildNew() *user.User {
 // StudentBuilder extends UserBuilder for student-specific properties
 type StudentBuilder struct {
 	UserBuilder
-	groupID        uuid.UUID
+	groupID        group.ID
 	registrationID registration.ID
 }
 
@@ -186,13 +196,18 @@ func NewStudentBuilder() *StudentBuilder {
 	}
 }
 
-func (b *StudentBuilder) WithGroupID(groupID uuid.UUID) *StudentBuilder {
+func (b *StudentBuilder) WithGroupID(groupID group.ID) *StudentBuilder {
 	b.groupID = groupID
 	return b
 }
 
+func (b *StudentBuilder) WithID(id user.ID) *StudentBuilder {
+	b.UserBuilder.WithID(id)
+	return b
+}
+
 // Override UserBuilder methods to return *StudentBuilder for proper chaining
-func (b *StudentBuilder) WithBarcode(barcode string) *StudentBuilder {
+func (b *StudentBuilder) WithBarcode(barcode user.Barcode) *StudentBuilder {
 	b.UserBuilder.WithBarcode(barcode)
 	return b
 }
@@ -275,6 +290,7 @@ func (b *StudentBuilder) WithInvalidShortLastName() *StudentBuilder {
 func (b *StudentBuilder) Build() *user.Student {
 	return user.RehydrateStudent(user.RehydrateStudentArgs{
 		RehydrateUserArgs: user.RehydrateUserArgs{
+			ID:        b.id,
 			Barcode:   b.barcode,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
@@ -335,8 +351,13 @@ func NewStaffBuilder() *StaffBuilder {
 	}
 }
 
+func (b *StaffBuilder) WithID(id user.ID) *StaffBuilder {
+	b.UserBuilder.WithID(id)
+	return b
+}
+
 // Override UserBuilder methods to return *StaffBuilder for proper chaining
-func (b *StaffBuilder) WithBarcode(barcode string) *StaffBuilder {
+func (b *StaffBuilder) WithBarcode(barcode user.Barcode) *StaffBuilder {
 	b.UserBuilder.WithBarcode(barcode)
 	return b
 }
@@ -419,6 +440,7 @@ func (b *StaffBuilder) WithInvalidShortLastName() *StaffBuilder {
 func (b *StaffBuilder) Build() *user.Staff {
 	return user.RehydrateStaff(user.RehydrateStaffArgs{
 		RehydrateUserArgs: user.RehydrateUserArgs{
+			ID:        b.id,
 			Barcode:   b.barcode,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
