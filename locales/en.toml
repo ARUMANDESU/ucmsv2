@@ -135,6 +135,9 @@ other = "This email address is already registered"
 [error_barcode_not_available]
 other = "This barcode is already in use"
 
+[error_username_not_available]
+other = "This username is already taken"
+
 [business_error_code_expired]
 other = "Verification code has expired"
 

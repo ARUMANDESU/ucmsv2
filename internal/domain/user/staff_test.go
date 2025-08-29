@@ -31,6 +31,30 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 			wantErr: validation.Errors{"barcode": validation.ErrRequired},
 		},
 		{
+			name:    "missing username",
+			args:    builders.NewStaffBuilder().WithUsername("").BuildRegisterArgs(),
+			wantErr: validation.Errors{"username": validation.ErrRequired},
+		},
+		{
+			name:    "username too short",
+			args:    builders.NewStaffBuilder().WithUsername("ab").BuildRegisterArgs(),
+			wantErr: validation.Errors{"username": validationx.ErrInvalidUsernameFormat},
+		},
+		{
+			name: "username too long",
+			args: builders.NewStaffBuilder().
+				WithUsername("a_very_long_username_exceeding_the_maximum_length_of_fifty_characters"). // 69 chars
+				BuildRegisterArgs(),
+			wantErr: validation.Errors{"username": validationx.ErrInvalidUsernameFormat},
+		},
+		{
+			name: "username format invalid",
+			args: builders.NewStaffBuilder().
+				WithUsername("invalid username!"). // contains space and exclamation mark
+				BuildRegisterArgs(),
+			wantErr: validation.Errors{"username": validationx.ErrInvalidUsernameFormat},
+		},
+		{
 			name:    "missing RegistrationID",
 			args:    builders.NewStaffBuilder().WithRegistrationID(registration.ID{}).BuildRegisterArgs(),
 			wantErr: validation.Errors{"registration_id": validation.ErrRequired},
@@ -110,6 +134,7 @@ func TestRegisterStaff_EmptyArgs(t *testing.T) {
 	staff, err := user.RegisterStaff(user.RegisterStaffArgs{})
 	validationx.AssertValidationErrors(t, err, validation.Errors{
 		"barcode":         validation.ErrRequired,
+		"username":        validation.ErrRequired,
 		"registration_id": validation.ErrRequired,
 		"email":           validation.ErrRequired,
 		"first_name":      validation.ErrRequired,

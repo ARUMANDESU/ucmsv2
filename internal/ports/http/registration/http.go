@@ -71,6 +71,7 @@ type PostV1RegistrationsResendJSONBody struct {
 
 type PostV1RegistrationsStudentsCompleteJSONBody struct {
 	Barcode          string    `json:"barcode"`
+	Username         string    `json:"username"`
 	Email            string    `json:"email"`
 	FirstName        string    `json:"first_name"`
 	GroupId          uuid.UUID `json:"group_id"`
@@ -189,6 +190,7 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 
 	req.Email = sanitizex.CleanSingleLine(req.Email)
 	req.Barcode = sanitizex.CleanSingleLine(req.Barcode)
+	req.Username = sanitizex.CleanSingleLine(req.Username)
 	req.VerificationCode = sanitizex.CleanSingleLine(req.VerificationCode)
 	req.FirstName = sanitizex.CleanSingleLine(req.FirstName)
 	req.LastName = sanitizex.CleanSingleLine(req.LastName)
@@ -201,6 +203,7 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 			validation.Length(registration.VerificationCodeLength, registration.VerificationCodeLength),
 			is.Alphanumeric,
 		),
+		validation.Field(&req.Username, validation.Required, validation.Length(2, 100)),
 		validation.Field(&req.FirstName, validationx.NameRules...),
 		validation.Field(&req.LastName, validationx.NameRules...),
 		validation.Field(&req.Password, validationx.PasswordRules...),
@@ -218,6 +221,7 @@ func (h *HTTP) CompleteStudentRegistration(w http.ResponseWriter, r *http.Reques
 		Email:            req.Email,
 		VerificationCode: req.VerificationCode,
 		Barcode:          user.Barcode(req.Barcode),
+		Username:         req.Username,
 		FirstName:        req.FirstName,
 		LastName:         req.LastName,
 		Password:         req.Password,

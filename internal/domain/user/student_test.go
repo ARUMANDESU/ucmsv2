@@ -35,6 +35,30 @@ func TestRegisterStudent_ArgValidation(t *testing.T) {
 			wantErr: validation.Errors{"barcode": validation.ErrRequired},
 		},
 		{
+			name:    "missing username",
+			args:    builders.NewStudentBuilder().WithUsername("").BuildRegisterArgs(),
+			wantErr: validation.Errors{"username": validation.ErrRequired},
+		},
+		{
+			name:    "username too short",
+			args:    builders.NewStudentBuilder().WithUsername("ab").BuildRegisterArgs(),
+			wantErr: validation.Errors{"username": validationx.ErrInvalidUsernameFormat},
+		},
+		{
+			name: "username too long",
+			args: builders.NewStudentBuilder().
+				WithUsername("a_very_long_username_exceeding_the_maximum_length_of_fifty_characters"). // 69 chars
+				BuildRegisterArgs(),
+			wantErr: validation.Errors{"username": validationx.ErrInvalidUsernameFormat},
+		},
+		{
+			name: "username format invalid",
+			args: builders.NewStudentBuilder().
+				WithUsername("invalid username!"). // contains space and exclamation mark
+				BuildRegisterArgs(),
+			wantErr: validation.Errors{"username": validationx.ErrInvalidUsernameFormat},
+		},
+		{
 			name:    "missing Email",
 			args:    builders.NewStudentBuilder().WithEmail("").BuildRegisterArgs(),
 			wantErr: validation.Errors{"email": validation.ErrRequired},
@@ -115,6 +139,7 @@ func TestRegisterStudent_EmptyArgs(t *testing.T) {
 	student, err := user.RegisterStudent(user.RegisterStudentArgs{})
 	validationx.AssertValidationErrors(t, err, validation.Errors{
 		"barcode":         validation.ErrRequired,
+		"username":        validation.ErrRequired,
 		"registration_id": validation.ErrRequired,
 		"email":           validation.ErrRequired,
 		"password":        validation.ErrRequired,

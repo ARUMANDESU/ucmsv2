@@ -14,12 +14,16 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 )
 
-var ErrBarcodeNotAvailable = errorx.NewDuplicateEntry().WithKey("error_barcode_not_available")
+var (
+	ErrBarcodeNotAvailable  = errorx.NewDuplicateEntry().WithKey("error_barcode_not_available")
+	ErrUsernameNotAvailable = errorx.NewDuplicateEntry().WithKey("error_username_not_available")
+)
 
 type StudentComplete struct {
 	Email            string
 	VerificationCode string
 	Barcode          user.Barcode
+	Username         string
 	FirstName        string
 	LastName         string
 	Password         string
@@ -71,28 +75,26 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 		))
 	defer span.End()
 
-	u, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
-	if err != nil && !errorx.IsNotFound(err) {
+	emailExists, usernameExists, barcodeExists, err := h.usergetter.IsUserExists(ctx, cmd.Email, cmd.Username, cmd.Barcode)
+	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by email")
+		span.SetStatus(codes.Error, "failed to check if user exists")
 		return err
 	}
-	if u != nil {
-		span.RecordError(ErrEmailNotAvailable)
-		span.SetStatus(codes.Error, "user already exists by email")
-		return ErrEmailNotAvailable
-	}
-
-	u, err = h.usergetter.GetUserByBarcode(ctx, user.Barcode(cmd.Barcode))
-	if err != nil && !errorx.IsNotFound(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by barcode")
-		return err
-	}
-	if u != nil {
-		span.RecordError(ErrBarcodeNotAvailable)
-		span.SetStatus(codes.Error, "user already exists by barcode")
-		return ErrBarcodeNotAvailable
+	if emailExists || usernameExists || barcodeExists {
+		errs := make(errorx.I18nErrors, 0)
+		if emailExists {
+			errs = append(errs, ErrEmailNotAvailable)
+		}
+		if usernameExists {
+			errs = append(errs, ErrUsernameNotAvailable)
+		}
+		if barcodeExists {
+			errs = append(errs, ErrBarcodeNotAvailable)
+		}
+		span.RecordError(errs)
+		span.SetStatus(codes.Error, "validation error: user already exists")
+		return errs
 	}
 
 	_, err = h.groupgetter.GetGroupByID(ctx, group.ID(cmd.GroupID))
@@ -121,6 +123,7 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 
 	student, err := user.RegisterStudent(user.RegisterStudentArgs{
 		Barcode:        user.Barcode(cmd.Barcode),
+		Username:       cmd.Username,
 		RegistrationID: reg.ID(),
 		FirstName:      cmd.FirstName,
 		LastName:       cmd.LastName,

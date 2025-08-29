@@ -67,6 +67,16 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, err e
 	lang := r.Header.Get("Accept-Language")
 	localizer := h.Localizer(lang)
 
+	var appErrs errorx.I18nErrors
+	if errors.As(err, &appErrs) {
+		writeError(w, r,
+			appErrs.Code(),
+			appErrs.Localize(localizer),
+			appErrs.HTTPStatusCode(),
+		)
+		return
+	}
+
 	var appErr *errorx.I18nError
 	if errors.As(err, &appErr) {
 		writeError(w, r,

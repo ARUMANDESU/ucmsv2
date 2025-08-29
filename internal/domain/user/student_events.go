@@ -13,13 +13,14 @@ const (
 type StudentRegistered struct {
 	event.Header
 	event.Otel
-	StudentID      ID
-	StudentBarcode Barcode
-	RegistrationID registration.ID
-	Email          string
-	FirstName      string
-	LastName       string
-	GroupID        group.ID
+	StudentID       ID
+	StudentBarcode  Barcode
+	StudentUsername string
+	RegistrationID  registration.ID
+	Email           string
+	FirstName       string
+	LastName        string
+	GroupID         group.ID
 }
 
 func (e *StudentRegistered) GetStreamName() string {

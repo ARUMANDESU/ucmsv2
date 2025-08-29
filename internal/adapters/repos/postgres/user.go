@@ -46,7 +46,7 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, err
 	defer span.End()
 
 	query := `
-        SELECT  u.id, u.barcode, u.role_id,
+        SELECT  u.id, u.barcode, u.username, u.role_id,
                 u.first_name, u.last_name, u.avatar_url,
                 u.email, u.pass_hash, u.created_at, u.updated_at,
                 gr.id, gr.name
@@ -58,7 +58,7 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, err
 	var roleDTO GlobalRoleDTO
 	err := r.pool.QueryRow(ctx, query, id).
 		Scan(
-			&dto.ID, &dto.Barcode, &dto.RoleID,
+			&dto.ID, &dto.Barcode, &dto.Username, &dto.RoleID,
 			&dto.FirstName, &dto.LastName, &dto.AvatarURL,
 			&dto.Email, &dto.Passhash, &dto.CreatedAt, &dto.UpdatedAt,
 			&roleDTO.ID, &roleDTO.Name,
@@ -80,7 +80,7 @@ func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*user.User
 	defer span.End()
 
 	query := `
-        SELECT  u.id, u.barcode, u.role_id, 
+        SELECT  u.id, u.barcode, u.username, u.role_id, 
                 u.first_name, u.last_name, u.avatar_url, 
                 u.email, u.pass_hash, u.created_at, u.updated_at,
                 gr.id, gr.name
@@ -92,7 +92,7 @@ func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*user.User
 	var roleDTO GlobalRoleDTO
 	err := r.pool.QueryRow(ctx, query, email).
 		Scan(
-			&dto.ID, &dto.Barcode, &dto.RoleID,
+			&dto.ID, &dto.Barcode, &dto.Username, &dto.RoleID,
 			&dto.FirstName, &dto.LastName, &dto.AvatarURL,
 			&dto.Email, &dto.Passhash, &dto.CreatedAt, &dto.UpdatedAt,
 			&roleDTO.ID, &roleDTO.Name,
@@ -114,7 +114,7 @@ func (r *UserRepo) GetUserByBarcode(ctx context.Context, barcode user.Barcode) (
 	defer span.End()
 
 	query := `
-        SELECT  u.id, u.barcode, u.role_id,
+        SELECT  u.id, u.barcode, u.username, u.role_id,
                 u.first_name, u.last_name, u.avatar_url, 
                 u.email, u.pass_hash, u.created_at, u.updated_at,
                 gr.id, gr.name
@@ -126,7 +126,7 @@ func (r *UserRepo) GetUserByBarcode(ctx context.Context, barcode user.Barcode) (
 	var roleDTO GlobalRoleDTO
 	err := r.pool.QueryRow(ctx, query, barcode).
 		Scan(
-			&dto.ID, &dto.Barcode, &dto.RoleID,
+			&dto.ID, &dto.Barcode, &dto.Username, &dto.RoleID,
 			&dto.FirstName, &dto.LastName, &dto.AvatarURL,
 			&dto.Email, &dto.Passhash, &dto.CreatedAt, &dto.UpdatedAt,
 			&roleDTO.ID, &roleDTO.Name,
@@ -141,4 +141,29 @@ func (r *UserRepo) GetUserByBarcode(ctx context.Context, barcode user.Barcode) (
 	}
 
 	return UserToDomain(dto, roleDTO), nil
+}
+
+func (r *UserRepo) IsUserExists(
+	ctx context.Context,
+	email, username string,
+	barcode user.Barcode,
+) (emailExists, usernameExists, barcodeExists bool, err error) {
+	ctx, span := r.tracer.Start(ctx, "UserRepo.IsUserExists")
+	defer span.End()
+
+	query := `
+        SELECT  EXISTS(SELECT 1 FROM users WHERE email = $1),
+                EXISTS(SELECT 1 FROM users WHERE username = $2),
+                EXISTS(SELECT 1 FROM users WHERE barcode = $3);
+    `
+
+	err = r.pool.QueryRow(ctx, query, email, username, barcode).
+		Scan(&emailExists, &usernameExists, &barcodeExists)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to check if user exists")
+		return false, false, false, err
+	}
+
+	return emailExists, usernameExists, barcodeExists, nil
 }

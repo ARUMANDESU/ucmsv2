@@ -68,6 +68,7 @@ type User struct {
 	event.Recorder
 	id        ID
 	barcode   Barcode
+	username  string
 	firstName string
 	lastName  string
 	avatarURL string
@@ -81,6 +82,7 @@ type User struct {
 type RehydrateUserArgs struct {
 	ID        ID
 	Barcode   Barcode
+	Username  string
 	FirstName string
 	LastName  string
 	Role      role.Global
@@ -95,6 +97,7 @@ func RehydrateUser(p RehydrateUserArgs) *User {
 	return &User{
 		id:        p.ID,
 		barcode:   p.Barcode,
+		username:  p.Username,
 		firstName: p.FirstName,
 		lastName:  p.LastName,
 		role:      p.Role,
@@ -166,6 +169,14 @@ func (u *User) Barcode() Barcode {
 	}
 
 	return u.barcode
+}
+
+func (u *User) Username() string {
+	if u == nil {
+		return ""
+	}
+
+	return u.username
 }
 
 func (u *User) FirstName() string {

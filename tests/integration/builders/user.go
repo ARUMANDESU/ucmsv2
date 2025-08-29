@@ -1,6 +1,8 @@
 package builders
 
 import (
+	"fmt"
+	"math/rand/v2"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -44,6 +46,7 @@ func (f *UserFactory) AITUSA(email string) *user.AITUSA {
 type UserBuilder struct {
 	id        user.ID
 	barcode   user.Barcode
+	username  string
 	firstName string
 	lastName  string
 	email     string
@@ -62,6 +65,7 @@ func NewUserBuilder() *UserBuilder {
 	return &UserBuilder{
 		id:        user.NewID(),
 		barcode:   fixtures.TestStudent.Barcode,
+		username:  fmt.Sprintf("user_%d_%d", rand.Uint()%1000, now.UnixNano()),
 		firstName: fixtures.TestStudent.FirstName,
 		lastName:  fixtures.TestStudent.LastName,
 		email:     fixtures.ValidStudentEmail,
@@ -81,6 +85,16 @@ func (b *UserBuilder) WithID(id user.ID) *UserBuilder {
 
 func (b *UserBuilder) WithBarcode(barcode user.Barcode) *UserBuilder {
 	b.barcode = barcode
+	return b
+}
+
+func (b *UserBuilder) WithUsername(username string) *UserBuilder {
+	b.username = username
+	return b
+}
+
+func (b *UserBuilder) WithRandomUsername() *UserBuilder {
+	b.username = fmt.Sprintf("user_%d", time.Now().UnixNano())
 	return b
 }
 
@@ -140,6 +154,7 @@ func (b *UserBuilder) Build() *user.User {
 	return user.RehydrateUser(user.RehydrateUserArgs{
 		ID:        b.id,
 		Barcode:   b.barcode,
+		Username:  b.username,
 		FirstName: b.firstName,
 		LastName:  b.lastName,
 		Role:      b.role,
@@ -209,6 +224,11 @@ func (b *StudentBuilder) WithID(id user.ID) *StudentBuilder {
 // Override UserBuilder methods to return *StudentBuilder for proper chaining
 func (b *StudentBuilder) WithBarcode(barcode user.Barcode) *StudentBuilder {
 	b.UserBuilder.WithBarcode(barcode)
+	return b
+}
+
+func (b *StudentBuilder) WithUsername(username string) *StudentBuilder {
+	b.UserBuilder.WithUsername(username)
 	return b
 }
 
@@ -292,6 +312,7 @@ func (b *StudentBuilder) Build() *user.Student {
 		RehydrateUserArgs: user.RehydrateUserArgs{
 			ID:        b.id,
 			Barcode:   b.barcode,
+			Username:  b.username,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
 			Role:      role.Student,
@@ -315,6 +336,7 @@ func (b *StudentBuilder) RehydrateStudentArgs() user.RehydrateStudentArgs {
 func (b *StudentBuilder) BuildNew() (*user.Student, error) {
 	return user.RegisterStudent(user.RegisterStudentArgs{
 		Barcode:        b.barcode,
+		Username:       b.username,
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,
@@ -328,6 +350,7 @@ func (b *StudentBuilder) BuildNew() (*user.Student, error) {
 func (b *StudentBuilder) BuildRegisterArgs() user.RegisterStudentArgs {
 	return user.RegisterStudentArgs{
 		Barcode:        b.barcode,
+		Username:       b.username,
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,
@@ -359,6 +382,11 @@ func (b *StaffBuilder) WithID(id user.ID) *StaffBuilder {
 // Override UserBuilder methods to return *StaffBuilder for proper chaining
 func (b *StaffBuilder) WithBarcode(barcode user.Barcode) *StaffBuilder {
 	b.UserBuilder.WithBarcode(barcode)
+	return b
+}
+
+func (b *StaffBuilder) WithUsername(username string) *StaffBuilder {
+	b.UserBuilder.WithUsername(username)
 	return b
 }
 
@@ -442,6 +470,7 @@ func (b *StaffBuilder) Build() *user.Staff {
 		RehydrateUserArgs: user.RehydrateUserArgs{
 			ID:        b.id,
 			Barcode:   b.barcode,
+			Username:  b.username,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
 			Role:      role.Staff,
@@ -463,6 +492,7 @@ func (b *StaffBuilder) RehydrateStaffArgs() user.RehydrateStaffArgs {
 func (b *StaffBuilder) BuildNew() (*user.Staff, error) {
 	return user.RegisterStaff(user.RegisterStaffArgs{
 		Barcode:        b.barcode,
+		Username:       b.username,
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,
@@ -475,6 +505,7 @@ func (b *StaffBuilder) BuildNew() (*user.Staff, error) {
 func (b *StaffBuilder) BuildRegisterArgs() user.RegisterStaffArgs {
 	return user.RegisterStaffArgs{
 		Barcode:        b.barcode,
+		Username:       b.username,
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,

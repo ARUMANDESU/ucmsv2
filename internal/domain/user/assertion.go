@@ -26,6 +26,7 @@ func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterSt
 	t.Helper()
 	assert.NotEmpty(t, s.staff.user.id, "ID should not be empty")
 	assert.Equal(t, args.Barcode, s.staff.user.barcode, "Barcode mismatch")
+	assert.Equal(t, args.Username, s.staff.user.username, "Username mismatch")
 	assert.Equal(t, args.FirstName, s.staff.user.firstName, "FirstName mismatch")
 	assert.Equal(t, args.LastName, s.staff.user.lastName, "LastName mismatch")
 	assert.Equal(t, args.AvatarURL, s.staff.user.avatarURL, "AvatarURL mismatch")
@@ -40,6 +41,7 @@ func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterSt
 	staffRegisteredEvent := events[0].(*StaffRegistered)
 	assert.Equal(t, s.staff.user.id, staffRegisteredEvent.StaffID, "StaffID in event mismatch")
 	assert.Equal(t, args.Barcode, staffRegisteredEvent.StaffBarcode, "StaffBarcode in event mismatch")
+	assert.Equal(t, args.Username, staffRegisteredEvent.StaffUsername, "StaffUsername in event mismatch")
 	assert.Equal(t, args.Email, staffRegisteredEvent.Email, "Email in event mismatch")
 	assert.Equal(t, args.FirstName, staffRegisteredEvent.FirstName, "FirstName in event mismatch")
 	assert.Equal(t, args.LastName, staffRegisteredEvent.LastName, "LastName in event mismatch")
@@ -56,6 +58,12 @@ func (s *StaffAssertions) AssertIDNotEmpty(t *testing.T) *StaffAssertions {
 func (s *StaffAssertions) AssertBarcode(t *testing.T, expected Barcode) *StaffAssertions {
 	t.Helper()
 	assert.Equal(t, expected, s.staff.user.barcode, "Barcode mismatch")
+	return s
+}
+
+func (s *StaffAssertions) AssertUsername(t *testing.T, expected string) *StaffAssertions {
+	t.Helper()
+	assert.Equal(t, expected, s.staff.user.username, "Username mismatch")
 	return s
 }
 
@@ -112,6 +120,7 @@ func NewStudentAssertions(s *Student) *StudentAssertions {
 func (s *StudentAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterStudentArgs) *StudentAssertions {
 	t.Helper()
 	assert.Equal(t, args.Barcode, s.student.user.barcode, "Barcode mismatch")
+	assert.Equal(t, args.Username, s.student.user.username, "Username mismatch")
 	assert.Equal(t, args.FirstName, s.student.user.firstName, "FirstName mismatch")
 	assert.Equal(t, args.LastName, s.student.user.lastName, "LastName mismatch")
 	assert.Equal(t, args.AvatarURL, s.student.user.avatarURL, "AvatarURL mismatch")
@@ -126,6 +135,7 @@ func (s *StudentAssertions) AssertByRegistrationArgs(t *testing.T, args Register
 	studentRegisteredEvent := events[0].(*StudentRegistered)
 	assert.Equal(t, s.student.user.id, studentRegisteredEvent.StudentID, "StudentID in event mismatch")
 	assert.Equal(t, args.Barcode, studentRegisteredEvent.StudentBarcode, "StudentBarcode in event mismatch")
+	assert.Equal(t, args.Username, studentRegisteredEvent.StudentUsername, "StudentUsername in event mismatch")
 	assert.Equal(t, args.RegistrationID, studentRegisteredEvent.RegistrationID, "RegistrationID in event mismatch")
 	assert.Equal(t, args.Email, studentRegisteredEvent.Email, "Email in event mismatch")
 	assert.Equal(t, args.FirstName, studentRegisteredEvent.FirstName, "FirstName in event mismatch")
@@ -144,6 +154,12 @@ func (s *StudentAssertions) AssertIDNotEmpty(t *testing.T) *StudentAssertions {
 func (s *StudentAssertions) AssertBarcode(t *testing.T, expected Barcode) *StudentAssertions {
 	t.Helper()
 	assert.Equal(t, expected, s.student.user.barcode, "Barcode mismatch")
+	return s
+}
+
+func (s *StudentAssertions) AssertUsername(t *testing.T, expected string) *StudentAssertions {
+	t.Helper()
+	assert.Equal(t, expected, s.student.user.username, "Username mismatch")
 	return s
 }
 
@@ -217,6 +233,12 @@ func (s *StudentRegistrationAssertions) AssertStudentID(expected ID) *StudentReg
 func (s *StudentRegistrationAssertions) AssertStudentBarcode(expected Barcode) *StudentRegistrationAssertions {
 	s.t.Helper()
 	assert.Equal(s.t, expected, s.event.StudentBarcode, "StudentBarcode mismatch")
+	return s
+}
+
+func (s *StudentRegistrationAssertions) AssertStudentUsername(expected string) *StudentRegistrationAssertions {
+	s.t.Helper()
+	assert.Equal(s.t, expected, s.event.StudentUsername, "StudentUsername mismatch")
 	return s
 }
 

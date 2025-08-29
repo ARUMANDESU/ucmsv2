@@ -21,6 +21,7 @@ type Student struct {
 
 type RegisterStudentArgs struct {
 	Barcode        Barcode         `json:"barcode"`
+	Username       string          `json:"username"`
 	RegistrationID registration.ID `json:"registration_id"`
 	FirstName      string          `json:"first_name"`
 	LastName       string          `json:"last_name"`
@@ -32,6 +33,7 @@ type RegisterStudentArgs struct {
 
 func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 	err := validation.ValidateStruct(&p,
+		validation.Field(&p.Username, validation.Required, validationx.IsUsername),
 		validation.Field(&p.Barcode, validation.Required, validation.Length(6, 20), is.Alphanumeric),
 		validation.Field(&p.RegistrationID, validationx.Required),
 		validation.Field(&p.Email, validation.Required, is.EmailFormat),
@@ -56,6 +58,7 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 		user: User{
 			id:        NewID(),
 			barcode:   p.Barcode,
+			username:  p.Username,
 			firstName: p.FirstName,
 			lastName:  p.LastName,
 			avatarURL: p.AvatarURL,
@@ -69,14 +72,15 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 	}
 
 	student.AddEvent(&StudentRegistered{
-		Header:         event.NewEventHeader(),
-		StudentID:      student.user.id,
-		StudentBarcode: p.Barcode,
-		RegistrationID: p.RegistrationID,
-		Email:          p.Email,
-		FirstName:      p.FirstName,
-		LastName:       p.LastName,
-		GroupID:        p.GroupID,
+		Header:          event.NewEventHeader(),
+		StudentID:       student.user.id,
+		StudentBarcode:  p.Barcode,
+		StudentUsername: p.Username,
+		RegistrationID:  p.RegistrationID,
+		Email:           p.Email,
+		FirstName:       p.FirstName,
+		LastName:        p.LastName,
+		GroupID:         p.GroupID,
 	})
 
 	return student, nil

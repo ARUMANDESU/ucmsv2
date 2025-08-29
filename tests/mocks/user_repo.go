@@ -56,6 +56,25 @@ func (r *UserRepo) GetUserByBarcode(ctx context.Context, barcode user.Barcode) (
 	return nil, errorx.NewNotFound()
 }
 
+func (r *UserRepo) IsUserExists(
+	ctx context.Context,
+	email, username string,
+	barcode user.Barcode,
+) (emailExists, usernameExists, barcodeExists bool, err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	_, emailExists = r.dbbyEmail[email]
+	_, barcodeExists = r.dbbyBarcode[barcode]
+	for _, u := range r.dbbyID {
+		if u.Username() == username {
+			usernameExists = true
+			break
+		}
+	}
+	return emailExists, usernameExists, barcodeExists, nil
+}
+
 func (r *UserRepo) SeedUser(t *testing.T, u *user.User) {
 	t.Helper()
 

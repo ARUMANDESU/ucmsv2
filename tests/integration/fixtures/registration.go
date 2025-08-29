@@ -43,6 +43,7 @@ var (
 	TestStudent = struct {
 		ID        user.ID
 		Barcode   user.Barcode
+		Username  string
 		Email     string
 		FirstName string
 		LastName  string
@@ -52,6 +53,7 @@ var (
 	}{
 		ID:        user.ID(uuid.MustParse("990e8400-e29b-41d4-a716-446655440000")),
 		Barcode:   TestStudentBarcode,
+		Username:  "teststudent",
 		Email:     ValidStudentEmail,
 		FirstName: "Test",
 		LastName:  "Student",
@@ -63,6 +65,7 @@ var (
 	TestStudent2 = struct {
 		ID        user.ID
 		Barcode   user.Barcode
+		Username  string
 		Email     string
 		FirstName string
 		LastName  string
@@ -72,6 +75,7 @@ var (
 	}{
 		ID:        user.ID(uuid.MustParse("990e8400-e29b-41d4-a716-446655440001")),
 		Barcode:   TestStudent2Barcode,
+		Username:  "teststudent2",
 		Email:     ValidStudent2Email,
 		FirstName: "Test",
 		LastName:  "Student2",
@@ -83,6 +87,7 @@ var (
 	TestStaff = struct {
 		ID        user.ID
 		Barcode   user.Barcode
+		Username  string
 		Email     string
 		FirstName string
 		LastName  string
@@ -90,10 +95,29 @@ var (
 	}{
 		ID:        user.ID(uuid.MustParse("880e8400-e29b-41d4-a716-446655440000")),
 		Barcode:   TestStaffBarcode,
+		Username:  "teststaff",
 		Email:     ValidStaffEmail,
 		FirstName: "Test",
 		LastName:  "Staff",
 		Password:  "StaffPass123!",
+	}
+
+	TestStaff2 = struct {
+		ID        user.ID
+		Barcode   user.Barcode
+		Username  string
+		Email     string
+		FirstName string
+		LastName  string
+		Password  string
+	}{
+		ID:        user.ID(uuid.MustParse("880e8400-e29b-41d4-a716-446655440001")),
+		Barcode:   TestStaff2Barcode,
+		Username:  "teststaff2",
+		Email:     ValidStaffEmail,
+		FirstName: "Test2",
+		LastName:  "Staff2",
+		Password:  "StaffPass456!",
 	}
 )
 

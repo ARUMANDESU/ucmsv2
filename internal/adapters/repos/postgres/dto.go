@@ -15,6 +15,7 @@ import (
 type UserDTO struct {
 	ID        uuid.UUID
 	Barcode   string
+	Username  string
 	RoleID    int
 	FirstName string
 	LastName  string
@@ -69,6 +70,7 @@ func DomainToUserDTO(u *user.User, roleID int) UserDTO {
 	return UserDTO{
 		ID:        uuid.UUID(u.ID()),
 		Barcode:   string(u.Barcode()),
+		Username:  u.Username(),
 		RoleID:    roleID,
 		FirstName: u.FirstName(),
 		LastName:  u.LastName(),
@@ -84,6 +86,7 @@ func UserToDomain(dto UserDTO, roleDTO GlobalRoleDTO) *user.User {
 	return user.RehydrateUser(user.RehydrateUserArgs{
 		ID:        user.ID(dto.ID),
 		Barcode:   user.Barcode(dto.Barcode),
+		Username:  dto.Username,
 		FirstName: dto.FirstName,
 		LastName:  dto.LastName,
 		Role:      role.Global(roleDTO.Name),

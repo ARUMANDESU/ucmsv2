@@ -10,6 +10,76 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+type I18nErrors []*I18nError
+
+func (errs I18nErrors) Error() string {
+	messages := make([]string, len(errs))
+	for i, err := range errs {
+		messages[i] = err.Error()
+	}
+	return strings.Join(messages, "; ")
+}
+
+func (errs I18nErrors) Unwrap() []error {
+	if len(errs) == 0 {
+		return nil
+	}
+	var unwrappedErrs []error
+	for _, err := range errs {
+		unwrappedErrs = append(unwrappedErrs, err)
+	}
+
+	return unwrappedErrs
+}
+
+func (errs I18nErrors) Is(target error) bool {
+	if target == nil {
+		return len(errs) == 0
+	}
+	for _, err := range errs {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+	return false
+}
+
+func (errs I18nErrors) Localize(localizer *i18n.Localizer) string {
+	message := strings.Builder{}
+	for _, err := range errs {
+		if message.Len() > 0 {
+			message.WriteString("; ")
+		}
+		message.WriteString(err.Localize(localizer))
+	}
+
+	return message.String()
+}
+
+func (errs I18nErrors) Code() Code {
+	if len(errs) == 0 {
+		return CodeInternal
+	}
+
+	return errs[0].Code
+}
+
+func (errs I18nErrors) HTTPStatusCode() int {
+	if len(errs) == 0 {
+		return http.StatusOK
+	}
+
+	var maxHTTPCode int
+	for _, err := range errs {
+		code := err.HTTPStatusCode()
+		if code > maxHTTPCode {
+			maxHTTPCode = code
+		}
+	}
+
+	return maxHTTPCode
+}
+
 type I18nError struct {
 	cause              error
 	MessageKey         string
@@ -25,6 +95,10 @@ func (e *I18nError) Error() string {
 	}
 
 	return fmt.Sprintf("[%s] %s: %s", e.Code, e.MessageKey, e.cause)
+}
+
+func (e *I18nError) Unwrap() error {
+	return e.cause
 }
 
 func (e *I18nError) Localize(localizer *i18n.Localizer) string {

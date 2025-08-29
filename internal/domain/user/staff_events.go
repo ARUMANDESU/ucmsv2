@@ -11,6 +11,7 @@ type StaffRegistered struct {
 	event.Header
 	StaffID        ID
 	StaffBarcode   Barcode
+	StaffUsername  string
 	RegistrationID registration.ID
 	FirstName      string
 	LastName       string

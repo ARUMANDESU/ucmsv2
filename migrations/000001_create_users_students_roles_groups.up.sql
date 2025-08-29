@@ -13,6 +13,7 @@ insert into global_roles (name) values
 create table users (
     id uuid primary key,
     barcode text not null unique,
+    username text not null unique,
     role_id smallint not null,
     first_name text not null,
     last_name text not null,

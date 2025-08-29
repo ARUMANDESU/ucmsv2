@@ -66,6 +66,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: reg.VerificationCode(),
 			Barcode:          fixtures.TestStudent.Barcode,
+			Username:         fixtures.TestStudent.Username,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -76,6 +77,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 		s.MockStudent.RequireStudentByBarcode(t, user.Barcode(fixtures.TestStudent.Barcode)).
 			AssertEmail(t, fixtures.ValidStudentEmail).
 			AssertAvatarURL(t, "").
+			AssertUsername(t, fixtures.TestStudent.Username).
 			AssertFirstName(t, fixtures.TestStudent.FirstName).
 			AssertLastName(t, fixtures.TestStudent.LastName).
 			AssertGroupID(t, fixtures.TestStudent.GroupID).
@@ -86,6 +88,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 		e := mocks.RequireEventExists(t, s.MockStudent.EventRepo, &user.StudentRegistered{})
 		user.NewStudentRegistrationAssertions(t, e).
 			AssertStudentBarcode(user.Barcode(fixtures.TestStudent.Barcode)).
+			AssertStudentUsername(fixtures.TestStudent.Username).
 			AssertRegistrationID(reg.ID()).
 			AssertEmail(fixtures.TestStudent.Email).
 			AssertFirstName(fixtures.TestStudent.FirstName).
@@ -108,6 +111,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: reg.VerificationCode(),
 			Barcode:          fixtures.TestStudent.Barcode,
+			Username:         fixtures.TestStudent.Username,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -126,6 +130,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 			Email:            u.Email(),
 			VerificationCode: fixtures.ValidVerificationCode,
 			Barcode:          u.Barcode(),
+			Username:         u.Username(),
 			FirstName:        u.FirstName(),
 			LastName:         u.LastName(),
 			Password:         fixtures.TestStudent.Password,
@@ -144,6 +149,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: fixtures.ValidVerificationCode,
 			Barcode:          u.Barcode(),
+			Username:         fixtures.TestStudent.Username,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -152,7 +158,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, ErrBarcodeNotAvailable)
 	})
-	t.Run("user by email and barcode already exists", func(t *testing.T) {
+	t.Run("user by email, username and barcode already exists", func(t *testing.T) {
 		s := NewStudentCompleteSuite(t)
 		u := builders.NewStudentBuilder().Build().User()
 		s.MockUser.SeedUser(t, u)
@@ -161,6 +167,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 			Email:            u.Email(),
 			VerificationCode: fixtures.ValidVerificationCode,
 			Barcode:          u.Barcode(),
+			Username:         u.Username(),
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -168,6 +175,8 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, ErrEmailNotAvailable)
+		assert.ErrorIs(t, err, ErrBarcodeNotAvailable)
+		assert.ErrorIs(t, err, ErrUsernameNotAvailable)
 	})
 
 	t.Run("group not found", func(t *testing.T) {
@@ -181,6 +190,7 @@ func TestStudentCompleteHandler_UserAlreadyExists_ShouldFail(t *testing.T) {
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: reg.VerificationCode(),
 			Barcode:          fixtures.TestStudent.Barcode,
+			Username:         fixtures.TestStudent.Username,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -207,6 +217,7 @@ func TestStudentCompleteHandler_Verified(t *testing.T) {
 			Email:            fixtures.TestStudent.Email,
 			VerificationCode: fixtures.InvalidVerificationCode,
 			Barcode:          fixtures.TestStudent.Barcode,
+			Username:         fixtures.TestStudent.Username,
 			FirstName:        fixtures.TestStudent.FirstName,
 			LastName:         fixtures.TestStudent.LastName,
 			Password:         fixtures.TestStudent.Password,
@@ -231,6 +242,7 @@ func TestStudentCompleteHandler_AlreadyCompleted_ShouldFail(t *testing.T) {
 		Email:            fixtures.TestStudent.Email,
 		VerificationCode: reg.VerificationCode(),
 		Barcode:          fixtures.TestStudent.Barcode,
+		Username:         fixtures.TestStudent.Username,
 		FirstName:        fixtures.TestStudent.FirstName,
 		LastName:         fixtures.TestStudent.LastName,
 		Password:         fixtures.TestStudent.Password,
@@ -254,6 +266,7 @@ func TestStudentCompleteHandler_Pending_InvalidVerificationCode_ShouldFail(t *te
 		Email:            fixtures.TestStudent.Email,
 		VerificationCode: fixtures.InvalidVerificationCode,
 		Barcode:          fixtures.TestStudent.Barcode,
+		Username:         fixtures.TestStudent.Username,
 		FirstName:        fixtures.TestStudent.FirstName,
 		LastName:         fixtures.TestStudent.LastName,
 		Password:         fixtures.TestStudent.Password,
@@ -272,6 +285,7 @@ func TestStudentCompleteHandler_RegistrationNotFound_ShouldFail(t *testing.T) {
 		Email:            fixtures.TestStudent.Email,
 		VerificationCode: fixtures.ValidVerificationCode,
 		Barcode:          fixtures.TestStudent.Barcode,
+		Username:         fixtures.TestStudent.Username,
 		FirstName:        fixtures.TestStudent.FirstName,
 		LastName:         fixtures.TestStudent.LastName,
 		Password:         fixtures.TestStudent.Password,

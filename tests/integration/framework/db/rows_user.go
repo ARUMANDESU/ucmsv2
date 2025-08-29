@@ -14,6 +14,7 @@ import (
 type UserRow struct {
 	ID        uuid.UUID
 	Barcode   string
+	Username  string
 	Email     string
 	FirstName string
 	LastName  string

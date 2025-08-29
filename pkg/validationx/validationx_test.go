@@ -260,6 +260,83 @@ func TestPasswordLengths(t *testing.T) {
 	}
 }
 
+func TestIsUsername(t *testing.T) {
+    t.Parallel()
+
+    tests := []struct {
+        name     string
+        username string
+        valid    bool
+    }{
+        {"valid username", "user_name123", true},
+        {"empty", "", true}, // Let Required handle emptiness
+        {"only letters", "username", true},
+        {"only letters and digits", "user123", true},
+        {"capital letters", "ARUMANDESU", true},
+        {"contains period", "user.name", true},
+        {"contains underscore", "user_name", true},
+        {"ends with underscore", "username_", false},
+        {"contains hyphen", "user-name", false},
+        {"contains plus", "user+name", false},
+        {"contains hash", "user#name", false},
+        {"too short", "us", false},
+        {"too long", strings.Repeat("a", 31), false},
+        {"invalid char", "user$name", false},
+        {"invalid space", "user name", false},
+        {"starts with underscore", "_username", false},
+        {"starts with digit", "1username", false},
+        {"only digits", "123456", false},
+        {"only special chars", "___", false},
+        {"mixed invalid chars", "user@name!", false},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            t.Parallel()
+            err := IsUsername.Validate(tt.username)
+            if (err == nil) != tt.valid {
+                t.Errorf("IsUsername(%q) = %v, expected valid: %v", tt.username, err == nil, tt.valid)
+            }
+        })
+    }
+}
+
+func TestIsPersonName(t *testing.T) {
+    t.Parallel()
+
+    tests := []struct {
+        name     string
+        personName string
+        valid    bool
+    }{
+        {"valid name", "John Doe", true},
+        {"empty", "", true}, // Let Required handle emptiness
+        {"single name", "Alice", true},
+        {"name with hyphen", "Mary-Jane", true},
+        {"name with apostrophe", "O'Connor", true},
+        {"name with period", "Dr. Smith", true},
+        {"name with multiple spaces", "  John   Doe  ", true},
+        {"name with accented chars", "José Ángel", true},
+        {"name with unicode chars", "李小龙", true},
+        {"name with comma", "Smith, John", false},
+        {"name with invalid char #1", "John_Doe", false},
+        {"name with invalid char #2", "Jane@Doe", false},
+        {"name with invalid char #3", "Alice!", false},
+        {"name with digits", "John123", false},
+        {"name with special chars", "Mary#Jane$", false},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            t.Parallel()
+            err := IsPersonName.Validate(tt.personName)
+            if (err == nil) != tt.valid {
+                t.Errorf("IsPersonName(%q) = %v, expected valid: %v", tt.personName, err == nil, tt.valid)
+            }
+        })
+    }
+}
+
 // Test special characters individually
 func TestSpecialCharacters(t *testing.T) {
 	allowedSpecial := "@$!%*?&+-=_[]{}|\\:;\"'<>,./~`"

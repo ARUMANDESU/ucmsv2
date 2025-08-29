@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 	"unicode"
@@ -11,14 +12,19 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
-var ErrInvalidPasswordFormat = validation.NewError(
-	"validation_is_password",
-	"must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one digit, and one special character",
+var (
+	ErrInvalidPasswordFormat = validation.NewError(
+		"validation_is_password",
+		"must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one digit, and one special character",
+	)
+	ErrInvalidNameFormat = validation.NewError(
+		"validation_is_name",
+		"must be a valid name containing only letters, spaces, hyphens, apostrophes, and periods")
+	ErrInvalidUsernameFormat = validation.NewError(
+		"validation_is_username",
+		"must be between 3 and 30 characters long, start with a letter, and contain only letters, digits, periods, and underscores. Cannot contain consecutive periods or underscores, or period followed by underscore or vice versa",
+	)
 )
-
-var ErrInvalidNameFormat = validation.NewError(
-	"validation_is_name",
-	"must be a valid name containing only letters, spaces, hyphens, apostrophes, and periods")
 
 var (
 	PasswordFormat = PasswordFormatRule{}
@@ -32,10 +38,15 @@ var (
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	// Allow alphanumeric characters
 	barcodeRegex = regexp.MustCompile(`^[A-Z0-9]{6,20}$`)
+
+	usernameRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9]*(?:[._][a-zA-Z0-9]+)*$`)
 )
 
-var IsPersonName = validation.By(func(value interface{}) error {
-	s, _ := value.(string)
+var IsPersonName = validation.By(func(value any) error {
+	s, ok := value.(string)
+	if !ok {
+		return errors.New("value is not a string")
+	}
 	if s == "" {
 		return nil // Let Required handle emptiness
 	}
@@ -43,6 +54,30 @@ var IsPersonName = validation.By(func(value interface{}) error {
 	if !nameRegex.MatchString(s) {
 		return errors.New("must be a valid name")
 	}
+	return nil
+})
+
+var IsUsername = validation.By(func(value any) error {
+	s, ok := value.(string)
+	if !ok {
+		return errors.New("value is not a string")
+	}
+	if s == "" {
+		return nil // Let Required handle emptiness
+	}
+
+	if len(s) < 3 || len(s) > 30 {
+		return ErrInvalidUsernameFormat
+	}
+
+	if !usernameRegex.MatchString(s) {
+		return ErrInvalidUsernameFormat
+	}
+
+	if strings.Contains(s, "..") || strings.Contains(s, "__") || strings.Contains(s, "._") || strings.Contains(s, "_.") {
+		return ErrInvalidUsernameFormat
+	}
+
 	return nil
 })
 

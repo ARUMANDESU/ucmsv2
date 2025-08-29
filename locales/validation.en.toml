@@ -236,3 +236,6 @@ other = "must be a valid semantic version"
 
 [validation_is_password]
 other = "must contain at least 8 characters with uppercase, lowercase, number, and special character"
+
+[validation_is_username]
+other = "must be between 3 and 30 characters long, start with a letter, and contain only lowercase letters, digits, periods, and underscores. Cannot contain consecutive periods or underscores, or period followed by underscore or vice versa"

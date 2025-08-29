@@ -141,14 +141,14 @@ func (h *Helper) RequireUserExists(t *testing.T, email string) *UserAssertion {
 
 	var u UserRow
 	err := h.pool.QueryRow(context.Background(), `
-        SELECT u.id, u.barcode, u.email, u.first_name, u.last_name, u.role_id, 
+        SELECT u.id, u.barcode, u.username, u.email, u.first_name, u.last_name, u.role_id, 
                u.avatar_url, u.pass_hash, u.created_at, u.updated_at,
                gr.name as role_name
         FROM users u
         JOIN global_roles gr ON u.role_id = gr.id
         WHERE u.email = $1
     `, email).Scan(
-		&u.ID, &u.Barcode, &u.Email, &u.FirstName, &u.LastName, &u.RoleID,
+		&u.ID, &u.Barcode, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.RoleID,
 		&u.AvatarURL, &u.PassHash, &u.CreatedAt, &u.UpdatedAt, &u.RoleName,
 	)
 
@@ -223,10 +223,12 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
 	require.NoError(t, err)
 
 	_, err = h.pool.Exec(context.Background(), `
-        INSERT INTO users (id, barcode, email, role_id, first_name, last_name, 
+        INSERT INTO users (id, barcode, username, email, role_id, first_name, last_name, 
                           avatar_url, pass_hash, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         ON CONFLICT (id) DO UPDATE SET
+            barcode = EXCLUDED.barcode,
+            username = EXCLUDED.username,
             email = EXCLUDED.email,
             role_id = EXCLUDED.role_id,
             first_name = EXCLUDED.first_name,
@@ -234,7 +236,7 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
             avatar_url = EXCLUDED.avatar_url,
             pass_hash = EXCLUDED.pass_hash,
             updated_at = EXCLUDED.updated_at
-    `, u.ID(), u.Barcode().String(), u.Email(), roleID, u.FirstName(), u.LastName(),
+    `, u.ID(), u.Barcode().String(), u.Username(), u.Email(), roleID, u.FirstName(), u.LastName(),
 		u.AvatarUrl(), u.PassHash(), u.CreatedAt(), u.UpdatedAt())
 
 	require.NoError(t, err)

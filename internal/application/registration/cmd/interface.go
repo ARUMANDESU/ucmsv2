@@ -18,6 +18,7 @@ type Repo interface {
 type UserGetter interface {
 	GetUserByEmail(ctx context.Context, email string) (*user.User, error)
 	GetUserByBarcode(ctx context.Context, barcode user.Barcode) (*user.User, error)
+	IsUserExists(ctx context.Context, email, username string, barcode user.Barcode) (emailExists, usernameExists, barcodeExists bool, err error)
 }
 
 type GroupGetter interface {
