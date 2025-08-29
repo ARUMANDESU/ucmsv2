@@ -2,6 +2,7 @@ package user
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,6 +33,8 @@ func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterSt
 	assert.Equal(t, args.AvatarURL, s.staff.user.avatarURL, "AvatarURL mismatch")
 	assert.Equal(t, args.Email, s.staff.user.email, "Email mismatch")
 	assert.Equal(t, role.Staff, s.staff.user.role, "Role mismatch")
+	assert.WithinDuration(t, time.Now(), s.staff.user.createdAt, time.Minute, "CreatedAt should be recent")
+	assert.WithinDuration(t, time.Now(), s.staff.user.updatedAt, time.Minute, "UpdatedAt should be recent")
 
 	assert.NoError(t, bcrypt.CompareHashAndPassword(s.staff.user.passHash, []byte(args.Password)), "PassHash mismatch")
 
@@ -45,6 +48,34 @@ func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterSt
 	assert.Equal(t, args.Email, staffRegisteredEvent.Email, "Email in event mismatch")
 	assert.Equal(t, args.FirstName, staffRegisteredEvent.FirstName, "FirstName in event mismatch")
 	assert.Equal(t, args.LastName, staffRegisteredEvent.LastName, "LastName in event mismatch")
+
+	return s
+}
+
+func (s *StaffAssertions) AssertByCreateInitialArgs(t *testing.T, args CreateInitialStaffArgs) *StaffAssertions {
+	t.Helper()
+	assert.NotEmpty(t, s.staff.user.id, "ID should not be empty")
+	assert.Equal(t, args.Barcode, s.staff.user.barcode, "Barcode mismatch")
+	assert.Equal(t, args.Username, s.staff.user.username, "Username mismatch")
+	assert.Equal(t, args.FirstName, s.staff.user.firstName, "FirstName mismatch")
+	assert.Equal(t, args.LastName, s.staff.user.lastName, "LastName mismatch")
+	assert.Equal(t, args.Email, s.staff.user.email, "Email mismatch")
+	assert.Equal(t, role.Staff, s.staff.user.role, "Role mismatch")
+	assert.WithinDuration(t, time.Now(), s.staff.user.createdAt, time.Minute, "CreatedAt should be recent")
+	assert.WithinDuration(t, time.Now(), s.staff.user.updatedAt, time.Minute, "UpdatedAt should be recent")
+
+	assert.NoError(t, bcrypt.CompareHashAndPassword(s.staff.user.passHash, []byte(args.Password)), "PassHash mismatch")
+
+	events := s.staff.GetUncommittedEvents()
+	require.Len(t, events, 1, "expected one event")
+	assert.IsType(t, &InitialStaffCreated{}, events[0], "expected InitialStaffCreated event type")
+	initialStaffCreatedEvent := events[0].(*InitialStaffCreated)
+	assert.Equal(t, s.staff.user.id, initialStaffCreatedEvent.StaffID, "StaffID in event mismatch")
+	assert.Equal(t, args.Barcode, initialStaffCreatedEvent.StaffBarcode, "StaffBarcode in event mismatch")
+	assert.Equal(t, args.Username, initialStaffCreatedEvent.StaffUsername, "StaffUsername in event mismatch")
+	assert.Equal(t, args.Email, initialStaffCreatedEvent.Email, "Email in event mismatch")
+	assert.Equal(t, args.FirstName, initialStaffCreatedEvent.FirstName, "FirstName in event mismatch")
+	assert.Equal(t, args.LastName, initialStaffCreatedEvent.LastName, "LastName in event mismatch")
 
 	return s
 }

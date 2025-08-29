@@ -43,6 +43,11 @@ create table students (
     constraint students_group_id_fkey foreign key (group_id) references groups(id)
 );
 
+create table staffs (
+    user_id uuid primary key,
+    constraint staffs_user_id_fkey foreign key (user_id) references users(id)
+);
+
 create table registrations (
     id uuid primary key,
     email text not null unique,

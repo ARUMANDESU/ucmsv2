@@ -32,6 +32,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/application/mail"
 	"github.com/ARUMANDESU/ucms/internal/application/registration"
 	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	httpport "github.com/ARUMANDESU/ucms/internal/ports/http"
 	watermillport "github.com/ARUMANDESU/ucms/internal/ports/watermill"
 	"github.com/ARUMANDESU/ucms/pkg/env"
@@ -51,10 +52,11 @@ type Application struct {
 
 // Config holds all configuration for the application
 type Config struct {
-	Mode    env.Mode
-	Port    string
-	PgDSN   string
-	LogPath string
+	Mode         env.Mode
+	Port         string
+	PgDSN        string
+	LogPath      string
+	InitialStaff *user.CreateInitialStaffArgs
 }
 
 func main() {
@@ -130,6 +132,28 @@ func main() {
 		}()
 	}()
 
+	// Create initial staff user if configured
+	hasStaff, err := repos.Staff.HasAnyStaff(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "Failed to check for existing staff users", "error", err)
+		os.Exit(1)
+	}
+
+	if config.InitialStaff != nil && !hasStaff {
+		initStaff, err := user.CreateInitialStaff(*config.InitialStaff)
+		if err != nil {
+			slog.ErrorContext(ctx, "Failed to create initial staff user", "error", err)
+			os.Exit(1)
+		}
+		if err := repos.Staff.SaveStaff(ctx, initStaff); err != nil {
+			slog.ErrorContext(ctx, "Failed to save initial staff user", "error", err)
+			os.Exit(1)
+		}
+
+		slog.InfoContext(ctx, "Initial staff user created", "email", config.InitialStaff.Email)
+	} else {
+		slog.InfoContext(ctx, "Skipping initial staff user creation", "hasStaff", hasStaff, "initialStaffConfigured", config.InitialStaff != nil)
+	}
 	// Set up HTTP server
 	httpServer := setupHTTPServer(config, apps)
 
@@ -167,11 +191,24 @@ func loadConfig() *Config {
 	pgdsn := getEnvOrDefault("PG_DSN", "postgres://user:password@localhost:8765/ucms?sslmode=disable")
 	logPath := getEnvOrDefault("LOG_PATH", "")
 
+	var initialStaff *user.CreateInitialStaffArgs
+	if os.Getenv("INITIAL_STAFF_EMAIL") != "" {
+		initialStaff = &user.CreateInitialStaffArgs{
+			Username:  getEnvOrDefault("INITIAL_STAFF_USERNAME", "admin"),
+			Email:     os.Getenv("INITIAL_STAFF_EMAIL"),
+			Password:  getEnvOrDefault("INITIAL_STAFF_PASSWORD", "StrongP@ssw0rd"),
+			Barcode:   user.Barcode(getEnvOrDefault("INITIAL_STAFF_BARCODE", "000000")),
+			FirstName: getEnvOrDefault("INITIAL_STAFF_FIRST_NAME", "Admin"),
+			LastName:  getEnvOrDefault("INITIAL_STAFF_LAST_NAME", "User"),
+		}
+	}
+
 	return &Config{
-		Mode:    mode,
-		Port:    port,
-		PgDSN:   pgdsn,
-		LogPath: logPath,
+		Mode:         mode,
+		Port:         port,
+		PgDSN:        pgdsn,
+		LogPath:      logPath,
+		InitialStaff: initialStaff,
 	}
 }
 
@@ -213,6 +250,7 @@ type Repositories struct {
 	User         *postgres.UserRepo
 	Registration *postgres.RegistrationRepo
 	Student      *postgres.StudentRepo
+	Staff        *postgres.StaffRepo
 	Group        *postgres.GroupRepo
 }
 
@@ -222,6 +260,7 @@ func setupRepositories(pool *pgxpool.Pool) *Repositories {
 		User:         postgres.NewUserRepo(pool, nil, nil),
 		Registration: postgres.NewRegistrationRepo(pool, nil, nil),
 		Student:      postgres.NewStudentRepo(pool, nil, nil),
+		Staff:        postgres.NewStaffRepo(pool, nil, nil),
 		Group:        postgres.NewGroupRepo(pool, nil, nil),
 	}
 }

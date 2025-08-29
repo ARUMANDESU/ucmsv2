@@ -21,3 +21,17 @@ type StaffRegistered struct {
 func (e *StaffRegistered) GetStreamName() string {
 	return StaffEventStreamName
 }
+
+type InitialStaffCreated struct {
+	event.Header
+	StaffID       ID
+	StaffBarcode  Barcode
+	StaffUsername string
+	FirstName     string
+	LastName      string
+	Email         string
+}
+
+func (e *InitialStaffCreated) GetStreamName() string {
+	return StaffEventStreamName
+}

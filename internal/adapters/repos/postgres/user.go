@@ -14,6 +14,10 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
+const insertUserQuery = `
+    INSERT INTO users (id, barcode, username, role_id, email, first_name, last_name, avatar_url, pass_hash, created_at, updated_at)
+    VALUES ($1, $2, $3, (SELECT id FROM global_roles WHERE name = $4), $5, $6, $7, $8, $9, $10, $11);`
+
 type UserRepo struct {
 	tracer trace.Tracer
 	logger *slog.Logger

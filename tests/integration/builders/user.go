@@ -514,3 +514,14 @@ func (b *StaffBuilder) BuildRegisterArgs() user.RegisterStaffArgs {
 		Password:       b.password,
 	}
 }
+
+func (b *StaffBuilder) BuildCreateInitialStaffArgs() user.CreateInitialStaffArgs {
+	return user.CreateInitialStaffArgs{
+		Email:     b.email,
+		Password:  b.password,
+		Barcode:   b.barcode,
+		Username:  b.username,
+		FirstName: b.firstName,
+		LastName:  b.lastName,
+	}
+}

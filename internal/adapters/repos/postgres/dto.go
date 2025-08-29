@@ -26,6 +26,15 @@ type UserDTO struct {
 	UpdatedAt time.Time
 }
 
+type StudentDTO struct {
+	ID      uuid.UUID
+	GroupID uuid.UUID
+}
+
+type StaffDTO struct {
+	ID uuid.UUID
+}
+
 type GlobalRoleDTO struct {
 	ID   int16
 	Name string
