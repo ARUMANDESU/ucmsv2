@@ -12,9 +12,14 @@ import (
 
 // Test emails
 const (
-	ValidStudentEmail  = "student@astanait.edu.kz"
-	ValidStudent2Email = "student2@astanait.edu.kz"
-	ValidStaffEmail    = "staff@astanait.edu.kz"
+	ValidStudentEmail  = "student@test.com"
+	ValidStudent2Email = "student2@test.com"
+	ValidStudent3Email = "student3@test.com"
+	ValidStudent4Email = "student4@test.com"
+	ValidStaffEmail    = "staff@test.com"
+	ValidStaff2Email   = "staff2@test.com"
+	ValidStaff3Email   = "staff3@test.com"
+	ValidStaff4Email   = "staff4@test.com"
 	ValidExternalEmail = "external@gmail.com"
 	InvalidEmail       = "notanemail"
 )
@@ -114,7 +119,7 @@ var (
 		ID:        user.ID(uuid.MustParse("880e8400-e29b-41d4-a716-446655440001")),
 		Barcode:   TestStaff2Barcode,
 		Username:  "teststaff2",
-		Email:     ValidStaffEmail,
+		Email:     ValidStaff2Email,
 		FirstName: "Test2",
 		LastName:  "Staff2",
 		Password:  "StaffPass456!",

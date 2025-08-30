@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/ARUMANDESU/validation"
+	"github.com/ARUMANDESU/validation/is"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/ARUMANDESU/validation"
+	"github.com/ARUMANDESU/validation/is"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
@@ -32,8 +32,7 @@ var (
 
 var (
 	recipientsEmailRules = []validation.Rule{
-		validation.Required,
-		validation.Length(1, MaxEmails),
+		validation.Count(0, MaxEmails),
 		validationx.NoDuplicate,
 		validation.Each(
 			validation.Required,
@@ -149,7 +148,6 @@ func NewStaffInvitation(args CreateArgs) (*StaffInvitation, error) {
 		ValidFrom:         staffInvitation.validFrom,
 		ValidUntil:        staffInvitation.validUntil,
 		CreatorID:         args.CreatorID,
-		CreatedAt:         staffInvitation.createdAt,
 	})
 
 	return staffInvitation, nil
@@ -353,7 +351,6 @@ type Created struct {
 	ValidFrom         *time.Time `json:"valid_from,omitempty"`
 	ValidUntil        *time.Time `json:"valid_until,omitempty"`
 	CreatorID         user.ID    `json:"creator_id"`
-	CreatedAt         time.Time  `json:"created_at"`
 }
 
 func (e *Created) GetStreamName() string {

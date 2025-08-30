@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/ARUMANDESU/validation"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"

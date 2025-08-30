@@ -3,8 +3,8 @@ package user
 import (
 	"time"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/ARUMANDESU/validation"
+	"github.com/ARUMANDESU/validation/is"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/group"

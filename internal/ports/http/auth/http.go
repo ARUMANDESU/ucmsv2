@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ARUMANDESU/validation"
+	"github.com/ARUMANDESU/validation/is"
 	"github.com/go-chi/chi"
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

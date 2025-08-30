@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/ARUMANDESU/validation"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ARUMANDESU/ucms/pkg/validationx"

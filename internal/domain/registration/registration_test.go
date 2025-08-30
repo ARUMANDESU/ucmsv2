@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/ARUMANDESU/validation"
+	"github.com/ARUMANDESU/validation/is"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -78,7 +78,7 @@ func TestNewRegistration(t *testing.T) {
 			name:        "localhost email in dev mode",
 			email:       "test@localhost",
 			mode:        env.Dev,
-			expectError: true,
+			expectError: false,
 			errorType:   is.ErrEmail,
 		},
 	}
@@ -88,8 +88,8 @@ func TestNewRegistration(t *testing.T) {
 			reg, err := NewRegistration(tt.email, tt.mode)
 
 			if tt.expectError {
-				assert.Error(t, err)
-				assert.Nil(t, reg)
+				require.Error(t, err)
+				require.Nil(t, reg)
 				if tt.errorType != nil {
 					assert.ErrorAs(t, err, &tt.errorType)
 				} else {

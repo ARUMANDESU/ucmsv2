@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ARUMANDESU/validation"
 	"github.com/BurntSushi/toml"
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 

@@ -1,5 +1,5 @@
 
-# ---- core (github.com/go-ozzo/ozzo-validation/v4) ----
+# ---- core (github.com/ARUMANDESU/validation) ----
 
 [validation_required]
 other = "cannot be blank"
@@ -70,7 +70,7 @@ other = "must be a valid date"
 [validation_date_out_of_range]
 other = "the date is out of range"
 
-# ---- is (github.com/go-ozzo/ozzo-validation/v4/is) ----
+# ---- is (github.com/ARUMANDESU/validation/is) ----
 
 [validation_is_email]
 other = "must be a valid email address"
