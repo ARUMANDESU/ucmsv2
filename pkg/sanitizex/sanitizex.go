@@ -7,6 +7,8 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+type StringTransformFunc func(string) string
+
 // CleanSingleLine sanitizes a single-line string by normalizing Unicode, trimming whitespace,
 // removing control characters, and collapsing internal whitespace to a single ASCII space.
 // It is suitable for fields that should not contain newlines or tabs, such as names or titles.
@@ -63,4 +65,27 @@ func CleanMultiline(s string) string {
 		lines[i] = strings.TrimSpace(lines[i])
 	}
 	return strings.Join(lines, "\n")
+}
+
+func DeduplicateSlice[T comparable](s []T, transforms ...StringTransformFunc) []T {
+	if len(s) == 0 {
+		return s
+	}
+
+	seen := make(map[T]struct{}, len(s))
+	j := 0
+	for _, v := range s {
+		if str, ok := any(v).(string); ok && len(transforms) > 0 {
+			for _, transform := range transforms {
+				str = transform(str)
+			}
+			v = any(str).(T)
+		}
+		if _, ok := seen[v]; !ok {
+			seen[v] = struct{}{}
+			s[j] = v
+			j++
+		}
+	}
+	return s[:j]
 }

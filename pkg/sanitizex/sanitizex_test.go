@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"unicode"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCleanSingleLine(t *testing.T) {
@@ -258,28 +260,11 @@ func TestCleanMultiline(t *testing.T) {
 	}
 }
 
-// Benchmark tests
-func BenchmarkCleanSingleLine(b *testing.B) {
-	input := "  hello\tworld\nwith\rmixed   whitespace  "
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		CleanSingleLine(input)
-	}
-}
-
-func BenchmarkCleanMultiline(b *testing.B) {
-	input := "  line1  \n  line2\twith\ttabs  \n  line3  "
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		CleanMultiline(input)
-	}
-}
-
 // Edge case tests for very long strings
 func TestCleanSingleLineLongString(t *testing.T) {
 	// Create a very long string with mixed whitespace
 	var builder strings.Builder
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		builder.WriteString("word")
 		if i%10 == 0 {
 			builder.WriteString("   ")
@@ -305,7 +290,7 @@ func TestCleanSingleLineLongString(t *testing.T) {
 func TestCleanMultilineLongString(t *testing.T) {
 	// Create a multiline string with many lines
 	var lines []string
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		lines = append(lines, fmt.Sprintf("  line %d with content  ", i))
 	}
 	input := strings.Join(lines, "\n")
@@ -365,4 +350,489 @@ func TestCleanSingleLineProperties(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeduplicateSlice(t *testing.T) {
+	t.Parallel()
+
+	// Cleaning functions for testing
+	trimSpace := func(s string) string {
+		return strings.TrimSpace(s)
+	}
+
+	toLower := func(s string) string {
+		return strings.ToLower(s)
+	}
+
+	toUpper := func(s string) string {
+		return strings.ToUpper(s)
+	}
+
+	removeSpecial := func(s string) string {
+		s = strings.ReplaceAll(s, "-", "")
+		s = strings.ReplaceAll(s, "_", "")
+		return s
+	}
+
+	// Combined functions for backward compatibility
+	trimLower := func(s string) string {
+		return strings.ToLower(strings.TrimSpace(s))
+	}
+
+	identity := func(s string) string {
+		return s
+	}
+
+	t.Run("string slices with identity function", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			input    []string
+			expected []string
+		}{
+			{
+				name:     "no duplicates",
+				input:    []string{"apple", "banana", "cherry"},
+				expected: []string{"apple", "banana", "cherry"},
+			},
+			{
+				name:     "exact duplicates",
+				input:    []string{"apple", "banana", "apple", "cherry"},
+				expected: []string{"apple", "banana", "cherry"},
+			},
+			{
+				name:     "empty slice",
+				input:    []string{},
+				expected: []string{},
+			},
+			{
+				name:     "single element",
+				input:    []string{"single"},
+				expected: []string{"single"},
+			},
+			{
+				name:     "all same elements",
+				input:    []string{"same", "same", "same"},
+				expected: []string{"same"},
+			},
+			{
+				name:     "empty strings",
+				input:    []string{"", "apple", "", "banana"},
+				expected: []string{"", "apple", "banana"},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result := DeduplicateSlice(tt.input, identity)
+				assert.Equal(t, tt.expected, result)
+			})
+		}
+	})
+
+	t.Run("string slices with trimLower function", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			input    []string
+			expected []string
+		}{
+			{
+				name:     "case insensitive duplicates",
+				input:    []string{"Apple", "BANANA", "apple", "Cherry"},
+				expected: []string{"apple", "banana", "cherry"},
+			},
+			{
+				name:     "whitespace trimming creates duplicates",
+				input:    []string{"  apple  ", "banana", "apple", "  cherry  "},
+				expected: []string{"apple", "banana", "cherry"},
+			},
+			{
+				name:     "mixed case and whitespace",
+				input:    []string{"  APPLE  ", "banana", "  apple  ", "BANANA"},
+				expected: []string{"apple", "banana"},
+			},
+			{
+				name:     "only whitespace differences",
+				input:    []string{"test", "  test  ", "   test   "},
+				expected: []string{"test"},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result := DeduplicateSlice(tt.input, trimLower)
+				assert.Equal(t, tt.expected, result)
+			})
+		}
+	})
+
+	t.Run("integer slices", func(t *testing.T) {
+		intSlice := []int{1, 2, 3, 2, 4}
+		result := DeduplicateSlice(intSlice, identity)
+		expected := []int{1, 2, 3, 4}
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("complex cleaning function", func(t *testing.T) {
+		complexClean := func(s string) string {
+			s = strings.TrimSpace(s)
+			s = strings.ToLower(s)
+			s = strings.ReplaceAll(s, "-", "")
+			s = strings.ReplaceAll(s, "_", "")
+			return s
+		}
+
+		tests := []struct {
+			name     string
+			input    []string
+			expected []string
+		}{
+			{
+				name:     "normalize different formats",
+				input:    []string{"user-name", "user_name", "USERNAME", "  User-Name  "},
+				expected: []string{"username"},
+			},
+			{
+				name:     "mixed separators",
+				input:    []string{"hello-world", "hello_world", "HELLO-WORLD", "helloworld"},
+				expected: []string{"helloworld"},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result := DeduplicateSlice(tt.input, complexClean)
+				assert.Equal(t, tt.expected, result)
+			})
+		}
+	})
+
+	t.Run("edge cases", func(t *testing.T) {
+		t.Run("nil slice", func(t *testing.T) {
+			var nilSlice []string
+			result := DeduplicateSlice(nilSlice, identity)
+			assert.Nil(t, result)
+		})
+
+		t.Run("large slice performance", func(t *testing.T) {
+			largeInput := make([]string, 1000)
+			for i := range 1000 {
+				largeInput[i] = fmt.Sprintf("item%d", i%100)
+			}
+			result := DeduplicateSlice(largeInput, identity)
+			assert.Len(t, result, 100)
+		})
+
+		t.Run("cleaning function returns empty", func(t *testing.T) {
+			alwaysEmpty := func(s string) string {
+				return ""
+			}
+			input := []string{"different", "values", "here"}
+			result := DeduplicateSlice(input, alwaysEmpty)
+			assert.Equal(t, []string{""}, result)
+		})
+
+		t.Run("unicode normalization", func(t *testing.T) {
+			unicodeClean := func(s string) string {
+				return strings.ToLower(strings.TrimSpace(s))
+			}
+			input := []string{"Café", "café", "CAFÉ", "  café  "}
+			result := DeduplicateSlice(input, unicodeClean)
+			assert.Equal(t, []string{"café"}, result)
+		})
+	})
+
+	t.Run("order preservation", func(t *testing.T) {
+		input := []string{"first", "second", "first", "third", "second"}
+		result := DeduplicateSlice(input, identity)
+		expected := []string{"first", "second", "third"}
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("different comparable types", func(t *testing.T) {
+		t.Run("float64 slice", func(t *testing.T) {
+			floatInput := []float64{1.1, 2.2, 1.1, 3.3}
+			floatResult := DeduplicateSlice(floatInput, identity)
+			assert.Equal(t, []float64{1.1, 2.2, 3.3}, floatResult)
+		})
+
+		t.Run("byte slice", func(t *testing.T) {
+			byteInput := []byte{0x1, 0x2, 0x1, 0x3}
+			byteResult := DeduplicateSlice(byteInput, identity)
+			assert.Equal(t, []byte{0x1, 0x2, 0x3}, byteResult)
+		})
+	})
+
+	t.Run("multiple opts - no opts", func(t *testing.T) {
+		input := []string{"  Apple  ", "BANANA", "apple", "Cherry"}
+		result := DeduplicateSlice(input)
+		expected := []string{"  Apple  ", "BANANA", "apple", "Cherry"}
+		assert.Equal(t, expected, result, "No opts should preserve original strings")
+	})
+
+	t.Run("multiple opts - single opt", func(t *testing.T) {
+		input := []string{"  Apple  ", "banana", "  apple  ", "Cherry"}
+		result := DeduplicateSlice(input, trimSpace)
+		expected := []string{"Apple", "banana", "apple", "Cherry"}
+		assert.Equal(t, expected, result, "Single opt should apply trimming")
+	})
+
+	t.Run("multiple opts - chained transformation", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			input    []string
+			opts     []StringTransformFunc
+			expected []string
+		}{
+			{
+				name:     "trim then lowercase",
+				input:    []string{"  APPLE  ", "banana", "  Apple  ", "CHERRY"},
+				opts:     []StringTransformFunc{trimSpace, toLower},
+				expected: []string{"apple", "banana", "cherry"},
+			},
+			{
+				name:     "lowercase then trim",
+				input:    []string{"  APPLE  ", "banana", "  Apple  ", "CHERRY"},
+				opts:     []StringTransformFunc{toLower, trimSpace},
+				expected: []string{"apple", "banana", "cherry"},
+			},
+			{
+				name:     "trim, lowercase, remove special",
+				input:    []string{"  USER-NAME  ", "user_name", "  User-Name  ", "other"},
+				opts:     []StringTransformFunc{trimSpace, toLower, removeSpecial},
+				expected: []string{"username", "other"},
+			},
+			{
+				name:     "uppercase then remove special",
+				input:    []string{"user-name", "USER_NAME", "username", "test-case"},
+				opts:     []StringTransformFunc{toUpper, removeSpecial},
+				expected: []string{"USERNAME", "TESTCASE"},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result := DeduplicateSlice(tt.input, tt.opts...)
+				assert.Equal(t, tt.expected, result)
+			})
+		}
+	})
+
+	t.Run("multiple opts - complex combinations", func(t *testing.T) {
+		// Multiple cleaning functions in different orders
+		addPrefix := func(s string) string {
+			return "clean_" + s
+		}
+
+		removeVowels := func(s string) string {
+			vowels := "aeiouAEIOU"
+			result := s
+			for _, v := range vowels {
+				result = strings.ReplaceAll(result, string(v), "")
+			}
+			return result
+		}
+
+		tests := []struct {
+			name     string
+			input    []string
+			opts     []StringTransformFunc
+			expected []string
+		}{
+			{
+				name:     "prefix then remove vowels",
+				input:    []string{"hello", "world", "hello"},
+				opts:     []StringTransformFunc{addPrefix, removeVowels},
+				expected: []string{"cln_hll", "cln_wrld"},
+			},
+			{
+				name:     "remove vowels then prefix",
+				input:    []string{"hello", "world", "hello"},
+				opts:     []StringTransformFunc{removeVowels, addPrefix},
+				expected: []string{"clean_hll", "clean_wrld"},
+			},
+			{
+				name:     "trim, lowercase, remove special, remove vowels",
+				input:    []string{"  HELLO-WORLD  ", "hello_world", "  Hello-World  "},
+				opts:     []StringTransformFunc{trimSpace, toLower, removeSpecial, removeVowels},
+				expected: []string{"hllwrld"},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result := DeduplicateSlice(tt.input, tt.opts...)
+				assert.Equal(t, tt.expected, result)
+			})
+		}
+	})
+
+	t.Run("multiple opts - edge cases", func(t *testing.T) {
+		t.Run("many opts same function", func(t *testing.T) {
+			input := []string{"  HELLO  ", "hello", "  hello  "}
+			// Apply toLower multiple times (should be idempotent)
+			result := DeduplicateSlice(input, toLower, toLower, toLower, trimSpace)
+			expected := []string{"hello"}
+			assert.Equal(t, expected, result)
+		})
+
+		t.Run("conflicting opts", func(t *testing.T) {
+			input := []string{"hello", "HELLO", "Hello"}
+			// Apply toLower then toUpper (last one wins)
+			result := DeduplicateSlice(input, toLower, toUpper)
+			expected := []string{"HELLO"}
+			assert.Equal(t, expected, result)
+		})
+
+		t.Run("opts that create empty strings", func(t *testing.T) {
+			removeAll := func(s string) string {
+				return ""
+			}
+			input := []string{"hello", "world", "test"}
+			result := DeduplicateSlice(input, removeAll)
+			expected := []string{""}
+			assert.Equal(t, expected, result)
+		})
+
+		t.Run("opts with nil function behavior", func(t *testing.T) {
+			input := []string{"hello", "world", "hello"}
+			// Test with empty opts slice
+			result := DeduplicateSlice(input)
+			expected := []string{"hello", "world"}
+			assert.Equal(t, expected, result)
+		})
+	})
+
+	t.Run("multiple opts - performance with large slices", func(t *testing.T) {
+		largeInput := make([]string, 1000)
+		for i := range 1000 {
+			largeInput[i] = fmt.Sprintf("  ITEM-%d  ", i%50) // 50 unique items, 20 copies each
+		}
+
+		result := DeduplicateSlice(largeInput, trimSpace, toLower, removeSpecial)
+		assert.Len(t, result, 50, "Should have 50 unique cleaned items")
+
+		// Verify all results are properly cleaned
+		for _, item := range result {
+			assert.Equal(t, strings.TrimSpace(item), item, "Should be trimmed")
+			assert.Equal(t, strings.ToLower(item), item, "Should be lowercase")
+			assert.NotContains(t, item, "-", "Should not contain special chars")
+		}
+	})
+
+	t.Run("multiple opts - unicode handling", func(t *testing.T) {
+		normalizeUnicode := func(s string) string {
+			return strings.ToLower(s)
+		}
+
+		input := []string{"Café", "CAFÉ", "café", "Naïve", "NAÏVE"}
+		result := DeduplicateSlice(input, trimSpace, normalizeUnicode)
+		expected := []string{"café", "naïve"}
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("multiple opts - numeric types ignore opts", func(t *testing.T) {
+		// Integer slices should work regardless of StringTransformFunc opts
+		intInput := []int{1, 2, 3, 2, 4, 1}
+		intResult := DeduplicateSlice(intInput, trimSpace, toLower, toUpper)
+		expected := []int{1, 2, 3, 4}
+		assert.Equal(t, expected, intResult, "Numeric types should ignore string transform opts")
+
+		floatInput := []float64{1.1, 2.2, 1.1, 3.3}
+		floatResult := DeduplicateSlice(floatInput, trimSpace, removeSpecial)
+		expectedFloat := []float64{1.1, 2.2, 3.3}
+		assert.Equal(t, expectedFloat, floatResult, "Float types should ignore string transform opts")
+	})
+}
+
+// Benchmark tests
+func BenchmarkCleanSingleLine(b *testing.B) {
+	input := "  hello\tworld\nwith\rmixed   whitespace  "
+	for b.Loop() {
+		CleanSingleLine(input)
+	}
+}
+
+func BenchmarkCleanMultiline(b *testing.B) {
+	input := "  line1  \n  line2\twith\ttabs  \n  line3  "
+	for b.Loop() {
+		CleanMultiline(input)
+	}
+}
+
+func BenchmarkDeduplicateSlice(b *testing.B) {
+	trimSpace := func(s string) string {
+		return strings.TrimSpace(s)
+	}
+
+	toLower := func(s string) string {
+		return strings.ToLower(s)
+	}
+
+	b.Run("string slice no opts", func(b *testing.B) {
+		input := []string{"apple", "banana", "cherry", "apple", "date", "banana"}
+		b.ResetTimer()
+		for b.Loop() {
+			DeduplicateSlice(input)
+		}
+	})
+
+	b.Run("string slice single opt", func(b *testing.B) {
+		input := []string{"  apple  ", "banana", "  cherry  ", "apple", "  date  "}
+		b.ResetTimer()
+		for b.Loop() {
+			DeduplicateSlice(input, trimSpace)
+		}
+	})
+
+	b.Run("string slice multiple opts", func(b *testing.B) {
+		input := []string{"  APPLE  ", "banana", "  Cherry  ", "APPLE", "  DATE  "}
+		b.ResetTimer()
+		for b.Loop() {
+			DeduplicateSlice(input, trimSpace, toLower)
+		}
+	})
+
+	b.Run("large string slice no opts", func(b *testing.B) {
+		input := make([]string, 10000)
+		for i := range input {
+			input[i] = fmt.Sprintf("item%d", i%1000) // 1000 unique items, 10 copies each
+		}
+		b.ResetTimer()
+		for b.Loop() {
+			DeduplicateSlice(input)
+		}
+	})
+
+	b.Run("large string slice with opts", func(b *testing.B) {
+		input := make([]string, 10000)
+		for i := range input {
+			input[i] = fmt.Sprintf("  ITEM-%d  ", i%1000)
+		}
+		b.ResetTimer()
+		for b.Loop() {
+			DeduplicateSlice(input, trimSpace, toLower)
+		}
+	})
+
+	b.Run("int slice", func(b *testing.B) {
+		input := make([]int, 10000)
+		for i := range input {
+			input[i] = i % 1000
+		}
+		b.ResetTimer()
+		for b.Loop() {
+			DeduplicateSlice(input)
+		}
+	})
+
+	b.Run("worst case many duplicates", func(b *testing.B) {
+		input := make([]string, 10000)
+		for i := range input {
+			input[i] = "same"
+		}
+		b.ResetTimer()
+		for b.Loop() {
+			DeduplicateSlice(input)
+		}
+	})
 }

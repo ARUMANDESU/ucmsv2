@@ -2,6 +2,7 @@ package validationx
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -76,6 +77,42 @@ var IsUsername = validation.By(func(value any) error {
 
 	if strings.Contains(s, "..") || strings.Contains(s, "__") || strings.Contains(s, "._") || strings.Contains(s, "_.") {
 		return ErrInvalidUsernameFormat
+	}
+
+	return nil
+})
+
+// NoDuplicate checks that a slice of strings has no duplicate entries.
+// types: slice or array of strings, int, uint, float64, slice of bytes
+var NoDuplicate = validation.By(func(value any) error {
+	value, isNil := validation.Indirect(value)
+	if isNil {
+		return nil
+	}
+
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Array, reflect.Slice:
+		elemKind := v.Type().Elem().Kind()
+
+		isStringSlice := elemKind == reflect.String
+		// covers int, int8, int16, int32(rune), int64, uint, uint8(byte), uint16, uint32, uint64, float32, float64
+		isNumSlice := elemKind >= reflect.Int && elemKind <= reflect.Float64
+
+		if !isStringSlice && !isNumSlice {
+			return fmt.Errorf("unsupported element type: %s", elemKind)
+		}
+
+		seen := make(map[any]struct{})
+		for i := 0; i < v.Len(); i++ {
+			elem := v.Index(i).Interface()
+			if _, exists := seen[elem]; exists {
+				return errors.New("contains duplicate values")
+			}
+			seen[elem] = struct{}{}
+		}
+	default:
+		return errors.New("value is not a slice or an array")
 	}
 
 	return nil
