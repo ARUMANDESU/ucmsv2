@@ -12,6 +12,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	"github.com/ARUMANDESU/ucms/pkg/env"
 )
 
 const PasswordCostFactor = 12 // Future-proofing; default is 10 in 2025.08.18
@@ -244,7 +245,11 @@ func (u *User) UpdatedAt() time.Time {
 }
 
 func NewPasswordHash(password string) ([]byte, error) {
-	passhash, err := bcrypt.GenerateFromPassword([]byte(password), PasswordCostFactor)
+	costFactor := PasswordCostFactor
+	if env.Current() == env.Test {
+		costFactor = bcrypt.MinCost
+	}
+	passhash, err := bcrypt.GenerateFromPassword([]byte(password), costFactor)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate password hash from password: %w", err)
 	}
