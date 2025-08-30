@@ -25,6 +25,7 @@ var (
 		"validation_is_username",
 		"must be between 3 and 30 characters long, start with a letter, and contain only letters, digits, periods, and underscores. Cannot contain consecutive periods or underscores, or period followed by underscore or vice versa",
 	)
+	ErrDuplicate = validation.NewError("validation_no_duplicate", "must not contain duplicate entries")
 )
 
 var (
@@ -107,7 +108,7 @@ var NoDuplicate = validation.By(func(value any) error {
 		for i := 0; i < v.Len(); i++ {
 			elem := v.Index(i).Interface()
 			if _, exists := seen[elem]; exists {
-				return errors.New("contains duplicate values")
+				return ErrDuplicate
 			}
 			seen[elem] = struct{}{}
 		}
@@ -243,6 +244,10 @@ func AssertValidationError(t *testing.T, err error, expected error) {
 
 	var verrs validation.Error
 	if !errors.As(err, &verrs) {
+		if errors.As(err, &validation.Errors{}) {
+			AssertValidationErrors(t, err, expected)
+			return
+		}
 		t.Fatalf("expected error to be of type validation.Error, got %T: %v", err, err)
 	}
 	var expectedVerrs validation.Error
