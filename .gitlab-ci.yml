@@ -12,8 +12,8 @@ stages:
 
 variables:
     SECRET_DETECTION_ENABLED: "true"
-    GO_VERSION: "1.24"
-    GOCILINT_VERSION: "v1.59.3"
+    GO_VERSION: "1.24-alpine"
+    GOLANGCI_LINT_VERSION: "v2.4.0-alpine"
 
 include:
     - template: Security/SAST.gitlab-ci.yml
@@ -21,7 +21,7 @@ include:
 
 lint:
     stage: test
-    image: golangci/golangci-lint:${GOCILINT_VERSION:-v1.59.3}
+    image: golangci/golangci-lint:${GOLANGCI_LINT_VERSION}
     before_script:
         - golangci-lint --version
     script:
