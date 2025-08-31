@@ -52,24 +52,25 @@ func Migrate(dsn string, fs *embed.FS) error {
 	if err != nil {
 		return err
 	}
-	defer func(cause error) {
-		if cause != nil {
-			slog.Error("failed to close migration source", slog.String("error", cause.Error()))
+	defer func() {
+		if cerr := driver.Close(); cerr != nil {
+			slog.Error("failed to close migration driver", slog.String("error", cerr.Error()))
 		}
-	}(driver.Close())
+	}()
 
 	m, err := migrate.NewWithSourceInstance("iofs", driver, dsn)
 	if err != nil {
 		return err
 	}
-	defer func(source, database error) {
+	defer func() {
+		source, database := m.Close()
 		if source != nil {
 			slog.Error("failed to close migration source", slog.String("error", source.Error()))
 		}
 		if database != nil {
 			slog.Error("failed to close migration database", slog.String("error", database.Error()))
 		}
-	}(m.Close())
+	}()
 
 	err = m.Up()
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {

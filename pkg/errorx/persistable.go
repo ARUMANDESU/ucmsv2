@@ -23,5 +23,6 @@ func IsPersistable(err error) bool {
 		return false
 	}
 
-	return errors.Is(err, &Persistable{})
+	var persistable *Persistable
+	return errors.As(err, &persistable)
 }
