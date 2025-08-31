@@ -14,6 +14,7 @@ import (
 	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
 	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
 	studenthttp "github.com/ARUMANDESU/ucms/internal/ports/http/student"
+	"github.com/ARUMANDESU/ucms/pkg/httpx"
 )
 
 type Port struct {
@@ -30,16 +31,20 @@ type Args struct {
 }
 
 func NewPort(args Args) *Port {
+	errorHandler := httpx.NewErrorHandler()
 	return &Port{
 		reg: registrationhttp.NewHTTP(registrationhttp.Args{
-			Command: args.RegistrationCommand,
+			Command:    args.RegistrationCommand,
+			Errhandler: errorHandler,
 		}),
 		auth: authhttp.NewHTTP(authhttp.Args{
 			App:          args.AuthApp,
 			CookieDomain: args.CookieDomain,
+			Errhandler:   errorHandler,
 		}),
 		student: studenthttp.NewHTTP(studenthttp.Args{
-			App: args.StudentApp,
+			App:        args.StudentApp,
+			Errhandler: errorHandler,
 		}),
 	}
 }

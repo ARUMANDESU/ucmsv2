@@ -146,7 +146,7 @@ func TestNewStaffInvitation(t *testing.T) {
 			staffInvitation, err := staffinvitation.NewStaffInvitation(tt.args)
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				t.Logf("got error: %v", err)
+				t.Logf("got err: %v", err)
 				validationx.AssertValidationErrors(t, err, tt.wantErr)
 				assert.Nil(t, staffInvitation)
 			} else {
@@ -291,10 +291,9 @@ func TestStaffInvitation_UpdateRecipientsEmail(t *testing.T) {
 			err := tt.staffInvitation.UpdateRecipients(tt.userID, tt.emails)
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				t.Logf("got error: %v", err)
 				if tt.isValidationErr {
 					// Unwrap the "validation failed:" wrapper to get the actual validation error
-					var unwrappedErr error = err
+					unwrappedErr := err
 					if wrappedErr, ok := err.(interface{ Unwrap() error }); ok {
 						unwrappedErr = wrappedErr.Unwrap()
 					}

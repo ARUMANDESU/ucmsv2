@@ -27,20 +27,23 @@ func NewErrorHandler() *ErrorHandler {
 	bundle := i18n.NewBundle(language.English)
 	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
 
-	// Load translation files
-	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/en.toml")
-	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/kk.toml")
-	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/ru.toml")
+	locales := []string{
+		"locales/en.toml",
+		"locales/kk.toml",
+		"locales/ru.toml",
+		"locales/validation.en.toml",
+		"locales/validation.kk.toml",
+		"locales/validation.ru.toml",
+		"locales/fields.en.toml",
+		"locales/fields.kk.toml",
+		"locales/fields.ru.toml",
+	}
 
-	// Load validation files
-	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/validation.en.toml")
-	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/validation.kk.toml")
-	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/validation.ru.toml")
-
-	// Load fields files
-	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/fields.en.toml")
-	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/fields.kk.toml")
-	bundle.LoadMessageFileFS(ucmsv2.Locales, "locales/fields.ru.toml")
+	for _, locale := range locales {
+		if _, err := bundle.LoadMessageFileFS(ucmsv2.Locales, locale); err != nil {
+			panic(fmt.Sprintf("Failed to load locale file %s: %v", locale, err))
+		}
+	}
 
 	return &ErrorHandler{
 		bundle: bundle,

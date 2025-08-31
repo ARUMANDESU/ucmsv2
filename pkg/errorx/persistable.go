@@ -23,10 +23,5 @@ func IsPersistable(err error) bool {
 		return false
 	}
 
-	var p *Persistable
-	if errors.As(err, &p) {
-		return true
-	}
-
-	return false
+	return errors.Is(err, &Persistable{})
 }

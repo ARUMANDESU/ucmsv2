@@ -65,7 +65,7 @@ func (r *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) er
 	r.dbByEmail[student.User().Email()] = student
 	r.dbByID[student.User().Barcode()] = student
 
-	r.EventRepo.appendEvents(student.GetUncommittedEvents()...)
+	r.appendEvents(student.GetUncommittedEvents()...)
 
 	return nil
 }
@@ -86,7 +86,7 @@ func (r *StudentRepo) SeedStudent(t *testing.T, student *user.Student) {
 
 	r.dbByID[student.User().Barcode()] = student
 	r.dbByEmail[student.User().Email()] = student
-	r.EventRepo.appendEvents(student.GetUncommittedEvents()...)
+	r.appendEvents(student.GetUncommittedEvents()...)
 }
 
 func (r *StudentRepo) RequireStudentByBarcode(t *testing.T, barcode user.Barcode) *user.StudentAssertions {

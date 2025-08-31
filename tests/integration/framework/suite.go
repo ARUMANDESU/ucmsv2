@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -68,8 +67,6 @@ type IntegrationTestSuite struct {
 
 	// Mocks
 	MockMailSender *mocks.MockMailSender
-
-	mu sync.RWMutex
 }
 
 type Application struct {

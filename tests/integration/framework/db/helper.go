@@ -113,8 +113,8 @@ func (h *Helper) CheckUserExists(t *testing.T, email string) bool {
 	t.Helper()
 
 	var exists bool
-	err := h.pool.QueryRow(context.Background(),
-		"SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", email).Scan(&exists)
+	err := h.pool.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", email).Scan(&exists)
+	require.NoError(t, err)
 
 	rows, err := h.pool.Query(t.Context(), "SELECT id, barcode, email, first_name, last_name, role_id FROM users")
 	assert.NoError(t, err)

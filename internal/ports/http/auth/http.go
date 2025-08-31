@@ -45,6 +45,7 @@ type Args struct {
 	Tracer       trace.Tracer
 	Logger       *slog.Logger
 	App          *authapp.App
+	Errhandler   *httpx.ErrorHandler
 	CookieDomain string
 }
 
@@ -63,7 +64,7 @@ func NewHTTP(args Args) *HTTP {
 		tracer:       args.Tracer,
 		logger:       args.Logger,
 		app:          args.App,
-		errhandler:   httpx.NewErrorHandler(),
+		errhandler:   args.Errhandler,
 		cookiedomain: args.CookieDomain,
 	}
 }
@@ -227,8 +228,6 @@ func (h *HTTP) Logout(w http.ResponseWriter, r *http.Request) {
 		h.errhandler.HandleError(w, r, fmt.Errorf("failed to get cookie from request: %w", err))
 		return
 	}
-	fmt.Printf("Access Cookie Value: '%s'\n", accessCookie.Value)
-	fmt.Printf("Access Cookie string: '%s'\n", accessCookie.String())
 	if accessCookie == nil || accessCookie.Value == "" {
 		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no access token found in cookie"))
 		span.RecordError(err)
@@ -237,6 +236,7 @@ func (h *HTTP) Logout(w http.ResponseWriter, r *http.Request) {
 		h.errhandler.HandleError(w, r, err)
 		return
 	}
+
 	refreshCookie, err := r.Cookie(RefreshJWTCookie)
 	if err != nil {
 		span.RecordError(err)
@@ -245,8 +245,6 @@ func (h *HTTP) Logout(w http.ResponseWriter, r *http.Request) {
 		h.errhandler.HandleError(w, r, fmt.Errorf("failed to get cookie from request: %w", err))
 		return
 	}
-	fmt.Printf("Refresh Cookie Value: '%s'\n", refreshCookie.Value)
-	fmt.Printf("Refresh Cookie string: '%s'\n", refreshCookie.String())
 	if refreshCookie == nil || refreshCookie.Value == "" {
 		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no refresh token found in cookie"))
 		span.RecordError(err)

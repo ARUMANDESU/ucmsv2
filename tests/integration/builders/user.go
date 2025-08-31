@@ -236,12 +236,12 @@ func (b *StudentBuilder) WithName(firstName, lastName string) *StudentBuilder {
 }
 
 func (b *StudentBuilder) WithFirstName(firstName string) *StudentBuilder {
-	b.UserBuilder.firstName = firstName
+	b.firstName = firstName
 	return b
 }
 
 func (b *StudentBuilder) WithLastName(lastName string) *StudentBuilder {
-	b.UserBuilder.lastName = lastName
+	b.lastName = lastName
 	return b
 }
 
@@ -256,7 +256,7 @@ func (b *StudentBuilder) WithPassword(password string) *StudentBuilder {
 }
 
 func (b *StudentBuilder) WithPassHash(passHash []byte) *StudentBuilder {
-	b.UserBuilder.withPassHash(passHash)
+	b.withPassHash(passHash)
 	return b
 }
 
@@ -281,22 +281,22 @@ func (b *StudentBuilder) AsAITUSA() *StudentBuilder {
 }
 
 func (b *StudentBuilder) WithInvalidLongFirstName() *StudentBuilder {
-	b.UserBuilder.firstName = fixtures.InvalidLongFirstName
+	b.firstName = fixtures.InvalidLongFirstName
 	return b
 }
 
 func (b *StudentBuilder) WithInvalidShortFirstName() *StudentBuilder {
-	b.UserBuilder.firstName = fixtures.InvalidShortFirstName
+	b.firstName = fixtures.InvalidShortFirstName
 	return b
 }
 
 func (b *StudentBuilder) WithInvalidLongLastName() *StudentBuilder {
-	b.UserBuilder.lastName = fixtures.InvalidLongLastName
+	b.lastName = fixtures.InvalidLongLastName
 	return b
 }
 
 func (b *StudentBuilder) WithInvalidShortLastName() *StudentBuilder {
-	b.UserBuilder.lastName = fixtures.InvalidShortLastName
+	b.lastName = fixtures.InvalidShortLastName
 	return b
 }
 
@@ -321,7 +321,7 @@ func (b *StudentBuilder) Build() *user.Student {
 
 func (b *StudentBuilder) RehydrateStudentArgs() user.RehydrateStudentArgs {
 	return user.RehydrateStudentArgs{
-		RehydrateUserArgs: b.UserBuilder.RehydrateArgs(),
+		RehydrateUserArgs: b.RehydrateArgs(),
 		GroupID:           b.groupID,
 	}
 }
@@ -394,12 +394,12 @@ func (b *StaffBuilder) WithName(firstName, lastName string) *StaffBuilder {
 }
 
 func (b *StaffBuilder) WithFirstName(firstName string) *StaffBuilder {
-	b.UserBuilder.firstName = firstName
+	b.firstName = firstName
 	return b
 }
 
 func (b *StaffBuilder) WithLastName(lastName string) *StaffBuilder {
-	b.UserBuilder.lastName = lastName
+	b.lastName = lastName
 	return b
 }
 
@@ -414,7 +414,7 @@ func (b *StaffBuilder) WithPassword(password string) *StaffBuilder {
 }
 
 func (b *StaffBuilder) WithPassHash(passHash []byte) *StaffBuilder {
-	b.UserBuilder.withPassHash(passHash)
+	b.withPassHash(passHash)
 	return b
 }
 
@@ -439,22 +439,22 @@ func (b *StaffBuilder) AsAITUSA() *StaffBuilder {
 }
 
 func (b *StaffBuilder) WithInvalidLongFirstName() *StaffBuilder {
-	b.UserBuilder.firstName = fixtures.InvalidLongFirstName
+	b.firstName = fixtures.InvalidLongFirstName
 	return b
 }
 
 func (b *StaffBuilder) WithInvalidShortFirstName() *StaffBuilder {
-	b.UserBuilder.firstName = fixtures.InvalidShortFirstName
+	b.firstName = fixtures.InvalidShortFirstName
 	return b
 }
 
 func (b *StaffBuilder) WithInvalidLongLastName() *StaffBuilder {
-	b.UserBuilder.lastName = fixtures.InvalidLongLastName
+	b.lastName = fixtures.InvalidLongLastName
 	return b
 }
 
 func (b *StaffBuilder) WithInvalidShortLastName() *StaffBuilder {
-	b.UserBuilder.lastName = fixtures.InvalidShortLastName
+	b.lastName = fixtures.InvalidShortLastName
 	return b
 }
 
@@ -478,7 +478,7 @@ func (b *StaffBuilder) Build() *user.Staff {
 
 func (b *StaffBuilder) RehydrateStaffArgs() user.RehydrateStaffArgs {
 	return user.RehydrateStaffArgs{
-		RehydrateUserArgs: b.UserBuilder.RehydrateArgs(),
+		RehydrateUserArgs: b.RehydrateArgs(),
 	}
 }
 

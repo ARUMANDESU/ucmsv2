@@ -218,7 +218,7 @@ func BenchmarkValidatePasswordManual(b *testing.B) {
 	password := "BenchmarkTest123!"
 
 	for b.Loop() {
-		PasswordFormatRule{}.Validate(password)
+		_ = PasswordFormatRule{}.Validate(password)
 	}
 }
 

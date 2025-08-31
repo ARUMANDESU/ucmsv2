@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // Import the stdlib driver for pgx
 
-	"github.com/ARUMANDESU/ucms/pkg/ctxs"
 	"github.com/ARUMANDESU/ucms/pkg/env"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
@@ -53,13 +52,25 @@ func Migrate(dsn string, fs *embed.FS) error {
 	if err != nil {
 		return err
 	}
-	defer driver.Close()
+	defer func(cause error) {
+		if cause != nil {
+			slog.Error("failed to close migration source", slog.String("error", cause.Error()))
+		}
+	}(driver.Close())
 
 	m, err := migrate.NewWithSourceInstance("iofs", driver, dsn)
 	if err != nil {
 		return err
 	}
-	defer m.Close()
+	defer func(source, database error) {
+		if source != nil {
+			slog.Error("failed to close migration source", slog.String("error", source.Error()))
+		}
+		if database != nil {
+			slog.Error("failed to close migration database", slog.String("error", database.Error()))
+		}
+	}(m.Close())
+
 	err = m.Up()
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("failed to migrate database: %w", err)
@@ -74,7 +85,7 @@ func WithTx(ctx context.Context, pool *pgxpool.Pool, fn func(ctx context.Context
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	fnerr := fn(ctxs.WithTx(ctx, tx), tx)
+	fnerr := fn(ctx, tx)
 	if fnerr != nil && !errorx.IsPersistable(fnerr) {
 		rollbackerr := tx.Rollback(ctx)
 		if rollbackerr != nil {

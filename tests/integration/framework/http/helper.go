@@ -68,7 +68,7 @@ func (h *Helper) Do(t *testing.T, req Request) *Response {
 	}
 
 	if req.Context != nil {
-		httpReq.WithContext(req.Context)
+		httpReq = httpReq.WithContext(req.Context)
 	}
 
 	w := httptest.NewRecorder()

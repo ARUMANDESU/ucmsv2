@@ -70,6 +70,10 @@ func main() {
 
 	// Set up tracing (in production you'd configure a proper tracing provider)
 	shutdownOTel, err := setupOTelSDK(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "Failed to set up OpenTelemetry SDK", "error", err)
+		os.Exit(1)
+	}
 	defer func() {
 		if shutdownOTel != nil {
 			if err := shutdownOTel(ctx); err != nil {

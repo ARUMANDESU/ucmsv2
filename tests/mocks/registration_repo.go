@@ -60,7 +60,7 @@ func (r *RegistrationRepo) SaveRegistration(ctx context.Context, reg *registrati
 	r.dbbyID[reg.ID()] = reg
 	r.dbbyCode[reg.VerificationCode()] = reg
 
-	r.EventRepo.appendEvents(reg.GetUncommittedEvents()...)
+	r.appendEvents(reg.GetUncommittedEvents()...)
 
 	return nil
 }
@@ -91,7 +91,7 @@ func (r *RegistrationRepo) UpdateRegistration(
 	r.dbbyEmail[reg.Email()] = reg
 	r.dbbyCode[reg.VerificationCode()] = reg
 
-	r.EventRepo.appendEvents(reg.GetUncommittedEvents()...)
+	r.appendEvents(reg.GetUncommittedEvents()...)
 
 	if fnerr != nil && errorx.IsPersistable(fnerr) {
 		return fmt.Errorf("failed to apply update function: %w", fnerr)
@@ -125,7 +125,7 @@ func (r *RegistrationRepo) UpdateRegistrationByEmail(
 	r.dbbyID[reg.ID()] = reg
 	r.dbbyCode[reg.VerificationCode()] = reg
 
-	r.EventRepo.appendEvents(reg.GetUncommittedEvents()...)
+	r.appendEvents(reg.GetUncommittedEvents()...)
 
 	if fnerr != nil && errorx.IsPersistable(fnerr) {
 		return fmt.Errorf("failed to apply update function: %w", fnerr)
@@ -151,7 +151,7 @@ func (r *RegistrationRepo) SeedRegistration(t *testing.T, reg *registration.Regi
 	r.dbbyID[reg.ID()] = reg
 	r.dbbyCode[reg.VerificationCode()] = reg
 
-	r.EventRepo.appendEvents(reg.GetUncommittedEvents()...)
+	r.appendEvents(reg.GetUncommittedEvents()...)
 }
 
 func (r *RegistrationRepo) AssertRegistrationExistsByEmail(t *testing.T, email string) *registration.RegistrationAssertion {

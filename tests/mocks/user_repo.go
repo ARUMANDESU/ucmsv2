@@ -5,7 +5,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
@@ -14,8 +13,8 @@ type UserRepo struct {
 	dbbyID      map[user.ID]*user.User
 	dbbyEmail   map[string]*user.User
 	dbbyBarcode map[user.Barcode]*user.User
-	events      []event.Event
-	mu          sync.Mutex
+	// events      []event.Event
+	mu sync.Mutex
 }
 
 func NewUserRepo() *UserRepo {

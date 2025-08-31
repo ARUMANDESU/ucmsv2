@@ -33,7 +33,7 @@ func NewStudentCompleteSuite(t *testing.T) *StudentCompleteSuite {
 
 	// Seed a group for the test
 	group := builders.NewGroupBuilder().Build()
-	mockGroup.SeedGroup(t.Context(), group)
+	_ = mockGroup.SeedGroup(t.Context(), group)
 
 	handler := NewStudentCompleteHandler(StudentCompleteHandlerArgs{
 		UserGetter:       mockUser,

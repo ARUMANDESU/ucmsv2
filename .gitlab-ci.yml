@@ -7,59 +7,63 @@
 # See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 
 stages:
-  - test
-  - security
+    - test
+    - security
 
 variables:
-  SECRET_DETECTION_ENABLED: 'true'
-  # Go-specific variables
-  GO_VERSION: "1.24"
+    SECRET_DETECTION_ENABLED: "true"
+    GO_VERSION: "1.24"
+    GOCILINT_VERSION: "v1.59.3"
 
 include:
-  - template: Security/SAST.gitlab-ci.yml
-  - template: Security/Secret-Detection.gitlab-ci.yml
+    - template: Security/SAST.gitlab-ci.yml
+    - template: Security/Secret-Detection.gitlab-ci.yml
 
-# Unit tests job
+lint:
+    stage: test
+    image: golangci/golangci-lint:${GOCILINT_VERSION:-v1.59.3}
+    before_script:
+        - golangci-lint --version
+    script:
+        - golangci-lint run ./...
+
 unit_tests:
-  stage: test
-  image: golang:${GO_VERSION}
-  before_script:
-    - go version
-    - go mod download
-  script:
-    - go test -v ./internal/...
-    # - go test -v ./cmd/...
-    - go test -v ./pkg/... || true
-  coverage: '/coverage: \d+\.\d+% of statements/'
-  artifacts:
-    reports:
-      junit: report.xml
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.xml
-    expire_in: 30 days
-  only:
-    - merge_requests
-    - main
-    - develop
+    stage: test
+    image: golang:${GO_VERSION}
+    before_script:
+        - go version
+        - go mod download
+    script:
+        - go test -v ./internal/...
+        # - go test -v ./cmd/...
+        - go test -v ./pkg/... || true
+    coverage: '/coverage: \d+\.\d+% of statements/'
+    artifacts:
+        reports:
+            junit: report.xml
+            coverage_report:
+                coverage_format: cobertura
+                path: coverage.xml
+        expire_in: 30 days
+    only:
+        - merge_requests
+        - main
+        - dev
 
-# Integration tests (optional - uncomment if you want to run them)
-# integration_tests:
-#   stage: test
-#   image: golang:${GO_VERSION}
-#   before_script:
-#     - go version
-#     - go mod download
-#   script:
-#     - go test -v ./tests/... || true  # Allow failure as in your Taskfile
-#   only:
-#     - merge_requests
-#     - main
-#     - develop
+integration_tests:
+    stage: test
+    image: golang:${GO_VERSION}
+    before_script:
+        - go version
+        - go mod download
+    script:
+        - go test -v ./tests/...
+    only:
+        - merge_requests
 
 # Override SAST to use security stage
 sast:
-  stage: security
+    stage: security
 
 secret_detection:
-  stage: security
+    stage: security

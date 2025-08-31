@@ -37,9 +37,10 @@ type HTTP struct {
 }
 
 type Args struct {
-	Tracer  trace.Tracer
-	Logger  *slog.Logger
-	Command *registrationapp.Command
+	Tracer     trace.Tracer
+	Logger     *slog.Logger
+	Command    *registrationapp.Command
+	Errhandler *httpx.ErrorHandler
 }
 
 func NewHTTP(args Args) *HTTP {
@@ -54,7 +55,7 @@ func NewHTTP(args Args) *HTTP {
 		tracer:     args.Tracer,
 		logger:     args.Logger,
 		cmd:        args.Command,
-		errhandler: httpx.NewErrorHandler(),
+		errhandler: args.Errhandler,
 	}
 }
 
