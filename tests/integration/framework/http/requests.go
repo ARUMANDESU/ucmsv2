@@ -67,6 +67,12 @@ func (h *Helper) Refresh(t *testing.T, refreshToken string) *Response {
 		Build())
 }
 
+func (h *Helper) GetVerificationCode(t *testing.T, email string) *Response {
+	return h.Do(t, NewRequest("GET", "/dev/registrations/verification-code/"+email).
+		Build(),
+	)
+}
+
 func (h *Helper) Logout(t *testing.T, accessToken, refreshToken string) *Response {
 	return h.Do(t, NewRequest("POST", "/v1/auth/logout").
 		WithCookies([]string{

@@ -65,6 +65,7 @@ func main() {
 	// Load configuration from environment
 	config := loadConfig()
 
+	env.SetMode(config.Mode)
 	// Set up logging
 	setupLogging(config.LogPath, config.Mode)
 
@@ -298,6 +299,7 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 		UserGetter:   repos.User,
 		GroupGetter:  repos.Group,
 		StudentSaver: repos.Student,
+		PgxPool:      repos.PgxPool,
 	})
 
 	// Mail application
@@ -367,9 +369,9 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 
 	// Set up HTTP ports
 	httpPort := httpport.NewPort(httpport.Args{
-		RegistrationCommand: &apps.Registration.CMD,
-		AuthApp:             apps.Auth,
-		StudentApp:          apps.Student,
+		RegistrationApp: apps.Registration,
+		AuthApp:         apps.Auth,
+		StudentApp:      apps.Student,
 	})
 
 	httpPort.Route(router)

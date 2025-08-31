@@ -24,17 +24,17 @@ type Port struct {
 }
 
 type Args struct {
-	RegistrationCommand *registration.Command
-	AuthApp             *authapp.App
-	StudentApp          *studentapp.App
-	CookieDomain        string
+	RegistrationApp *registration.App
+	AuthApp         *authapp.App
+	StudentApp      *studentapp.App
+	CookieDomain    string
 }
 
 func NewPort(args Args) *Port {
 	errorHandler := httpx.NewErrorHandler()
 	return &Port{
 		reg: registrationhttp.NewHTTP(registrationhttp.Args{
-			Command:    args.RegistrationCommand,
+			App:        args.RegistrationApp,
 			Errhandler: errorHandler,
 		}),
 		auth: authhttp.NewHTTP(authhttp.Args{

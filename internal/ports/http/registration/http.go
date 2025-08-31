@@ -19,6 +19,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/pkg/env"
 	"github.com/ARUMANDESU/ucms/pkg/httpx"
 	"github.com/ARUMANDESU/ucms/pkg/sanitizex"
 	"github.com/ARUMANDESU/ucms/pkg/validationx"
@@ -33,13 +34,14 @@ type HTTP struct {
 	tracer     trace.Tracer
 	logger     *slog.Logger
 	cmd        *registrationapp.Command
+	query      *registrationapp.Query
 	errhandler *httpx.ErrorHandler
 }
 
 type Args struct {
 	Tracer     trace.Tracer
 	Logger     *slog.Logger
-	Command    *registrationapp.Command
+	App        *registrationapp.App
 	Errhandler *httpx.ErrorHandler
 }
 
@@ -54,16 +56,23 @@ func NewHTTP(args Args) *HTTP {
 	return &HTTP{
 		tracer:     args.Tracer,
 		logger:     args.Logger,
-		cmd:        args.Command,
+		cmd:        &args.App.Command,
+		query:      &args.App.Query,
 		errhandler: args.Errhandler,
 	}
 }
 
 func (h *HTTP) Route(r chi.Router) {
-	r.Post("/v1/registrations/verify", h.Verify)
-	r.Post("/v1/registrations/students/start", h.StartStudentRegistration)
-	r.Post("/v1/registrations/students/complete", h.CompleteStudentRegistration)
-	r.Post("/v1/registrations/resend", h.ResendVerificationCode)
+	r.Route("/v1/registrations", func(r chi.Router) {
+		r.Post("/verify", h.Verify)
+		r.Post("/resend", h.ResendVerificationCode)
+		r.Post("/students/start", h.StartStudentRegistration)
+		r.Post("/students/complete", h.CompleteStudentRegistration)
+	})
+
+	if env.Current() == env.Dev || env.Current() == env.Local || env.Current() == env.Test {
+		r.Get("/dev/registrations/verification-code/{email}", h.GetVerificationCode)
+	}
 }
 
 type PostV1RegistrationsResendJSONBody struct {
@@ -271,4 +280,30 @@ func (h *HTTP) ResendVerificationCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.Success(w, r, http.StatusAccepted, nil)
+}
+
+func (h *HTTP) GetVerificationCode(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.tracer.Start(r.Context(), "GetVerificationCode")
+	defer span.End()
+
+	email := chi.URLParam(r, "email")
+	email = sanitizex.CleanSingleLine(email)
+
+	err := validation.Validate(email, validationx.EmailRules...)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to validate email param")
+		h.errhandler.HandleError(w, r, err)
+		return
+	}
+
+	code, err := h.query.GetVerificationCode.Handle(ctx, email)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to get verification code")
+		h.errhandler.HandleError(w, r, err)
+		return
+	}
+
+	httpx.Success(w, r, http.StatusOK, httpx.Envelope{"verification_code": code})
 }

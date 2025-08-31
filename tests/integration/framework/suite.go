@@ -157,6 +157,7 @@ func (s *IntegrationTestSuite) createApplication() {
 		UserGetter:   userRepo,
 		GroupGetter:  groupRepo,
 		StudentSaver: studentRepo,
+		PgxPool:      s.pgPool,
 	})
 	mailApp := mail.NewApp(mail.Args{
 		Tracer:     nil,
@@ -189,10 +190,10 @@ func (s *IntegrationTestSuite) createApplication() {
 
 	s.httpHandler = chi.NewRouter()
 	httpPort := httpport.NewPort(httpport.Args{
-		RegistrationCommand: &regApp.CMD,
-		AuthApp:             authApp,
-		StudentApp:          studentApp,
-		CookieDomain:        "localhost",
+		RegistrationApp: regApp,
+		AuthApp:         authApp,
+		StudentApp:      studentApp,
+		CookieDomain:    "localhost",
 	})
 	httpPort.Route(s.httpHandler)
 }

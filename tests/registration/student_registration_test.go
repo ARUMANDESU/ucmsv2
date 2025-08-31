@@ -925,7 +925,6 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Security
 
 	for _, tt := range tests {
 		s.T().Run(tt.name, func(t *testing.T) {
-			
 			request := registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
 				Email:            fixtures.TestStudent.Email,
 				VerificationCode: "123456",
@@ -1451,4 +1450,30 @@ func (s *RegistrationIntegrationSuite) setupCompletedRegistration(email string) 
 
 func (s *RegistrationIntegrationSuite) getVerificationCode(email string) string {
 	return s.DB.RequireRegistrationExists(s.T(), email).GetVerificationCode()
+}
+
+func (s *RegistrationIntegrationSuite) TestGetVerificationCodeEndpoint() {
+	s.T().Run("Success - Returns verification code for existing registration", func(t *testing.T) {
+		email := "devcode@test.com"
+		s.HTTP.StartStudentRegistration(t, email).RequireAccepted()
+
+		expectedCode := s.getVerificationCode(email)
+
+		response := s.HTTP.GetVerificationCode(t, email)
+		response.RequireStatus(http.StatusOK)
+
+		var respData map[string]interface{}
+		response.ParseJSON(&respData)
+		require.Equal(t, expectedCode, respData["verification_code"])
+	})
+
+	s.T().Run("Invalid email format", func(t *testing.T) {
+		s.HTTP.GetVerificationCode(t, "invalid-email").
+			AssertBadRequest()
+	})
+
+	s.T().Run("Registration not found", func(t *testing.T) {
+		s.HTTP.GetVerificationCode(t, "notfound@test.com").
+			AssertStatus(http.StatusNotFound)
+	})
 }

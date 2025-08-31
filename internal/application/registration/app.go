@@ -1,14 +1,18 @@
 package registration
 
 import (
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/ARUMANDESU/ucms/internal/application/registration/cmd"
 	"github.com/ARUMANDESU/ucms/internal/application/registration/event"
+	"github.com/ARUMANDESU/ucms/internal/application/registration/query"
 	"github.com/ARUMANDESU/ucms/pkg/env"
 )
 
 type App struct {
-	CMD   Command
-	Event Event
+	Command Command
+	Event   Event
+	Query   Query
 }
 
 type Command struct {
@@ -22,17 +26,24 @@ type Event struct {
 	Registration *event.RegistrationCompletedHandler
 }
 
+type Query struct {
+	// GetVerificationCode is query handler that returns verification code for email.
+	// 	This is only for dev and local environments.
+	GetVerificationCode *query.GetVerificationCodeHandler
+}
+
 type Args struct {
 	Mode         env.Mode
 	Repo         cmd.Repo
 	UserGetter   cmd.UserGetter
 	GroupGetter  cmd.GroupGetter
 	StudentSaver cmd.StudentSaver
+	PgxPool      *pgxpool.Pool
 }
 
 func NewApp(args Args) *App {
 	return &App{
-		CMD: Command{
+		Command: Command{
 			StartStudent: cmd.NewStartStudentHandler(cmd.StartStudentHandlerArgs{
 				Mode:       args.Mode,
 				Repo:       args.Repo,
@@ -56,6 +67,9 @@ func NewApp(args Args) *App {
 			Registration: event.NewRegistrationCompletedHandler(event.RegistrationCompletedHandlerArgs{
 				RegRepo: args.Repo,
 			}),
+		},
+		Query: Query{
+			GetVerificationCode: query.NewGetVerificationCodeHandler(args.PgxPool),
 		},
 	}
 }

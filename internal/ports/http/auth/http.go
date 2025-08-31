@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
+	"github.com/ARUMANDESU/ucms/pkg/env"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/httpx"
 	"github.com/ARUMANDESU/ucms/pkg/sanitizex"
@@ -39,6 +40,8 @@ type HTTP struct {
 	app          *authapp.App
 	errhandler   *httpx.ErrorHandler
 	cookiedomain string
+	httpOnly     bool
+	secure       bool
 }
 
 type Args struct {
@@ -50,23 +53,31 @@ type Args struct {
 }
 
 func NewHTTP(args Args) *HTTP {
-	if args.Tracer == nil {
-		args.Tracer = tracer
-	}
-	if args.Logger == nil {
-		args.Logger = logger
-	}
-	if args.CookieDomain == "" {
-		args.CookieDomain = "localhost"
-	}
-
-	return &HTTP{
+	h := &HTTP{
 		tracer:       args.Tracer,
 		logger:       args.Logger,
 		app:          args.App,
 		errhandler:   args.Errhandler,
 		cookiedomain: args.CookieDomain,
+		httpOnly:     true,
+		secure:       true,
 	}
+
+	if h.tracer == nil {
+		h.tracer = tracer
+	}
+	if h.logger == nil {
+		h.logger = logger
+	}
+	if h.errhandler == nil {
+		h.errhandler = httpx.NewErrorHandler()
+	}
+	if env.Current() == env.Local {
+		h.cookiedomain = "localhost"
+		h.secure = false // for local development with http
+	}
+
+	return h
 }
 
 func (h *HTTP) Route(r chi.Router) {
@@ -140,8 +151,8 @@ func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
 		Domain:   h.cookiedomain,
 		Expires:  time.Now().Add(res.AccessTokenExp).UTC(),
 		MaxAge:   int(res.AccessTokenExp.Seconds()),
-		Secure:   true,
-		HttpOnly: true,
+		Secure:   h.secure,
+		HttpOnly: h.httpOnly,
 		SameSite: http.SameSiteStrictMode,
 	})
 	http.SetCookie(w, &http.Cookie{
@@ -151,8 +162,8 @@ func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
 		Domain:   h.cookiedomain,
 		Expires:  time.Now().Add(res.RefreshTokenExp).UTC(),
 		MaxAge:   int(res.RefreshTokenExp.Seconds()),
-		Secure:   true,
-		HttpOnly: true,
+		Secure:   h.secure,
+		HttpOnly: h.httpOnly,
 		SameSite: http.SameSiteStrictMode,
 	})
 
@@ -197,8 +208,8 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 		Domain:   h.cookiedomain,
 		Expires:  time.Now().Add(res.AccessTokenExp).UTC(),
 		MaxAge:   int(res.AccessTokenExp),
-		Secure:   true,
-		HttpOnly: true,
+		Secure:   h.secure,
+		HttpOnly: h.httpOnly,
 		SameSite: http.SameSiteStrictMode,
 	})
 	http.SetCookie(w, &http.Cookie{
@@ -208,8 +219,8 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 		Domain:   h.cookiedomain,
 		Expires:  time.Now().Add(res.RefreshTokenExp).UTC(),
 		MaxAge:   int(res.RefreshTokenExp),
-		Secure:   true,
-		HttpOnly: true,
+		Secure:   h.secure,
+		HttpOnly: h.httpOnly,
 		SameSite: http.SameSiteStrictMode,
 	})
 
@@ -268,15 +279,15 @@ func (h *HTTP) resetCookies(w http.ResponseWriter) {
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
+		HttpOnly: h.httpOnly,
+		Secure:   h.secure,
 	})
 	http.SetCookie(w, &http.Cookie{
 		Name:     RefreshJWTCookie,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
+		HttpOnly: h.httpOnly,
+		Secure:   h.secure,
 	})
 }
