@@ -7,13 +7,13 @@ import (
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/pkg/env"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 var ErrEmailNotAvailable = errorx.NewDuplicateEntry().WithKey("error_email_not_available")
@@ -70,35 +70,30 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 
 	user, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
 	if err != nil && !errorx.IsNotFound(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by email")
+		otelx.RecordSpanError(span, err, "failed to get user by email")
 		return err
 	}
 	if user != nil {
-		span.RecordError(ErrEmailNotAvailable)
-		span.SetStatus(codes.Error, "email already registered")
+		otelx.RecordSpanError(span, ErrEmailNotAvailable, "user already exists with this email")
 		return ErrEmailNotAvailable
 	}
 	span.AddEvent("user not found, proceeding with registration")
 
 	reg, err := h.repo.GetRegistrationByEmail(ctx, cmd.Email)
 	if err != nil && !errorx.IsNotFound(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get registration by email")
+		otelx.RecordSpanError(span, err, "failed to get registration by email")
 		return err
 	}
 	if errorx.IsNotFound(err) {
 		reg, err = registration.NewRegistration(cmd.Email, h.mode)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to create new registration")
+			otelx.RecordSpanError(span, err, "failed to create new registration")
 			return err
 		}
 
 		err = h.repo.SaveRegistration(ctx, reg)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to save registration")
+			otelx.RecordSpanError(span, err, "failed to save new registration")
 			return err
 		}
 		span.AddEvent("registration saved successfully",
@@ -112,8 +107,7 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 	}
 
 	if reg.IsCompleted() {
-		span.RecordError(ErrEmailNotAvailable)
-		span.SetStatus(codes.Error, "registration already completed")
+		otelx.RecordSpanError(span, ErrEmailNotAvailable, "registration already completed with this email")
 		return ErrEmailNotAvailable
 	}
 
@@ -127,8 +121,7 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 		return nil
 	})
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to update registration")
+		otelx.RecordSpanError(span, err, "failed to resend code for existing registration")
 		return err
 	}
 

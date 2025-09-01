@@ -5,13 +5,14 @@ import (
 	"log/slog"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/i18nx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 var (
@@ -77,8 +78,7 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 
 	emailExists, usernameExists, barcodeExists, err := h.usergetter.IsUserExists(ctx, cmd.Email, cmd.Username, cmd.Barcode)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to check if user exists")
+		otelx.RecordSpanError(span, err, "failed to check if user exists")
 		return err
 	}
 	if emailExists || usernameExists || barcodeExists {
@@ -92,32 +92,28 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 		if barcodeExists {
 			errs = append(errs, ErrBarcodeNotAvailable)
 		}
-		span.RecordError(errs)
-		span.SetStatus(codes.Error, "validation error: user already exists")
+		otelx.RecordSpanError(span, errs, "validation error: user already exists")
 		return errs
 	}
 
 	_, err = h.groupgetter.GetGroupByID(ctx, group.ID(cmd.GroupID))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get group by id")
+		otelx.RecordSpanError(span, err, "failed to get group by ID")
 		if errorx.IsNotFound(err) {
-			return errorx.NewResourceNotFound("group").WithCause(err)
+			return errorx.NewResourceNotFound(i18nx.FieldGroup).WithCause(err)
 		}
 		return err
 	}
 
 	reg, err := h.regRepo.GetRegistrationByEmail(ctx, cmd.Email)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get registration by email")
+		otelx.RecordSpanError(span, err, "failed to get registration by email")
 		return err
 	}
 
 	err = reg.CheckCode(cmd.VerificationCode)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to check verification code")
+		otelx.RecordSpanError(span, err, "failed to verify code")
 		return err
 	}
 
@@ -133,15 +129,13 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 		GroupID:        cmd.GroupID,
 	})
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to register student")
+		otelx.RecordSpanError(span, err, "failed to register student")
 		return err
 	}
 
 	err = h.studentSaver.SaveStudent(ctx, student)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to save student")
+		otelx.RecordSpanError(span, err, "failed to save student")
 		return err
 	}
 

@@ -1,4 +1,4 @@
-package otels
+package otelx
 
 import "context"
 

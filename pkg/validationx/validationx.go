@@ -11,21 +11,23 @@ import (
 	"unicode"
 
 	"github.com/ARUMANDESU/validation"
+
+	"github.com/ARUMANDESU/ucms/pkg/i18nx"
 )
 
 var (
 	ErrInvalidPasswordFormat = validation.NewError(
-		"validation_is_password",
+		i18nx.ValidationIsPassword,
 		"must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one digit, and one special character",
 	)
 	ErrInvalidNameFormat = validation.NewError(
-		"validation_is_name",
+		i18nx.ValidationIsName,
 		"must be a valid name containing only letters, spaces, hyphens, apostrophes, and periods")
 	ErrInvalidUsernameFormat = validation.NewError(
-		"validation_is_username",
+		i18nx.ValidationIsUsername,
 		"must be between 3 and 30 characters long, start with a letter, and contain only letters, digits, periods, and underscores. Cannot contain consecutive periods or underscores, or period followed by underscore or vice versa",
 	)
-	ErrDuplicate = validation.NewError("validation_no_duplicate", "must not contain duplicate entries")
+	ErrDuplicate = validation.NewError(i18nx.ValidationNoDuplicate, "must not contain duplicate entries")
 )
 
 var (

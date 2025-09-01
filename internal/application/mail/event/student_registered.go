@@ -8,12 +8,12 @@ import (
 	"github.com/ARUMANDESU/validation"
 	"github.com/ARUMANDESU/validation/is"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 type StudentRegisteredHandler struct {
@@ -68,8 +68,7 @@ func (h *StudentRegisteredHandler) Handle(ctx context.Context, e *user.StudentRe
 
 	err := validation.ValidateStruct(e, validation.Field(&e.Email, validation.Required, is.EmailFormat))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "invalid student registration data")
+		otelx.RecordSpanError(span, err, "invalid student registration data")
 		l.ErrorContext(ctx, "invalid student registration data", "error", err.Error())
 		return err
 	}
@@ -85,8 +84,7 @@ func (h *StudentRegisteredHandler) Handle(ctx context.Context, e *user.StudentRe
 	}
 
 	if err := h.mailsender.SendMail(ctx, payload); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to send registration email")
+		otelx.RecordSpanError(span, err, "failed to send registration email")
 		l.ErrorContext(ctx, "failed to send registration email", slog.Any("error", err))
 		return err
 	}

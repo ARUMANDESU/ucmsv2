@@ -6,18 +6,15 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
-var (
-	ErrOKAlreadyVerified = errorx.NewAlreadyProcessed().WithHTTPCode(http.StatusOK)
-	ErrMissingEmailCode  = errorx.NewValidationFieldFailed("email,code")
-)
+var ErrOKAlreadyVerified = errorx.NewAlreadyProcessed().WithHTTPCode(http.StatusOK)
 
 type Verify struct {
 	Email string
@@ -73,8 +70,7 @@ func (h *VerifyHandler) Handle(ctx context.Context, cmd Verify) error {
 		return nil
 	})
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed update registration")
+		otelx.RecordSpanError(span, err, "failed to update registration by email")
 		return err
 	}
 

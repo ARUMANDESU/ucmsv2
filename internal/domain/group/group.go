@@ -2,21 +2,25 @@ package group
 
 import (
 	"encoding/json"
+	"regexp"
 	"testing"
 	"time"
 
+	"github.com/ARUMANDESU/validation"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
-var (
-	ErrMissingName  = errorx.NewValidationFieldFailed("name")
-	ErrMissingMajor = errorx.NewValidationFieldFailed("major")
-	ErrMissingYear  = errorx.NewValidationFieldFailed("year")
+const (
+	MinNameLength = 2
+	MaxNameLength = 100
+	MinYearLength = 1
+	MaxYearLength = 3
 )
+
+var YearPattern = regexp.MustCompile(`^\d{1,3}$`)
 
 type ID uuid.UUID
 
@@ -57,14 +61,18 @@ type Group struct {
 }
 
 func NewGroup(name, year string, m major.Major) (*Group, error) {
-	if name == "" {
-		return nil, ErrMissingName
+	err := validation.Validate(name, validation.Required, validation.Length(MinNameLength, MaxNameLength))
+	if err != nil {
+		return nil, err
 	}
-	if year == "" {
-		return nil, ErrMissingYear
-	}
-	if m == "" {
-		return nil, ErrMissingMajor
+	err = validation.Validate(
+		year,
+		validation.Required,
+		validation.Length(MinYearLength, MaxYearLength),
+		validation.Match(YearPattern).Error("validation_"),
+	)
+	if err != nil {
+		return nil, err
 	}
 	if !major.IsValid(m) {
 		return nil, major.ErrInvalidMajor

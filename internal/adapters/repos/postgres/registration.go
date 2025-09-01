@@ -3,17 +3,18 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 	"github.com/ARUMANDESU/ucms/pkg/postgres"
 	"github.com/ARUMANDESU/ucms/pkg/watermillx"
 )
@@ -65,8 +66,7 @@ func (r *RegistrationRepo) GetRegistrationByEmail(ctx context.Context, email str
 		&dto.ResendTimeout, &dto.CreatedAt, &dto.UpdatedAt,
 	)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get registration by email")
+		otelx.RecordSpanError(span, err, "failed to get registration by email")
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errorx.NewNotFound().WithCause(err)
 		}
@@ -93,8 +93,7 @@ func (re *RegistrationRepo) GetRegistrationByID(ctx context.Context, id registra
 		&dto.ResendTimeout, &dto.CreatedAt, &dto.UpdatedAt,
 	)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get registration by ID")
+		otelx.RecordSpanError(span, err, "failed to get registration by id")
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errorx.NewNotFound().WithCause(err)
 		}
@@ -123,18 +122,17 @@ func (re *RegistrationRepo) SaveRegistration(ctx context.Context, r *registratio
 			dto.ResendTimeout, dto.CreatedAt, dto.UpdatedAt,
 		)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to save registration")
+			otelx.RecordSpanError(span, err, "failed to insert registration")
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			return errorx.NewNoRowsAffected()
+			otelx.RecordSpanError(span, ErrNoRowsAffected, "no rows affected when inserting registration")
+			return fmt.Errorf("failed to insert registration: %w", ErrNoRowsAffected)
 		}
 
 		if len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, re.wlogger, events...); err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "failed to publish events")
+				otelx.RecordSpanError(span, err, "failed to publish events")
 				return err
 			}
 		}
@@ -150,8 +148,7 @@ func (re *RegistrationRepo) UpdateRegistration(
 	ctx, span := re.tracer.Start(ctx, "RegistrationRepo.UpdateRegistration")
 	defer span.End()
 	if fn == nil {
-		span.RecordError(errors.New("update function cannot be nil"))
-		span.SetStatus(codes.Error, "update function cannot be nil")
+		otelx.RecordSpanError(span, errors.New("update function cannot be nil"), "update function cannot be nil")
 		return errors.New("update function cannot be nil")
 	}
 
@@ -177,8 +174,7 @@ func (re *RegistrationRepo) UpdateRegistration(
 			&dto.ResendTimeout, &dto.CreatedAt, &dto.UpdatedAt,
 		)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to get registration for update")
+			otelx.RecordSpanError(span, err, "failed to get registration for update")
 			if errors.Is(err, pgx.ErrNoRows) {
 				return errorx.NewNotFound().WithCause(err)
 			}
@@ -189,8 +185,7 @@ func (re *RegistrationRepo) UpdateRegistration(
 
 		fnerr := fn(ctx, reg)
 		if fnerr != nil && !errorx.IsPersistable(fnerr) {
-			span.RecordError(fnerr)
-			span.SetStatus(codes.Error, "failed to apply update function")
+			otelx.RecordSpanError(span, fnerr, "failed to apply update function")
 			return fnerr
 		}
 
@@ -202,26 +197,24 @@ func (re *RegistrationRepo) UpdateRegistration(
 			dto.ResendTimeout, dto.UpdatedAt,
 		)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to update registration")
+			otelx.RecordSpanError(span, err, "failed to update registration")
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			return errorx.NewNoRowsAffected()
+			otelx.RecordSpanError(span, ErrNoRowsAffected, "no rows affected when updating registration")
+			return fmt.Errorf("failed to update registration: %w", ErrNoRowsAffected)
 		}
 
 		events := reg.GetUncommittedEvents()
 		if len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, re.wlogger, events...); err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "failed to publish events")
+				otelx.RecordSpanError(span, err, "failed to publish events")
 				return err
 			}
 		}
 
 		if fnerr != nil && errorx.IsPersistable(fnerr) {
-			span.RecordError(fnerr)
-			span.SetStatus(codes.Error, "update function returned an error but is allowed to continue")
+			otelx.RecordSpanError(span, fnerr, "update function returned an error but is allowed to continue")
 			return fnerr
 		}
 		return nil
@@ -236,8 +229,7 @@ func (re *RegistrationRepo) UpdateRegistrationByEmail(
 	ctx, span := re.tracer.Start(ctx, "RegistrationRepo.UpdateRegistrationByEmail")
 	defer span.End()
 	if fn == nil {
-		span.RecordError(errors.New("update function cannot be nil"))
-		span.SetStatus(codes.Error, "update function cannot be nil")
+		otelx.RecordSpanError(span, errors.New("update function cannot be nil"), "update function cannot be nil")
 		return errors.New("update function cannot be nil")
 	}
 
@@ -263,8 +255,7 @@ func (re *RegistrationRepo) UpdateRegistrationByEmail(
 			&dto.ResendTimeout, &dto.CreatedAt, &dto.UpdatedAt,
 		)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to get registration for update")
+			otelx.RecordSpanError(span, err, "failed to get registration for update")
 			if errors.Is(err, pgx.ErrNoRows) {
 				return errorx.NewNotFound().WithCause(err)
 			}
@@ -275,8 +266,7 @@ func (re *RegistrationRepo) UpdateRegistrationByEmail(
 
 		fnerr := fn(ctx, reg)
 		if fnerr != nil && !errorx.IsPersistable(fnerr) {
-			span.RecordError(fnerr)
-			span.SetStatus(codes.Error, "failed to apply update function")
+			otelx.RecordSpanError(span, fnerr, "failed to apply update function")
 			return fnerr
 		}
 
@@ -288,26 +278,23 @@ func (re *RegistrationRepo) UpdateRegistrationByEmail(
 			dto.ResendTimeout, dto.UpdatedAt,
 		)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to update registration")
+			otelx.RecordSpanError(span, err, "failed to update registration")
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			return errorx.NewNoRowsAffected()
+			return fmt.Errorf("failed to update registration: %w", ErrNoRowsAffected)
 		}
 
 		events := reg.GetUncommittedEvents()
 		if len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, re.wlogger, events...); err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "failed to publish events")
+				otelx.RecordSpanError(span, err, "failed to publish events")
 				return err
 			}
 		}
 
 		if fnerr != nil && errorx.IsPersistable(fnerr) {
-			span.RecordError(fnerr)
-			span.SetStatus(codes.Error, "update function returned an error but is allowed to continue")
+			otelx.RecordSpanError(span, fnerr, "update function returned an error but is allowed to continue")
 			return fnerr
 		}
 		return nil

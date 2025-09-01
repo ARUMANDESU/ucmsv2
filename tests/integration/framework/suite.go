@@ -194,6 +194,7 @@ func (s *IntegrationTestSuite) createApplication() {
 		AuthApp:         authApp,
 		StudentApp:      studentApp,
 		CookieDomain:    "localhost",
+		Secret:          []byte(fixtures.AccessTokenSecretKey),
 	})
 	httpPort.Route(s.httpHandler)
 }

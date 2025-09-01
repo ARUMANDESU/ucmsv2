@@ -9,7 +9,14 @@ import (
 	"maps"
 	"net/http"
 	"strings"
+
+	"github.com/go-chi/chi"
+	"github.com/google/uuid"
+
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
+
+var ErrJSONSyntax = errorx.NewInvalidRequest().WithKey("error_json_syntax")
 
 type Envelope map[string]any
 
@@ -28,41 +35,60 @@ func ReadJSON(w http.ResponseWriter, r *http.Request, v any) error {
 		var invalidUnmarshalError *json.InvalidUnmarshalError
 		var maxBytesError *http.MaxBytesError
 
+		malformedErr := errorx.NewMalformedJSON().WithCause(err)
 		switch {
 		case errors.As(err, &syntaxError):
-			return fmt.Errorf("badly-formed JSON (at character %d): %w", syntaxError.Offset, err)
+			_ = malformedErr.WithDetails(fmt.Sprintf("badly-formed JSON (at character %d)", syntaxError.Offset))
 		case errors.Is(err, io.ErrUnexpectedEOF):
-			return fmt.Errorf("body contains badly-formed JSON: %w", err)
+			_ = malformedErr.WithDetails("body contains badly-formed JSON")
 		case errors.As(err, &unmarshalTypeError):
 			if unmarshalTypeError.Field != "" {
-				return fmt.Errorf("body contains invalid JSON (at character %d): %w", unmarshalTypeError.Offset, err)
+				_ = malformedErr.WithDetails(
+					fmt.Sprintf("body contains incorrect JSON type for field %q (at character %d)",
+						unmarshalTypeError.Field,
+						unmarshalTypeError.Offset,
+					),
+				)
+			} else {
+				_ = malformedErr.WithDetails(fmt.Sprintf("body contains incorrect JSON type (at character %d)", unmarshalTypeError.Offset))
 			}
-			return fmt.Errorf("body contains invalid JSON (at character %d): %w", unmarshalTypeError.Offset, err)
 		case errors.Is(err, io.EOF):
-			return fmt.Errorf("body must not be empty: %w", err)
+			_ = malformedErr.WithDetails("body must not be empty")
 		case strings.HasPrefix(err.Error(), "json: unknown field "):
 			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
-			return fmt.Errorf("body contains unknown field %s: %w", fieldName, err)
+			_ = malformedErr.WithDetails(fmt.Sprintf("body contains unknown field %s", fieldName))
 		case errors.As(err, &maxBytesError):
 			if maxBytesError.Limit < 1<<20 { // 1MB
-				return fmt.Errorf("body must not be larger than %d KB: %w", maxBytesError.Limit/1024, err)
+				_ = malformedErr.WithDetails(fmt.Sprintf("body must not be larger than %d KB", maxBytesError.Limit/1024))
+			} else {
+				_ = malformedErr.WithDetails(fmt.Sprintf("body must not be larger than %d MB", maxBytesError.Limit/(1<<20)))
 			}
-			return fmt.Errorf("body must not be larger than %d MB: %w", maxBytesError.Limit/(1<<20), err)
 		case errors.As(err, &invalidUnmarshalError):
-			return fmt.Errorf("body contains invalid JSON: %w", err)
+			_ = malformedErr.WithDetails("body contains invalid JSON")
 		default:
-			return fmt.Errorf("body contains invalid JSON: %w", err)
+			_ = malformedErr.WithDetails("body contains invalid JSON")
 		}
+
+		return malformedErr
 
 	}
 
 	// This is to ensure that the body contains only a single JSON value.
 	err = dec.Decode(&struct{}{})
 	if err != io.EOF {
-		return fmt.Errorf("body must only contain a single JSON value: %w", err)
+		return errorx.NewMalformedJSON().WithDetails("body must only contain a single JSON value").WithCause(err)
 	}
 
 	return nil
+}
+
+func ReadUUIDUrlParam(r *http.Request, param string) (uuid.UUID, error) {
+	idStr := chi.URLParam(r, param)
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return uuid.Nil, errorx.NewInvalidRequest().WithCause(err)
+	}
+	return id, nil
 }
 
 func WriteJSON(w http.ResponseWriter, status int, data Envelope, headers http.Header) error {

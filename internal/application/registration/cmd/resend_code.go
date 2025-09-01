@@ -6,12 +6,12 @@ import (
 	"log/slog"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 type ResendCode struct {
@@ -57,23 +57,21 @@ func (h *ResendCodeHandler) Handle(ctx context.Context, cmd ResendCode) error {
 
 	user, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
 	if err != nil && !errorx.IsNotFound(err) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by email")
+		otelx.RecordSpanError(span, err, "failed to get user by email")
 		return err
 	}
 	if user != nil {
-		span.RecordError(ErrEmailNotAvailable)
-		span.SetStatus(codes.Error, "user already exists with this email")
+		otelx.RecordSpanError(span, ErrEmailNotAvailable, "user already exists with this email")
 		return ErrEmailNotAvailable
 	}
 	span.AddEvent("user not found, proceeding to resend code")
 
 	err = h.repo.UpdateRegistrationByEmail(ctx, cmd.Email, func(ctx context.Context, r *registration.Registration) error {
 		span := trace.SpanFromContext(ctx)
-		span.SetAttributes(
-			attribute.String("registration.id", r.ID().String()),
-			attribute.String("registration.status", r.Status().String()),
-		)
+		otelx.SetSpanAttrs(span, map[string]any{
+			"registration.id":     r.ID().String(),
+			"registration.status": r.Status().String(),
+		})
 		err := r.ResendCode()
 		if err != nil {
 			span.AddEvent("failed to resend code")
@@ -83,8 +81,7 @@ func (h *ResendCodeHandler) Handle(ctx context.Context, cmd ResendCode) error {
 		return nil
 	})
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to update registration")
+		otelx.RecordSpanError(span, err, "failed to update registration by email")
 		return err
 	}
 

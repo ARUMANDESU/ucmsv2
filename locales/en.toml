@@ -5,7 +5,7 @@ other = "Invalid request"
 [validation_failed]
 other = "Validation failed"
 [validation_failed_field]
-other = "Validation failed for field: {{.Field}}"
+other = "Validation failed for field: {{.field}}"
 
 [malformed_json]
 other = "Invalid JSON format"
@@ -28,7 +28,7 @@ other = "Insufficient permissions"
 [not_found]
 other = "Resource not found"
 [not_found_with_type]
-other = "{{.Locale_ResourceType}} not found"
+other = "{{.locale_resource_type}} not found"
 
 [method_not_allowed]
 other = "HTTP method not allowed"
@@ -39,12 +39,12 @@ other = "Resource conflict"
 [duplicate_entry]
 other = "Resource already exists"
 [duplicate_entry_with_field]
-other = "{{.ResourceType}} with this {{.Field}} already exists"
+other = "{{.resource_type}} with this {{.field}} already exists"
 
 [rate_limit_exceeded]
 other = "Too many requests. Please try again later"
 [rate_limit_exceeded_with_time]
-other = "Rate limit exceeded. Try again in {{.RetryAfter}} seconds"
+other = "Rate limit exceeded. Try again in {{.retry_after}} seconds"
 
 # Idempotency
 [idempotency_key_missing]
@@ -126,7 +126,7 @@ other = "At least one email address is required"
 other = "Email address already exists"
 
 [max_emails_exceeded_field]
-other = "Maximum number of emails exceeded (limit: {{.MaxEmails}})"
+other = "Maximum number of emails exceeded (limit: {{.max_emails}})"
 
 # Registration availability errors
 [error_email_not_available]

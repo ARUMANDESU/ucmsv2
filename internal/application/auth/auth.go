@@ -14,12 +14,12 @@ import (
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 const (
@@ -131,8 +131,7 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 		u, err = a.usergetter.GetUserByBarcode(ctx, user.Barcode(cmd.EmailOrBarcode))
 	}
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user")
+		otelx.RecordSpanError(span, err, "failed to get user by email or barcode")
 		if errorx.IsNotFound(err) {
 			return LoginResponse{}, ErrWrongEmailOrBarcodeOrPassword.WithCause(err)
 		}
@@ -141,8 +140,7 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 
 	err = u.ComparePassword(cmd.Password)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to compare password")
+		otelx.RecordSpanError(span, err, "failed to compare user password")
 		return LoginResponse{}, ErrWrongEmailOrBarcodeOrPassword.WithCause(err)
 	}
 
@@ -166,14 +164,12 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 
 	accessjwt, err := accessToken.SignedString(a.accessTokenSecretKey)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to sign access token")
+		otelx.RecordSpanError(span, err, "failed to sign access token")
 		return LoginResponse{}, err
 	}
 	refreshjwt, err := refreshToken.SignedString(a.refreshTokenSecretKey)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to sign refresh token")
+		otelx.RecordSpanError(span, err, "failed to sign refresh token")
 		return LoginResponse{}, err
 	}
 
@@ -205,55 +201,47 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 		return a.refreshTokenSecretKey, nil
 	}, jwt.WithValidMethods([]string{a.signingMethod.Alg()}))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to parse refresh jwt token")
+		otelx.RecordSpanError(span, err, "failed to parse refresh token")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 
 	refreshClaims, ok := refreshToken.Claims.(jwt.MapClaims)
 	if !ok {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to parse refresh token claims")
+		otelx.RecordSpanError(span, err, "invalid refresh token claims type")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 	if refreshClaims["iss"] != "ucmsv2_auth" || refreshClaims["sub"] != "refresh" {
 		err = errors.New("invalid refresh token issuer or subject")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "invalid refresh token claims")
+		otelx.RecordSpanError(span, err, "invalid refresh token claims")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 	expUnix, ok := refreshClaims["exp"].(float64)
 	if !ok {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "invalid refresh token expiration")
+		otelx.RecordSpanError(span, err, "invalid refresh token exp claim type")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 	exp := time.Unix(int64(expUnix), 0)
 	if exp.Before(time.Now().UTC()) {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "refresh token expired")
+		otelx.RecordSpanError(span, err, "refresh token is expired")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 	uid, ok := refreshClaims["uid"].(string)
 	if !ok {
 		err := errors.New("missing or invalid user id in refresh token claims")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "invalid refresh token user id")
+		otelx.RecordSpanError(span, err, "invalid refresh token uid claim type")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 	span.SetAttributes(attribute.String("uid", uid))
 
 	userID, err := uuid.Parse(uid)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "invalid user id in refresh token claims")
+		otelx.RecordSpanError(span, err, "invalid user id format in refresh token claims")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
 
 	u, err := a.usergetter.GetUserByID(ctx, user.ID(userID))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by id")
+		otelx.RecordSpanError(span, err, "failed to get user by id from refresh token claims")
 		return LoginResponse{}, errorx.NewInternalError().WithCause(err)
 	}
 
@@ -268,8 +256,7 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 
 	accessjwt, err := accessToken.SignedString(a.accessTokenSecretKey)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to sign access token")
+		otelx.RecordSpanError(span, err, "failed to sign access token")
 		return LoginResponse{}, errorx.NewInternalError().WithCause(err)
 	}
 

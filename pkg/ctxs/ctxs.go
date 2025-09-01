@@ -2,9 +2,19 @@ package ctxs
 
 import (
 	"context"
+	"errors"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
+)
+
+var (
+	ErrNotFoundInContext    = errors.New("not found in context")
+	ErrInvalidTypeInContext = errors.New("invalid type in context")
 )
 
 type contextKey string
@@ -22,12 +32,25 @@ func WithUser(ctx context.Context, user *User) context.Context {
 	return context.WithValue(ctx, UserKey, user)
 }
 
-func UserFromCtx(ctx context.Context) (*User, bool) {
+func UserFromCtx(ctx context.Context) (*User, error) {
 	val := ctx.Value(UserKey)
 	if val == nil {
-		return nil, false
+		return nil, errorx.NewInternalError().WithCause(ErrNotFoundInContext)
 	}
 
 	user, ok := val.(*User)
-	return user, ok
+	if !ok {
+		return nil, errorx.NewInternalError().WithCause(ErrInvalidTypeInContext)
+	}
+	return user, nil
+}
+
+func (u User) SetSpanAttrs(span trace.Span) {
+	if span == nil {
+		return
+	}
+	span.SetAttributes(
+		attribute.String("user.id", u.ID.String()),
+		attribute.String("user.role", u.Role.String()),
+	)
 }

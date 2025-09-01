@@ -1,5 +1,10 @@
 package errorx
 
+import (
+	"errors"
+	"net/http"
+)
+
 type Code string
 
 func (c Code) String() string {
@@ -7,11 +12,6 @@ func (c Code) String() string {
 }
 
 const (
-	// Success codes
-	CodeSuccess Code = "SUCCESS"
-	CodeCreated Code = "RESOURCE_CREATED"
-	CodeDeleted Code = "RESOURCE_DELETED"
-
 	// Client errors (4xx)
 	CodeInvalid            Code = "INVALID"
 	CodeValidationFailed   Code = "VALIDATION_FAILED"
@@ -20,9 +20,7 @@ const (
 	CodeInvalidCredentials Code = "INVALID_CREDENTIALS"
 	CodeTokenExpired       Code = "TOKEN_EXPIRED"
 	CodeForbidden          Code = "FORBIDDEN"
-	CodeAccessDenied       Code = "ACCESS_DENIED"
 	CodeNotFound           Code = "NOT_FOUND"
-	CodeMethodNotAllowed   Code = "METHOD_NOT_ALLOWED"
 	CodeConflict           Code = "CONFLICT"
 	CodeDuplicateEntry     Code = "DUPLICATE_ENTRY"
 	CodeRateLimitExceeded  Code = "RATE_LIMIT_EXCEEDED"
@@ -32,10 +30,6 @@ const (
 	CodeIdempotencyKeyMismatch   Code = "IDEMPOTENCY_KEY_PAYLOAD_MISMATCH"
 	CodeIdempotencyKeyInProgress Code = "IDEMPOTENCY_KEY_IN_PROGRESS"
 
-	// Password validation
-	CodePasswordTooWeak       Code = "PASSWORD_TOO_WEAK"
-	CodePasswordFormatInvalid Code = "PASSWORD_FORMAT_INVALID"
-
 	// Business logic
 	CodeAlreadyProcessed        Code = "ALREADY_PROCESSED"
 	CodeBusinessRuleViolation   Code = "BUSINESS_RULE_VIOLATION"
@@ -44,7 +38,56 @@ const (
 	// Server errors (5xx)
 	CodeInternal           Code = "INTERNAL_ERROR"
 	CodeServiceUnavailable Code = "SERVICE_UNAVAILABLE"
-	CodeUpstreamError      Code = "UPSTREAM_SERVICE_ERROR"
-	CodeUpstreamTimeout    Code = "UPSTREAM_TIMEOUT"
-	CodeMaintenanceMode    Code = "MAINTENANCE_MODE"
 )
+
+func HTTPStatusCode(code Code) int {
+	switch code {
+	case CodeInvalid, CodeValidationFailed, CodeMalformedJSON, CodeIdempotencyKeyMissing:
+		return http.StatusBadRequest
+	case CodeUnauthorized, CodeInvalidCredentials, CodeTokenExpired:
+		return http.StatusUnauthorized
+	case CodeForbidden, CodeInsufficientPermissions:
+		return http.StatusForbidden
+	case CodeNotFound:
+		return http.StatusNotFound
+	case CodeConflict, CodeAlreadyProcessed, CodeIdempotencyKeyInProgress:
+		return http.StatusConflict
+	case CodeDuplicateEntry:
+		return http.StatusConflict
+	case CodeBusinessRuleViolation, CodeIdempotencyKeyMismatch:
+		return http.StatusUnprocessableEntity
+	case CodeRateLimitExceeded:
+		return http.StatusTooManyRequests
+	case CodeServiceUnavailable:
+		return http.StatusServiceUnavailable
+	case CodeInternal:
+		return http.StatusInternalServerError
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
+func IsCode(err error, code Code) bool {
+	if err == nil {
+		return false
+	}
+
+	var i18nErr *I18nError
+	if errors.As(err, &i18nErr) {
+		return i18nErr.Code == code
+	}
+
+	return false
+}
+
+func IsNotFound(err error) bool {
+	return IsCode(err, CodeNotFound)
+}
+
+func IsConflict(err error) bool {
+	return IsCode(err, CodeConflict)
+}
+
+func IsDuplicateEntry(err error) bool {
+	return IsCode(err, CodeDuplicateEntry)
+}

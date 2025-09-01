@@ -7,11 +7,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 const insertUserQuery = `
@@ -68,8 +68,7 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, err
 			&roleDTO.ID, &roleDTO.Name,
 		)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by id")
+		otelx.RecordSpanError(span, err, "failed to get user by id")
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errorx.NewNotFound().WithCause(err)
 		}
@@ -102,8 +101,7 @@ func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*user.User
 			&roleDTO.ID, &roleDTO.Name,
 		)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by email")
+		otelx.RecordSpanError(span, err, "failed to get user by email")
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errorx.NewNotFound().WithCause(err)
 		}
@@ -136,8 +134,7 @@ func (r *UserRepo) GetUserByBarcode(ctx context.Context, barcode user.Barcode) (
 			&roleDTO.ID, &roleDTO.Name,
 		)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get user by barcode")
+		otelx.RecordSpanError(span, err, "failed to get user by barcode")
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errorx.NewNotFound().WithCause(err)
 		}
@@ -164,8 +161,7 @@ func (r *UserRepo) IsUserExists(
 	err = r.pool.QueryRow(ctx, query, email, username, barcode).
 		Scan(&emailExists, &usernameExists, &barcodeExists)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to check if user exists")
+		otelx.RecordSpanError(span, err, "failed to check if user exists")
 		return false, false, false, err
 	}
 

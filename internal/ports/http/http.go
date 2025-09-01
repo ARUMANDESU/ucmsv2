@@ -12,6 +12,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/application/registration"
 	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
 	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
+	"github.com/ARUMANDESU/ucms/internal/ports/http/middlewares"
 	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
 	studenthttp "github.com/ARUMANDESU/ucms/internal/ports/http/student"
 	"github.com/ARUMANDESU/ucms/pkg/httpx"
@@ -28,10 +29,16 @@ type Args struct {
 	AuthApp         *authapp.App
 	StudentApp      *studentapp.App
 	CookieDomain    string
+	Secret          []byte
 }
 
 func NewPort(args Args) *Port {
 	errorHandler := httpx.NewErrorHandler()
+	m := middlewares.NewMiddleware(middlewares.Args{
+		Secret:     args.Secret,
+		Exp:        authapp.AccessTokenExpDuration,
+		Errhandler: errorHandler,
+	})
 	return &Port{
 		reg: registrationhttp.NewHTTP(registrationhttp.Args{
 			App:        args.RegistrationApp,
@@ -45,6 +52,7 @@ func NewPort(args Args) *Port {
 		student: studenthttp.NewHTTP(studenthttp.Args{
 			App:        args.StudentApp,
 			Errhandler: errorHandler,
+			Middleware: m,
 		}),
 	}
 }

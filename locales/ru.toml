@@ -5,7 +5,7 @@ other = "Некорректный запрос"
 [validation_failed]
 other = "Ошибка валидации"
 [validation_failed_field]
-other = "Ошибка валидации поля: {{.Field}}"
+other = "Ошибка валидации поля: {{.field}}"
 
 [malformed_json]
 other = "Неверный формат JSON"
@@ -28,7 +28,7 @@ other = "Недостаточно прав доступа"
 [not_found]
 other = "Ресурс не найден"
 [not_found_with_type]
-other = "{{.Locale_ResourceType}} не найден"
+other = "{{.locale_resource_type}} не найден"
 
 [method_not_allowed]
 other = "HTTP метод не разрешен"
@@ -39,12 +39,12 @@ other = "Конфликт ресурсов"
 [duplicate_entry]
 other = "Ресурс уже существует"
 [duplicate_entry_with_field]
-other = "{{.ResourceType}} с таким {{.Field}} уже существует"
+other = "{{.resource_type}} с таким {{.field}} уже существует"
 
 [rate_limit_exceeded]
 other = "Слишком много запросов. Попробуйте позже"
 [rate_limit_exceeded_with_time]
-other = "Превышен лимит запросов. Повторите через {{.RetryAfter}} секунд"
+other = "Превышен лимит запросов. Повторите через {{.retry_after}} секунд"
 
 # Idempotency
 [idempotency_key_missing]
@@ -126,7 +126,7 @@ other = "Требуется хотя бы один адрес электронн
 other = "Адрес электронной почты уже существует"
 
 [max_emails_exceeded_field]
-other = "Превышено максимальное количество email адресов (лимит: {{.MaxEmails}})"
+other = "Превышено максимальное количество email адресов (лимит: {{.max_emails}})"
 
 # Registration availability errors
 [error_email_not_available]

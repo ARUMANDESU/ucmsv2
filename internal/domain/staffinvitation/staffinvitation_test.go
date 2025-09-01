@@ -207,6 +207,7 @@ func TestNewStaffInvitation(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, staffInvitation)
 
+				fmt.Println(staffInvitation.Code())
 				assertStaffInvitationFields(t, staffInvitation, tt.args)
 
 				e := event.AssertSingleEvent[*staffinvitation.Created](t, staffInvitation.GetUncommittedEvents())
@@ -249,7 +250,7 @@ func TestStaffInvitation_UpdateRecipientsEmail(t *testing.T) {
 			staffInvitation: builders.NewStaffInvitationBuilder().WithCreatorID(fixtures.TestStaff.ID).Build(),
 			userID:          fixtures.TestStaff2.ID,
 			emails:          []string{fixtures.ValidStaff3Email, fixtures.ValidStaff4Email},
-			wantErr:         staffinvitation.ErrAccessDenied,
+			wantErr:         staffinvitation.ErrForbidden,
 		},
 		{
 			name:            "invalid update with invalid recipient email",
@@ -385,7 +386,7 @@ func TestStaffInvitation_UpdateRecipientsEmail(t *testing.T) {
 				Build(),
 			userID:  fixtures.TestStaff2.ID,
 			emails:  []string{fixtures.ValidStaff3Email, fixtures.ValidStaff4Email},
-			wantErr: staffinvitation.ErrAccessDenied,
+			wantErr: staffinvitation.ErrForbidden,
 		},
 	}
 
@@ -483,7 +484,7 @@ func TestStaffInvitation_UpdateValidity(t *testing.T) {
 			userID:          fixtures.TestStaff2.ID,
 			validFrom:       timePointer(time.Now().Add(1 * time.Minute)),
 			validUntil:      timePointer(time.Now().Add(2 * time.Minute)),
-			wantErr:         staffinvitation.ErrAccessDenied,
+			wantErr:         staffinvitation.ErrForbidden,
 			wantValidFrom:   nil,
 			wantValidUntil:  nil,
 		},
@@ -554,7 +555,7 @@ func TestStaffInvitation_UpdateValidity(t *testing.T) {
 			userID:         fixtures.TestStaff2.ID,
 			validFrom:      timePointer(time.Now().Add(1 * time.Minute)),
 			validUntil:     timePointer(time.Now().Add(2 * time.Minute)),
-			wantErr:        staffinvitation.ErrAccessDenied,
+			wantErr:        staffinvitation.ErrForbidden,
 			wantValidFrom:  nil,
 			wantValidUntil: nil,
 		},
@@ -591,7 +592,7 @@ func TestStaffInvitation_UpdateValidity(t *testing.T) {
 	}
 }
 
-func TestStaffInvitation_Delete(t *testing.T) {
+func TestStaffInvitation_MarkDeleted(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -610,7 +611,7 @@ func TestStaffInvitation_Delete(t *testing.T) {
 			name:            "invalid delete by another staff",
 			staffInvitation: builders.NewStaffInvitationBuilder().WithCreatorID(fixtures.TestStaff.ID).Build(),
 			userID:          fixtures.TestStaff2.ID,
-			wantErr:         staffinvitation.ErrAccessDenied,
+			wantErr:         staffinvitation.ErrForbidden,
 		},
 		{
 			name: "invalid delete when already deleted",
@@ -626,7 +627,7 @@ func TestStaffInvitation_Delete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.staffInvitation.Delete(tt.userID)
+			err := tt.staffInvitation.MarkDeleted(tt.userID)
 			if tt.wantErr != nil {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tt.wantErr)

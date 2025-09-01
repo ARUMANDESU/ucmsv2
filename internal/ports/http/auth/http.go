@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ARUMANDESU/validation"
@@ -12,7 +13,6 @@ import (
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
@@ -87,8 +87,37 @@ func (h *HTTP) Route(r chi.Router) {
 }
 
 type LoginRequest struct {
-	EmailOrBarcode string `json:"email_barcode"`
-	Password       string `json:"password"`
+	EmailOrBarcode     string `json:"email_barcode"`
+	Password           string `json:"password"`
+	isEmail, isBarcode bool   `json:"-"`
+}
+
+func (r *LoginRequest) Sanitized() {
+	r.EmailOrBarcode = sanitizex.CleanSingleLine(r.EmailOrBarcode)
+	r.Password = strings.TrimSpace(r.Password)
+	r.isEmail, r.isBarcode = validationx.IsEmailOrBarcode(r.EmailOrBarcode)
+}
+
+func (r *LoginRequest) SetSpanAttrs(span trace.Span) {
+	if r.isEmail {
+		span.SetAttributes(attribute.String("email", r.EmailOrBarcode))
+	} else if r.isBarcode {
+		span.SetAttributes(attribute.String("barcode", r.EmailOrBarcode))
+	}
+}
+
+func (r *LoginRequest) Validate() error {
+	var validationRules []validation.Rule
+	if r.isEmail {
+		copy(validationRules, validationx.EmailRules)
+	} else if r.isBarcode {
+		validationRules = append(validationRules, validation.Length(0, 80), is.Alphanumeric)
+	}
+
+	return validation.ValidateStruct(r,
+		validation.Field(&r.EmailOrBarcode, validationRules...),
+		validation.Field(&r.Password, validation.Required, validation.Length(0, 100)),
+	)
 }
 
 func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
@@ -99,48 +128,29 @@ func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
 
 	var req LoginRequest
 	if err := httpx.ReadJSON(w, r, &req); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to read json")
-		httpx.BadRequest(w, r, err.Error())
+		h.errhandler.HandleError(w, r, span, err, "failed to read json")
 		return
 	}
 
-	req.EmailOrBarcode = sanitizex.CleanSingleLine(req.EmailOrBarcode)
-
-	isEmail, isBarcode := validationx.IsEmailOrBarcode(req.EmailOrBarcode)
-	if !isEmail && !isBarcode {
-		span.RecordError(authapp.ErrWrongEmailOrBarcodeOrPassword)
-		span.SetStatus(codes.Error, "invalid email or barcode format")
-		h.errhandler.HandleError(w, r, authapp.ErrWrongEmailOrBarcodeOrPassword)
+	req.Sanitized()
+	req.SetSpanAttrs(span)
+	if !req.isEmail && !req.isBarcode {
+		h.errhandler.HandleError(w, r, span, authapp.ErrWrongEmailOrBarcodeOrPassword, "email or barcode is not valid")
 		return
 	}
-	var validationRules []validation.Rule
-	if isEmail {
-		copy(validationRules, validationx.EmailRules)
-	} else if isBarcode {
-		validationRules = append(validationRules, validation.Length(0, 80), is.Alphanumeric)
-	}
-
-	err := validation.ValidateStruct(&req,
-		validation.Field(&req.EmailOrBarcode, validationRules...),
-		validation.Field(&req.Password, validation.Required, validation.Length(0, 100)),
-	)
+	err := req.Validate()
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to validate request body")
-		h.errhandler.HandleError(w, r, err)
+		h.errhandler.HandleError(w, r, span, err, "failed to validate request")
 		return
 	}
 
 	res, err := h.app.LoginHandle(ctx, authapp.Login{
 		EmailOrBarcode: req.EmailOrBarcode,
-		IsEmail:        isEmail,
+		IsEmail:        req.isEmail,
 		Password:       req.Password,
 	})
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to login user")
-		h.errhandler.HandleError(w, r, err)
+		h.errhandler.HandleError(w, r, span, err, "failed to login")
 		return
 	}
 
@@ -176,28 +186,22 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	refreshCookie, err := r.Cookie(RefreshJWTCookie)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get refresh token from cookie")
 		h.resetCookies(w)
-		h.errhandler.HandleError(w, r, fmt.Errorf("failed to get cookie from request: %w", err))
+		h.errhandler.HandleError(w, r, span, err, "failed to get refresh token from cookie")
 		return
 	}
 
 	err = validation.Validate(refreshCookie.Value, validation.Required, validation.Length(1, 1000))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to validate refresh token")
 		h.resetCookies(w)
-		h.errhandler.HandleError(w, r, fmt.Errorf("failed to validate refresh token from cookie: %w", errorx.NewInvalidCredentials().WithCause(err)))
+		h.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err), "invalid refresh token in cookie")
 		return
 	}
 
 	res, err := h.app.RefreshHandle(ctx, authapp.Refresh{RefreshToken: refreshCookie.Value})
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to refresh access token")
 		h.resetCookies(w)
-		h.errhandler.HandleError(w, r, fmt.Errorf("failed refresh token: %w", err))
+		h.errhandler.HandleError(w, r, span, err, "failed to refresh token")
 		return
 	}
 
@@ -230,46 +234,33 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 func (h *HTTP) Logout(w http.ResponseWriter, r *http.Request) {
 	_, span := h.tracer.Start(r.Context(), "Logout")
 	defer span.End()
+	defer h.resetCookies(w)
 
 	accessCookie, err := r.Cookie(AccessJWTCookie)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get access token from cookie")
-		h.resetCookies(w)
-		h.errhandler.HandleError(w, r, fmt.Errorf("failed to get cookie from request: %w", err))
+		h.errhandler.HandleError(w, r, span, err, "failed to get access token from cookie")
 		return
 	}
 	if accessCookie == nil || accessCookie.Value == "" {
 		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no access token found in cookie"))
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "no access token found in cookie")
-		h.resetCookies(w)
-		h.errhandler.HandleError(w, r, err)
+		h.errhandler.HandleError(w, r, span, err, "no access token found in cookie")
 		return
 	}
 
 	refreshCookie, err := r.Cookie(RefreshJWTCookie)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get refresh token from cookie")
-		h.resetCookies(w)
-		h.errhandler.HandleError(w, r, fmt.Errorf("failed to get cookie from request: %w", err))
+		h.errhandler.HandleError(w, r, span, err, "failed to get refresh token from cookie")
 		return
 	}
 	if refreshCookie == nil || refreshCookie.Value == "" {
 		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no refresh token found in cookie"))
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "no refresh token found in cookie")
-		h.resetCookies(w)
-		h.errhandler.HandleError(w, r, err)
+		h.errhandler.HandleError(w, r, span, err, "no refresh token found in cookie")
 		return
 	}
 
-	h.resetCookies(w)
-	span.AddEvent("User logged out", trace.WithAttributes(
-		attribute.String("cookie_domain", h.cookiedomain),
-	))
+	span.AddEvent("User logged out", trace.WithAttributes(attribute.String("cookie_domain", h.cookiedomain)))
 
+	h.resetCookies(w)
 	httpx.Success(w, r, http.StatusOK, nil)
 }
 

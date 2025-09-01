@@ -15,6 +15,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/i18nx"
 	"github.com/ARUMANDESU/ucms/pkg/randcode"
 	"github.com/ARUMANDESU/ucms/pkg/validationx"
 )
@@ -22,13 +23,14 @@ import (
 const EventStreamName = "events_staff_invitation"
 
 const (
-	MaxEmails = 25
+	CodeLength = 20
+	MaxEmails  = 25
 )
 
 var (
-	ErrTimeInPast        = validation.NewError("validation_time_in_past", "the time must be in the future")
-	ErrTimeBeforeStart   = validation.NewError("validation_time_before_start", "the time must be after the start time")
-	ErrAccessDenied      = errorx.NewAccessDenied()
+	ErrTimeInPast        = validation.NewError(i18nx.ValidationTimeInPast, "the time must be in the future")
+	ErrTimeBeforeStart   = validation.NewError(i18nx.ValidationTimeBeforeStart, "the time must be after the start time")
+	ErrForbidden         = errorx.NewForbidden()
 	ErrNotFoundOrDeleted = errorx.NewNotFound().WithKey("not_found_or_deleted")
 	ErrInvalidInvitation = errorx.NewInvalidRequest().WithKey("invalid_invitation")
 )
@@ -127,7 +129,7 @@ func NewStaffInvitation(args CreateArgs) (*StaffInvitation, error) {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	token, err := randcode.GenerateAlphaNumericCode(10)
+	token, err := randcode.GenerateAlphaNumericCode(CodeLength)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate code: %w", err)
 	}
@@ -184,7 +186,7 @@ func Rehydrate(args RehydrateArgs) *StaffInvitation {
 
 func (s *StaffInvitation) UpdateRecipients(userID user.ID, emails []string) error {
 	if s.creatorID != userID {
-		return ErrAccessDenied
+		return ErrForbidden
 	}
 	if s.deletedAt != nil {
 		return ErrNotFoundOrDeleted
@@ -236,7 +238,7 @@ func (s *StaffInvitation) UpdateRecipients(userID user.ID, emails []string) erro
 
 func (s *StaffInvitation) UpdateValidity(userID user.ID, from *time.Time, until *time.Time) error {
 	if s.creatorID != userID {
-		return ErrAccessDenied
+		return ErrForbidden
 	}
 	if s.deletedAt != nil {
 		return ErrNotFoundOrDeleted
@@ -271,9 +273,9 @@ func (s *StaffInvitation) UpdateValidity(userID user.ID, from *time.Time, until 
 	return nil
 }
 
-func (s *StaffInvitation) Delete(userID user.ID) error {
+func (s *StaffInvitation) MarkDeleted(userID user.ID) error {
 	if s.creatorID != userID {
-		return ErrAccessDenied
+		return ErrForbidden
 	}
 	if s.deletedAt != nil {
 		return nil

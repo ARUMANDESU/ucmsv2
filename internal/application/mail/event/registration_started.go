@@ -10,12 +10,12 @@ import (
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 var (
@@ -77,8 +77,7 @@ func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration
 		validation.Field(&e.VerificationCode, validation.Required),
 	)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "validation failed")
+		otelx.RecordSpanError(span, err, "validation failed")
 		l.ErrorContext(ctx, "validation failed", slog.Any("error", err))
 		return err
 	}
@@ -89,8 +88,7 @@ func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration
 		Body:    fmt.Sprintf("Your email verification code is: %s", e.VerificationCode),
 	}
 	if err := h.mailsender.SendMail(ctx, payload); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to send email verification code")
+		otelx.RecordSpanError(span, err, "failed to send email verification code")
 		l.ErrorContext(ctx, "Failed to send email verification code", slog.Any("error", err))
 		return fmt.Errorf("failed to send email verification code: %w", err)
 	}

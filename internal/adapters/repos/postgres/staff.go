@@ -3,16 +3,16 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 	"github.com/ARUMANDESU/ucms/pkg/postgres"
 	"github.com/ARUMANDESU/ucms/pkg/watermillx"
 )
@@ -54,8 +54,7 @@ func (r *StaffRepo) HasAnyStaff(ctx context.Context) (bool, error) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to check if any staff exists")
+		otelx.RecordSpanError(span, err, "failed to check if any staff exists")
 		return false, err
 	}
 	return exists, nil
@@ -81,14 +80,12 @@ func (r *StaffRepo) SaveStaff(ctx context.Context, staff *user.Staff) error {
 			dto.UpdatedAt,
 		)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to insert user")
+			otelx.RecordSpanError(span, err, "failed to insert user")
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			err := errorx.NewNoRowsAffected()
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "no rows affected while inserting user")
+			err := fmt.Errorf("no rows affected while inserting user: %w", ErrNoRowsAffected)
+			otelx.RecordSpanError(span, err, "no rows affected while inserting user")
 			return err
 		}
 
@@ -98,22 +95,19 @@ func (r *StaffRepo) SaveStaff(ctx context.Context, staff *user.Staff) error {
         `
 		res, err = tx.Exec(ctx, insertStaffQuery, dto.ID)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to insert staff")
+			otelx.RecordSpanError(span, err, "failed to insert staff")
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			err := errorx.NewNoRowsAffected()
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "no rows affected while inserting staff")
+			err := fmt.Errorf("no rows affected while inserting staff: %w", ErrNoRowsAffected)
+			otelx.RecordSpanError(span, err, "no rows affected while inserting staff")
 			return err
 		}
 
 		events := staff.GetUncommittedEvents()
 		if len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, r.wlogger, events...); err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "failed to publish events")
+				otelx.RecordSpanError(span, err, "failed to publish events")
 				return err
 			}
 		}

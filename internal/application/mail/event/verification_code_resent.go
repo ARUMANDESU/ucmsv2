@@ -8,12 +8,12 @@ import (
 	"github.com/ARUMANDESU/validation"
 	"github.com/ARUMANDESU/validation/is"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 type VerificationCodeResentHandler struct {
@@ -73,8 +73,7 @@ func (h *VerificationCodeResentHandler) Handle(ctx context.Context, e *registrat
 		validation.Field(&e.Email, validation.Required, is.EmailFormat),
 		validation.Field(&e.VerificationCode, validation.Required))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "invalid verification code resent data")
+		otelx.RecordSpanError(span, err, "invalid verification code resent data")
 		l.ErrorContext(ctx, "invalid verification code resent data", slog.Any("error", err))
 		return err
 	}
@@ -84,8 +83,7 @@ func (h *VerificationCodeResentHandler) Handle(ctx context.Context, e *registrat
 		Subject: "Verification Code Resent",
 		Body:    fmt.Sprintf("Your verification code has been resent: %s", e.VerificationCode),
 	}); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to send verification code resent email")
+		otelx.RecordSpanError(span, err, "failed to send verification code resent email")
 		h.logger.ErrorContext(ctx, "failed to send verification code resent email", slog.Any("error", err))
 		return err
 	}

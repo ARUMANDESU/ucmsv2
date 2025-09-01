@@ -8,11 +8,11 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 type GroupRepo struct {
@@ -65,8 +65,7 @@ func (r *GroupRepo) GetGroupByID(ctx context.Context, groupID group.ID) (*group.
 		&dto.UpdatedAt,
 	)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to get group by ID")
+		otelx.RecordSpanError(span, err, "failed to execute query")
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errorx.NewNotFound().WithCause(err)
 		}

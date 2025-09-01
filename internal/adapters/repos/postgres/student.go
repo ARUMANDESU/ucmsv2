@@ -2,16 +2,16 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 	"github.com/ARUMANDESU/ucms/pkg/postgres"
 	"github.com/ARUMANDESU/ucms/pkg/watermillx"
 )
@@ -62,14 +62,12 @@ func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) e
 			dto.UpdatedAt,
 		)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to insert user")
+			otelx.RecordSpanError(span, err, "failed to insert user")
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			err := errorx.NewNoRowsAffected()
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "no rows affected while inserting user")
+			err := fmt.Errorf("no rows affected while inserting user: %w", ErrNoRowsAffected)
+			otelx.RecordSpanError(span, err, "no rows affected while inserting user")
 			return err
 		}
 
@@ -84,22 +82,19 @@ func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) e
 			dto.UpdatedAt,
 		)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to insert student")
+			otelx.RecordSpanError(span, err, "failed to insert student")
 			return err
 		}
 		if res.RowsAffected() == 0 {
-			err := errorx.NewNoRowsAffected()
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "no rows affected while inserting student")
+			err := fmt.Errorf("no rows affected while inserting student: %w", ErrNoRowsAffected)
+			otelx.RecordSpanError(span, err, "no rows affected while inserting student")
 			return err
 		}
 
 		events := student.GetUncommittedEvents()
 		if len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, st.wlogger, events...); err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "failed to publish events")
+				otelx.RecordSpanError(span, err, "failed to publish events")
 				return err
 			}
 		}

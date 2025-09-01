@@ -19,7 +19,7 @@ func (h *Helper) StartStudentRegistration(t *testing.T, email string) *Response 
 
 func (h *Helper) VerifyRegistrationCode(t *testing.T, email, code string) *Response {
 	return h.Do(t, NewRequest("POST", "/v1/registrations/verify").
-		WithJSON(registrationhttp.PostV1RegistrationsVerifyJSONRequestBody{
+		WithJSON(registrationhttp.VerifyRequest{
 			Email:            email,
 			VerificationCode: code,
 		}).
@@ -27,7 +27,7 @@ func (h *Helper) VerifyRegistrationCode(t *testing.T, email, code string) *Respo
 	)
 }
 
-func (h *Helper) CompleteStudentRegistration(t *testing.T, req registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) *Response {
+func (h *Helper) CompleteStudentRegistration(t *testing.T, req registrationhttp.CompleteStudentRegistrationRequest) *Response {
 	return h.Do(t, NewRequest("POST", "/v1/registrations/students/complete").
 		WithJSON(req).
 		Build(),

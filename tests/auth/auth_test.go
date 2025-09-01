@@ -874,7 +874,7 @@ func (s *AuthIntegrationSuite) TestAuth_AdvancedInjectionVectors() {
 			loginField:      strings.Repeat("A", 10000),
 			password:        fixtures.TestStudent.Password,
 			expectedStatus:  http.StatusBadRequest,
-			expectedMessage: "body must not be larger than 4 KB",
+			expectedMessage: "Invalid request",
 			description:     "Buffer overflow with long input",
 		},
 		{
@@ -1102,7 +1102,7 @@ func (s *AuthIntegrationSuite) TestAuth_PasswordFieldInjections() {
 			name:            "Very Long Password",
 			password:        strings.Repeat("A", 10000),
 			expectedStatus:  http.StatusBadRequest,
-			expectedMessage: "body must not be larger than 4 KB",
+			expectedMessage: "Invalid request",
 		},
 
 		{

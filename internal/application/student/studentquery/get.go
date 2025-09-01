@@ -11,11 +11,11 @@ import (
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 var (
@@ -91,8 +91,7 @@ func (h *GetStudentHandler) Handle(ctx context.Context, query GetStudent) (*GetS
 		&res.RegisteredAt, &res.Role, &res.Group.ID, &res.Group.Major, &res.Group.Name, &res.Group.Year,
 	)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to query student data")
+		otelx.RecordSpanError(span, err, "failed to get student by id")
 		if errors.Is(err, pgx.ErrNoRows) {
 			h.logger.Warn("student not found", "id", query.ID.String())
 			return nil, errorx.NewNotFound().WithCause(err)

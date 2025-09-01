@@ -205,7 +205,6 @@ func (r *Registration) ResendCode() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate new verification code: %w", err)
 	}
-	fmt.Println("Generated new verification code:", code)
 
 	r.verificationCode = code
 	r.codeExpiresAt = time.Now().UTC().Add(10 * time.Minute)

@@ -7,12 +7,12 @@ import (
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 var (
@@ -78,8 +78,7 @@ func (h *RegistrationCompletedHandler) StudentHandle(ctx context.Context, e *use
 		return nil
 	})
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to update registration status to completed")
+		otelx.RecordSpanError(span, err, "failed to update registration status to completed")
 		l.ErrorContext(ctx, "failed to update registration status to completed", slog.String("error", err.Error()))
 		return err
 	}
@@ -114,8 +113,7 @@ func (h *RegistrationCompletedHandler) StaffHandle(ctx context.Context, e *user.
 		return nil
 	})
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to update registration status to completed")
+		otelx.RecordSpanError(span, err, "failed to update registration status to completed")
 		l.ErrorContext(ctx, "failed to update registration status to completed", slog.String("error", err.Error()))
 		return err
 	}

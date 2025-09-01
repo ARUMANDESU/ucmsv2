@@ -52,11 +52,13 @@ type Application struct {
 
 // Config holds all configuration for the application
 type Config struct {
-	Mode         env.Mode
-	Port         string
-	PgDSN        string
-	LogPath      string
-	InitialStaff *user.CreateInitialStaffArgs
+	Mode                  env.Mode
+	Port                  string
+	PgDSN                 string
+	LogPath               string
+	InitialStaff          *user.CreateInitialStaffArgs
+	AccessTokenSecretKey  string
+	RefreshTokenSecretKey string
 }
 
 func main() {
@@ -195,6 +197,8 @@ func loadConfig() *Config {
 	port := getEnvOrDefault("PORT", "8080")
 	pgdsn := getEnvOrDefault("PG_DSN", "postgres://user:password@localhost:8765/ucms?sslmode=disable")
 	logPath := getEnvOrDefault("LOG_PATH", "")
+	accessTokenSecretKey := getEnvOrDefault("ACCESS_TOKEN_SECRET", "default_access_secret")
+	refreshTokenSecretKey := getEnvOrDefault("REFRESH_TOKEN_SECRET", "default_refresh_secret")
 
 	var initialStaff *user.CreateInitialStaffArgs
 	if os.Getenv("INITIAL_STAFF_EMAIL") != "" {
@@ -209,11 +213,13 @@ func loadConfig() *Config {
 	}
 
 	return &Config{
-		Mode:         mode,
-		Port:         port,
-		PgDSN:        pgdsn,
-		LogPath:      logPath,
-		InitialStaff: initialStaff,
+		Mode:                  mode,
+		Port:                  port,
+		PgDSN:                 pgdsn,
+		LogPath:               logPath,
+		InitialStaff:          initialStaff,
+		AccessTokenSecretKey:  accessTokenSecretKey,
+		RefreshTokenSecretKey: refreshTokenSecretKey,
 	}
 }
 
@@ -314,8 +320,8 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 
 	authApp := authapp.NewApp(authapp.Args{
 		UserGetter:              repos.User,
-		AccessTokenSecretKey:    "secret1",
-		RefreshTokenSecretKey:   "secret2",
+		AccessTokenSecretKey:    config.AccessTokenSecretKey,
+		RefreshTokenSecretKey:   config.RefreshTokenSecretKey,
 		AccessTokenlExpDuration: nil,
 		RefreshTokenExpDuration: nil,
 	})
@@ -372,6 +378,7 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 		RegistrationApp: apps.Registration,
 		AuthApp:         apps.Auth,
 		StudentApp:      apps.Student,
+		Secret:          []byte(config.AccessTokenSecretKey),
 	})
 
 	httpPort.Route(router)

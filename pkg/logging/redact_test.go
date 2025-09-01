@@ -83,7 +83,6 @@ func TestRedactEmail(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			result := RedactEmail(tc.email)
@@ -100,4 +99,78 @@ func TestRedactEmail_PreservesDomainSuffix(t *testing.T) {
 
 	// Whatever masking happens to the local part, the domain must be intact
 	assert.True(t, strings.HasSuffix(out, "@sub.example.co.uk"))
+}
+
+func TestRedactUsername(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		username string
+		expected string
+	}{
+		{
+			name:     "empty username",
+			username: "",
+			expected: "",
+		},
+		{
+			name:     "1 rune - unchanged",
+			username: "a",
+			expected: "a",
+		},
+		{
+			name:     "2 runes - unchanged",
+			username: "ab",
+			expected: "ab",
+		},
+		{
+			name:     "3 runes - threshold",
+			username: "abc",
+			expected: "ab****",
+		},
+		{
+			name:     "normal ascii username",
+			username: "john_doe",
+			expected: "jo****",
+		},
+		{
+			name:     "long username",
+			username: "verylongusername123",
+			expected: "ve****",
+		},
+		{
+			name:     "unicode cyrillic",
+			username: "пользователь",
+			expected: "по****",
+		},
+		{
+			name:     "unicode emoji",
+			username: "😀😁😂😃",
+			expected: "😀😁****",
+		},
+		{
+			name:     "mixed unicode and ascii",
+			username: "user_пользователь",
+			expected: "us****",
+		},
+		{
+			name:     "numbers and symbols",
+			username: "user123!@#",
+			expected: "us****",
+		},
+		{
+			name:     "whitespace handling",
+			username: "  user  ",
+			expected: "us****",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result := RedactUsername(tc.username)
+			assert.Equal(t, tc.expected, result, "Redacted username should match expected value")
+		})
+	}
 }

@@ -38,3 +38,25 @@ func RedactEmail(s string) string {
 
 	return prefix + "****@" + domain
 }
+
+// RedactUsername shows first 2 runes of the username and replaces the rest
+// with "****". It leaves the input unchanged if: username is empty or has fewer than 3 runes
+func RedactUsername(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+
+	if utf8.RuneCountInString(s) < 3 {
+		return s
+	}
+
+	offset := 0
+	for count := 0; count < 2 && offset < len(s); count++ {
+		_, size := utf8.DecodeRuneInString(s[offset:])
+		offset += size
+	}
+	prefix := s[:offset]
+
+	return prefix + "****"
+}

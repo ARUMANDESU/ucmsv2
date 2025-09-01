@@ -10,10 +10,12 @@ import (
 	"github.com/ARUMANDESU/validation"
 	"github.com/BurntSushi/toml"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/text/language"
 
 	ucmsv2 "github.com/ARUMANDESU/ucms"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
 type ErrorHandler struct {
@@ -64,7 +66,8 @@ func (h *ErrorHandler) Localizer(lang string) *i18n.Localizer {
 	}
 }
 
-func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, err error) {
+func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, span trace.Span, err error, message string) {
+	otelx.RecordSpanError(span, err, message)
 	slog.ErrorContext(r.Context(), "HTTP error response", "error", err.Error())
 
 	lang := r.Header.Get("Accept-Language")
@@ -72,21 +75,22 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, err e
 
 	var appErrs errorx.I18nErrors
 	if errors.As(err, &appErrs) {
-		writeError(w, r,
-			appErrs.Code(),
-			appErrs.Localize(localizer),
-			appErrs.HTTPStatusCode(),
-		)
+		writeError(w, r, httpErrorResponse{
+			Status:  appErrs.HTTPStatusCode(),
+			Code:    appErrs.Code(),
+			Message: appErrs.Localize(localizer),
+		})
 		return
 	}
 
 	var appErr *errorx.I18nError
 	if errors.As(err, &appErr) {
-		writeError(w, r,
-			appErr.Code,
-			appErr.Localize(localizer),
-			appErr.HTTPStatusCode(),
-		)
+		writeError(w, r, httpErrorResponse{
+			Status:  appErr.HTTPStatusCode(),
+			Code:    appErr.Code,
+			Message: appErr.Localize(localizer),
+			Details: appErr.Details,
+		})
 		return
 	}
 
@@ -108,57 +112,55 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, err e
 				msg.WriteString(fmt.Sprintf("%s: %s; ", field, fieldErr.Error()))
 			}
 		}
-		writeError(w, r,
-			errorx.CodeValidationFailed,
-			msg.String(),
-			http.StatusBadRequest,
-		)
+		writeError(w, r, httpErrorResponse{
+			Status:  http.StatusBadRequest,
+			Code:    errorx.CodeValidationFailed,
+			Message: msg.String(),
+		})
 		return
 	}
 
 	var valErr validation.Error
 	if errors.As(err, &valErr) {
-		writeError(w, r,
-			errorx.CodeValidationFailed,
-			localizer.MustLocalize(&i18n.LocalizeConfig{
+		writeError(w, r, httpErrorResponse{
+			Status: http.StatusBadRequest,
+			Code:   errorx.CodeValidationFailed,
+			Message: localizer.MustLocalize(&i18n.LocalizeConfig{
 				MessageID:    valErr.Code(),
 				TemplateData: valErr.Params(),
 			}),
-			http.StatusBadRequest,
-		)
+		})
 		return
 	}
 
 	slog.ErrorContext(r.Context(), "Unhandled error", "error", err)
 	internalErr := errorx.NewInternalError().WithCause(err)
-	writeError(w, r,
-		internalErr.Code,
-		internalErr.Localize(localizer),
-		internalErr.HTTPStatusCode(),
-	)
+	writeError(w, r, httpErrorResponse{
+		Status:  internalErr.HTTPStatusCode(),
+		Code:    internalErr.Code,
+		Message: internalErr.Localize(localizer),
+	})
 }
 
-func BadRequest(w http.ResponseWriter, r *http.Request, message string) {
-	slog.ErrorContext(r.Context(), "Bad request", "message", message)
-	writeError(w, r,
-		errorx.CodeInvalid,
-		message,
-		http.StatusBadRequest,
-	)
+type httpErrorResponse struct {
+	Status  int         `json:"-"`
+	Success bool        `json:"success"`
+	Code    errorx.Code `json:"code,omitempty"`
+	Message string      `json:"message,omitempty"`
+	Details string      `json:"details,omitempty"`
 }
 
-func writeError(w http.ResponseWriter, r *http.Request,
-	code errorx.Code,
-	message string,
-	status int,
-) {
-	response := map[string]any{
-		"code":    code,
-		"message": message,
-		"success": false,
+func (h *httpErrorResponse) Envelope() map[string]any {
+	return map[string]any{
+		"success": h.Success,
+		"code":    h.Code,
+		"message": h.Message,
+		"details": h.Details,
 	}
+}
 
-	err := WriteJSON(w, status, response, nil)
+func writeError(w http.ResponseWriter, r *http.Request, res httpErrorResponse) {
+	err := WriteJSON(w, res.Status, res.Envelope(), nil)
 	if err != nil {
 		slog.ErrorContext(r.Context(), "Failed to write error response", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
