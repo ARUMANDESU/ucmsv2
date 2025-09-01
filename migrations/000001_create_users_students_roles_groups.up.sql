@@ -20,8 +20,8 @@ create table users (
     avatar_url text not null,
     email text not null unique,
     pass_hash bytea not null,
-    created_at timestamptz not null,
-    updated_at timestamptz not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
     constraint users_role_id_fkey foreign key (role_id) references global_roles(id)
 );
 
@@ -30,15 +30,15 @@ create table groups (
     name text not null,
     year text not null,
     major text not null,
-    created_at timestamptz not null,
-    updated_at timestamptz not null
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
 );
 
 create table students (
     user_id uuid primary key,
     group_id uuid not null,
-    created_at timestamptz not null,
-    updated_at timestamptz not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
     constraint students_user_id_fkey foreign key (user_id) references users(id),
     constraint students_group_id_fkey foreign key (group_id) references groups(id)
 );
@@ -56,6 +56,19 @@ create table registrations (
     code_attempts smallint not null,
     code_expires_at timestamptz not null,
     resend_timeout timestamptz not null,
-    created_at timestamptz not null,
-    updated_at timestamptz not null
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+create table staff_invitations (
+    id uuid primary key,
+    creator_id uuid not null,
+    code text not null unique,
+    recipients_email text[],
+    valid_from timestamptz,
+    valid_until timestamptz,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    deleted_at timestamptz default null,
+    constraint staff_invitations_creator_id_fkey foreign key (creator_id) references users(id)
 );

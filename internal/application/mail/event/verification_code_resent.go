@@ -16,34 +16,7 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
-type VerificationCodeResentHandler struct {
-	tracer     trace.Tracer
-	logger     *slog.Logger
-	mailsender MailSender
-}
-
-type VerificationCodeResentHandlerArgs struct {
-	Tracer     trace.Tracer
-	Logger     *slog.Logger
-	Mailsender MailSender
-}
-
-func NewVerificationCodeResentHandler(args VerificationCodeResentHandlerArgs) *VerificationCodeResentHandler {
-	if args.Tracer == nil {
-		args.Tracer = tracer
-	}
-	if args.Logger == nil {
-		args.Logger = logger
-	}
-
-	return &VerificationCodeResentHandler{
-		tracer:     args.Tracer,
-		logger:     args.Logger,
-		mailsender: args.Mailsender,
-	}
-}
-
-func (h *VerificationCodeResentHandler) Handle(ctx context.Context, e *registration.VerificationCodeResent) error {
+func (h *MailEventHandler) HandleVerificationCodeResent(ctx context.Context, e *registration.VerificationCodeResent) error {
 	if e == nil {
 		return nil
 	}
@@ -54,7 +27,7 @@ func (h *VerificationCodeResentHandler) Handle(ctx context.Context, e *registrat
 	)
 	ctx, span := h.tracer.Start(
 		ctx,
-		"VerificationCodeResentHandler.Handle",
+		"MailEventHandler.HandleVerificationCodeResent",
 		trace.WithNewRoot(),
 		trace.WithLinks(trace.LinkFromContext(e.Extract())),
 		trace.WithAttributes(

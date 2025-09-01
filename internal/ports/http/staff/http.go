@@ -1,4 +1,4 @@
-package staff
+package staffhttp
 
 import (
 	"log/slog"
@@ -16,6 +16,7 @@ import (
 	staffapp "github.com/ARUMANDESU/ucms/internal/application/staff"
 	"github.com/ARUMANDESU/ucms/internal/application/staff/cmd"
 	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
+	"github.com/ARUMANDESU/ucms/internal/ports/http/middlewares"
 	"github.com/ARUMANDESU/ucms/pkg/ctxs"
 	"github.com/ARUMANDESU/ucms/pkg/httpx"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
@@ -38,6 +39,7 @@ type HTTP struct {
 	cmd        *staffapp.Command
 	query      *staffapp.Query
 	errhandler *httpx.ErrorHandler
+	middleware *middlewares.Middleware
 }
 
 type Args struct {
@@ -45,6 +47,7 @@ type Args struct {
 	Logger     *slog.Logger
 	App        *staffapp.App
 	Errhandler *httpx.ErrorHandler
+	Middleware *middlewares.Middleware
 }
 
 func NewHTTP(args Args) *HTTP {
@@ -54,6 +57,7 @@ func NewHTTP(args Args) *HTTP {
 		cmd:        &args.App.Command,
 		query:      &args.App.Query,
 		errhandler: args.Errhandler,
+		middleware: args.Middleware,
 	}
 
 	if h.tracer == nil {
@@ -71,6 +75,8 @@ func NewHTTP(args Args) *HTTP {
 
 func (h *HTTP) Route(r chi.Router) {
 	r.Route("/v1/staffs", func(r chi.Router) {
+		r.Use(h.middleware.Auth, h.middleware.StaffOnly)
+
 		r.Route("/invitations", func(r chi.Router) {
 			r.Post("/", h.CreateInvitation)
 			r.Put("/{invitation_id}/recipients", h.UpdateInvitationRecipients)

@@ -16,47 +16,11 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
-type StudentRegisteredHandler struct {
-	tracer     trace.Tracer
-	logger     *slog.Logger
-	mailsender MailSender
-}
-
-type StudentRegisteredHandlerArgs struct {
-	Tracer     trace.Tracer
-	Logger     *slog.Logger
-	Mailsender MailSender
-}
-
-func NewStudentRegisteredHandler(args StudentRegisteredHandlerArgs) *StudentRegisteredHandler {
-	if args.Tracer == nil {
-		args.Tracer = tracer
-	}
-	if args.Logger == nil {
-		args.Logger = logger
-	}
-
-	return &StudentRegisteredHandler{
-		tracer:     args.Tracer,
-		logger:     args.Logger,
-		mailsender: args.Mailsender,
-	}
-}
-
-func (h *StudentRegisteredHandler) Handle(ctx context.Context, e *user.StudentRegistered) error {
+func (h *MailEventHandler) HandleStudentRegistered(ctx context.Context, e *user.StudentRegistered) error {
 	if e == nil {
 		return nil
 	}
-
-	l := h.logger.With(
-		slog.String("event", "StudentRegistered"),
-		slog.String("student.barcode", e.StudentBarcode.String()),
-		slog.String("student.email", logging.RedactEmail(e.Email)),
-		slog.String("student.group.id", e.GroupID.String()))
-
-	ctx, span := h.tracer.Start(
-		ctx,
-		"StudentRegisteredHandler.Handle",
+	ctx, span := h.tracer.Start(ctx, "MailEventHandler.HandleStudentRegistered",
 		trace.WithNewRoot(),
 		trace.WithLinks(trace.LinkFromContext(e.Extract())),
 		trace.WithAttributes(
@@ -65,6 +29,12 @@ func (h *StudentRegisteredHandler) Handle(ctx context.Context, e *user.StudentRe
 			attribute.String("student.group.id", e.GroupID.String())),
 	)
 	defer span.End()
+
+	l := h.logger.With(
+		slog.String("event", "StudentRegistered"),
+		slog.String("student.barcode", e.StudentBarcode.String()),
+		slog.String("student.email", logging.RedactEmail(e.Email)),
+		slog.String("student.group.id", e.GroupID.String()))
 
 	err := validation.ValidateStruct(e, validation.Field(&e.Email, validation.Required, is.EmailFormat))
 	if err != nil {

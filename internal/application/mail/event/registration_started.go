@@ -7,8 +7,6 @@ import (
 
 	"github.com/ARUMANDESU/validation"
 	"github.com/ARUMANDESU/validation/is"
-	"go.opentelemetry.io/contrib/bridges/otelslog"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
@@ -18,43 +16,7 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
-var (
-	tracer = otel.Tracer("ucms/application/mail/event")
-	logger = otelslog.NewLogger("ucms/application/mail/event")
-)
-
-type MailSender interface {
-	SendMail(ctx context.Context, payload mail.Payload) error
-}
-
-type RegistrationStartedHandler struct {
-	tracer     trace.Tracer
-	logger     *slog.Logger
-	mailsender MailSender
-}
-
-type RegistrationStartedHandlerArgs struct {
-	Tracer     trace.Tracer
-	Logger     *slog.Logger
-	Mailsender MailSender
-}
-
-func NewRegistrationStartedHandler(args RegistrationStartedHandlerArgs) *RegistrationStartedHandler {
-	if args.Tracer == nil {
-		args.Tracer = tracer
-	}
-	if args.Logger == nil {
-		args.Logger = logger
-	}
-
-	return &RegistrationStartedHandler{
-		tracer:     args.Tracer,
-		logger:     args.Logger,
-		mailsender: args.Mailsender,
-	}
-}
-
-func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration.RegistrationStarted) error {
+func (h *MailEventHandler) HandleRegistrationStarted(ctx context.Context, e *registration.RegistrationStarted) error {
 	if e == nil {
 		return nil
 	}
@@ -62,7 +24,7 @@ func (h *RegistrationStartedHandler) Handle(ctx context.Context, e *registration
 	l := h.logger.With(slog.String("event", "RegistrationStarted"), slog.String("registration.id", e.RegistrationID.String()))
 	ctx, span := h.tracer.Start(
 		ctx,
-		"RegistrationStartedHandler.Handle",
+		"MailEventHandler.HandleRegistrationStarted",
 		trace.WithNewRoot(),
 		trace.WithLinks(trace.LinkFromContext(e.Extract())),
 		trace.WithAttributes(

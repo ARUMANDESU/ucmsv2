@@ -12,6 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 )
 
 type Helper struct {
@@ -149,23 +152,20 @@ func (h *Helper) ClearAllEvents(t *testing.T) {
 	t.Helper()
 
 	tables := []string{
-		"watermill_events_registration",
-		"watermill_events_student",
-		"watermill_events_staff",
-	}
-
-	offsetTables := []string{
-		"watermill_offsets_events_registration",
-		"watermill_offsets_events_student",
-		"watermill_offsets_events_staff",
+		registration.EventStreamName,
+		user.StudentEventStreamName,
+		user.StaffEventStreamName,
+		staffinvitation.EventStreamName,
 	}
 
 	for _, table := range tables {
+		table = "watermill_" + table
 		_, err := h.pool.Exec(t.Context(), fmt.Sprintf("TRUNCATE TABLE %s RESTART IDENTITY", table))
 		require.NoError(t, err)
 	}
 
-	for _, table := range offsetTables {
+	for _, table := range tables {
+		table = "watermill_offsets_" + table
 		_, err := h.pool.Exec(t.Context(), `UPDATE `+table+` SET offset_acked = 0, last_processed_transaction_id = '0'::xid8`)
 		require.NoError(t, err)
 	}

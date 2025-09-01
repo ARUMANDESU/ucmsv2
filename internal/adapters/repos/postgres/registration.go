@@ -115,7 +115,6 @@ func (re *RegistrationRepo) SaveRegistration(ctx context.Context, r *registratio
     `
 
 	return postgres.WithTx(ctx, re.pool, func(ctx context.Context, tx pgx.Tx) error {
-		events := r.GetUncommittedEvents()
 		res, err := tx.Exec(ctx, query,
 			dto.ID, dto.Email, dto.Status,
 			dto.VerificationCode, dto.CodeAttempts, dto.CodeExpiresAt,
@@ -130,7 +129,7 @@ func (re *RegistrationRepo) SaveRegistration(ctx context.Context, r *registratio
 			return fmt.Errorf("failed to insert registration: %w", ErrNoRowsAffected)
 		}
 
-		if len(events) > 0 {
+		if events := r.GetUncommittedEvents(); len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, re.wlogger, events...); err != nil {
 				otelx.RecordSpanError(span, err, "failed to publish events")
 				return err
@@ -148,8 +147,8 @@ func (re *RegistrationRepo) UpdateRegistration(
 	ctx, span := re.tracer.Start(ctx, "RegistrationRepo.UpdateRegistration")
 	defer span.End()
 	if fn == nil {
-		otelx.RecordSpanError(span, errors.New("update function cannot be nil"), "update function cannot be nil")
-		return errors.New("update function cannot be nil")
+		otelx.RecordSpanError(span, ErrNilFunc, "update function cannot be nil")
+		return ErrNilFunc
 	}
 
 	selectquery := `
@@ -229,8 +228,8 @@ func (re *RegistrationRepo) UpdateRegistrationByEmail(
 	ctx, span := re.tracer.Start(ctx, "RegistrationRepo.UpdateRegistrationByEmail")
 	defer span.End()
 	if fn == nil {
-		otelx.RecordSpanError(span, errors.New("update function cannot be nil"), "update function cannot be nil")
-		return errors.New("update function cannot be nil")
+		otelx.RecordSpanError(span, ErrNilFunc, "update function cannot be nil")
+		return ErrNilFunc
 	}
 
 	selectquery := `

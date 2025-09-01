@@ -7,6 +7,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
@@ -61,6 +62,18 @@ type GroupDTO struct {
 	UpdatedAt time.Time
 }
 
+type StaffInvitationDTO struct {
+	ID              uuid.UUID
+	CreatorID       uuid.UUID
+	Code            string
+	RecipientsEmail []string
+	ValidFrom       *time.Time
+	ValidUntil      *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       *time.Time
+}
+
 func DomainToRegistrationDTO(r *registration.Registration) RegistrationDTO {
 	return RegistrationDTO{
 		ID:               uuid.UUID(r.ID()),
@@ -73,6 +86,20 @@ func DomainToRegistrationDTO(r *registration.Registration) RegistrationDTO {
 		CreatedAt:        r.CreatedAt(),
 		UpdatedAt:        r.UpdatedAt(),
 	}
+}
+
+func RegistrationToDomain(dto RegistrationDTO) *registration.Registration {
+	return registration.Rehydrate(registration.RehydrateArgs{
+		ID:               registration.ID(dto.ID),
+		Email:            dto.Email,
+		Status:           registration.Status(dto.Status),
+		VerificationCode: dto.VerificationCode,
+		CodeAttempts:     int8(dto.CodeAttempts),
+		CodeExpiresAt:    dto.CodeExpiresAt,
+		ResendTimeout:    dto.ResendTimeout,
+		CreatedAt:        dto.CreatedAt,
+		UpdatedAt:        dto.UpdatedAt,
+	})
 }
 
 func DomainToUserDTO(u *user.User, roleID int) UserDTO {
@@ -107,25 +134,39 @@ func UserToDomain(dto UserDTO, roleDTO GlobalRoleDTO) *user.User {
 	})
 }
 
-func RegistrationToDomain(dto RegistrationDTO) *registration.Registration {
-	return registration.Rehydrate(registration.RehydrateArgs{
-		ID:               registration.ID(dto.ID),
-		Email:            dto.Email,
-		Status:           registration.Status(dto.Status),
-		VerificationCode: dto.VerificationCode,
-		CodeAttempts:     int8(dto.CodeAttempts),
-		CodeExpiresAt:    dto.CodeExpiresAt,
-		ResendTimeout:    dto.ResendTimeout,
-		CreatedAt:        dto.CreatedAt,
-		UpdatedAt:        dto.UpdatedAt,
-	})
-}
-
 func GroupToDomain(dto GroupDTO) *group.Group {
 	return group.Rehydrate(group.RehydrateArgs{
 		ID:    group.ID(dto.ID),
 		Name:  dto.Name,
 		Major: major.Major(dto.Major),
 		Year:  dto.Year,
+	})
+}
+
+func DomainToStaffInvitationDTO(i *staffinvitation.StaffInvitation) StaffInvitationDTO {
+	return StaffInvitationDTO{
+		ID:              uuid.UUID(i.ID()),
+		CreatorID:       uuid.UUID(i.CreatorID()),
+		Code:            i.Code(),
+		RecipientsEmail: i.RecipientsEmail(),
+		ValidFrom:       i.ValidFrom(),
+		ValidUntil:      i.ValidUntil(),
+		CreatedAt:       i.CreatedAt(),
+		UpdatedAt:       i.UpdatedAt(),
+		DeletedAt:       i.DeletedAt(),
+	}
+}
+
+func StaffInvitationToDomain(dto StaffInvitationDTO) *staffinvitation.StaffInvitation {
+	return staffinvitation.Rehydrate(staffinvitation.RehydrateArgs{
+		ID:              staffinvitation.ID(dto.ID),
+		CreatorID:       user.ID(dto.CreatorID),
+		Code:            dto.Code,
+		RecipientsEmail: dto.RecipientsEmail,
+		ValidFrom:       dto.ValidFrom,
+		ValidUntil:      dto.ValidUntil,
+		CreatedAt:       dto.CreatedAt,
+		UpdatedAt:       dto.UpdatedAt,
+		DeletedAt:       dto.DeletedAt,
 	})
 }

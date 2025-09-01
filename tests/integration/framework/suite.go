@@ -26,6 +26,7 @@ import (
 	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
 	"github.com/ARUMANDESU/ucms/internal/application/mail"
 	registrationapp "github.com/ARUMANDESU/ucms/internal/application/registration"
+	staffapp "github.com/ARUMANDESU/ucms/internal/application/staff"
 	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
 	httpport "github.com/ARUMANDESU/ucms/internal/ports/http"
 	watermillport "github.com/ARUMANDESU/ucms/internal/ports/watermill"
@@ -146,6 +147,7 @@ func (s *IntegrationTestSuite) createApplication() {
 	registrationRepo := postgresrepo.NewRegistrationRepo(s.pgPool, nil, nil)
 	userRepo := postgresrepo.NewUserRepo(s.pgPool, nil, nil)
 	studentRepo := postgresrepo.NewStudentRepo(s.pgPool, nil, nil)
+	staffInvitationRepo := postgresrepo.NewStaffInvitationRepo(s.pgPool, nil, nil)
 	groupRepo := postgresrepo.NewGroupRepo(s.pgPool, nil, nil)
 
 	s.MockMailSender = mocks.NewMockMailSender()
@@ -160,15 +162,18 @@ func (s *IntegrationTestSuite) createApplication() {
 		PgxPool:      s.pgPool,
 	})
 	mailApp := mail.NewApp(mail.Args{
-		Tracer:     nil,
-		Logger:     s.logger,
-		Mailsender: s.MockMailSender,
+		Mailsender:             s.MockMailSender,
+		StaffInvitationBaseURL: "http://localhost:3000/invitations/staff",
 	})
 
 	studentApp := studentapp.NewApp(studentapp.Args{
 		Tracer:  nil,
 		Logger:  s.logger,
 		PgxPool: s.pgPool,
+	})
+
+	staffApp := staffapp.NewApp(staffapp.Args{
+		StaffInvitationRepo: staffInvitationRepo,
 	})
 
 	authApp := authapp.NewApp(authapp.Args{
@@ -193,6 +198,7 @@ func (s *IntegrationTestSuite) createApplication() {
 		RegistrationApp: regApp,
 		AuthApp:         authApp,
 		StudentApp:      studentApp,
+		StaffApp:        staffApp,
 		CookieDomain:    "localhost",
 		Secret:          []byte(fixtures.AccessTokenSecretKey),
 	})

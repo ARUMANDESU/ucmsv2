@@ -31,6 +31,7 @@ import (
 	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
 	"github.com/ARUMANDESU/ucms/internal/application/mail"
 	"github.com/ARUMANDESU/ucms/internal/application/registration"
+	staffapp "github.com/ARUMANDESU/ucms/internal/application/staff"
 	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	httpport "github.com/ARUMANDESU/ucms/internal/ports/http"
@@ -47,21 +48,24 @@ type Application struct {
 	Registration *registration.App
 	Mail         *mail.App
 	Student      *studentapp.App
+	Staff        *staffapp.App
 	Auth         *authapp.App
 }
 
 // Config holds all configuration for the application
 type Config struct {
-	Mode                  env.Mode
-	Port                  string
-	PgDSN                 string
-	LogPath               string
-	InitialStaff          *user.CreateInitialStaffArgs
-	AccessTokenSecretKey  string
-	RefreshTokenSecretKey string
+	Mode                   env.Mode
+	Port                   string
+	PgDSN                  string
+	LogPath                string
+	InitialStaff           *user.CreateInitialStaffArgs
+	AccessTokenSecretKey   string
+	RefreshTokenSecretKey  string
+	StaffInvitationBaseURL string
 }
 
 func main() {
+	startTime := time.Now()
 	ctx := context.Background()
 
 	// Load configuration from environment
@@ -173,6 +177,7 @@ func main() {
 		}
 	}()
 
+	slog.InfoContext(ctx, "Server started in", "duration", time.Since(startTime).String())
 	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -199,6 +204,7 @@ func loadConfig() *Config {
 	logPath := getEnvOrDefault("LOG_PATH", "")
 	accessTokenSecretKey := getEnvOrDefault("ACCESS_TOKEN_SECRET", "default_access_secret")
 	refreshTokenSecretKey := getEnvOrDefault("REFRESH_TOKEN_SECRET", "default_refresh_secret")
+	staffInvitationBaseURL := getEnvOrDefault("STAFF_INVITATION_BASE_URL", "http://localhost:3000/invitations/accept")
 
 	var initialStaff *user.CreateInitialStaffArgs
 	if os.Getenv("INITIAL_STAFF_EMAIL") != "" {
@@ -213,13 +219,14 @@ func loadConfig() *Config {
 	}
 
 	return &Config{
-		Mode:                  mode,
-		Port:                  port,
-		PgDSN:                 pgdsn,
-		LogPath:               logPath,
-		InitialStaff:          initialStaff,
-		AccessTokenSecretKey:  accessTokenSecretKey,
-		RefreshTokenSecretKey: refreshTokenSecretKey,
+		Mode:                   mode,
+		Port:                   port,
+		PgDSN:                  pgdsn,
+		LogPath:                logPath,
+		InitialStaff:           initialStaff,
+		AccessTokenSecretKey:   accessTokenSecretKey,
+		RefreshTokenSecretKey:  refreshTokenSecretKey,
+		StaffInvitationBaseURL: staffInvitationBaseURL,
 	}
 }
 
@@ -257,22 +264,24 @@ func setupDatabase(ctx context.Context, config *Config) (*pgxpool.Pool, error) {
 }
 
 type Repositories struct {
-	PgxPool      *pgxpool.Pool
-	User         *postgres.UserRepo
-	Registration *postgres.RegistrationRepo
-	Student      *postgres.StudentRepo
-	Staff        *postgres.StaffRepo
-	Group        *postgres.GroupRepo
+	PgxPool         *pgxpool.Pool
+	User            *postgres.UserRepo
+	Registration    *postgres.RegistrationRepo
+	Student         *postgres.StudentRepo
+	Staff           *postgres.StaffRepo
+	StaffInvitation *postgres.StaffInvitationRepo
+	Group           *postgres.GroupRepo
 }
 
 func setupRepositories(pool *pgxpool.Pool) *Repositories {
 	return &Repositories{
-		PgxPool:      pool,
-		User:         postgres.NewUserRepo(pool, nil, nil),
-		Registration: postgres.NewRegistrationRepo(pool, nil, nil),
-		Student:      postgres.NewStudentRepo(pool, nil, nil),
-		Staff:        postgres.NewStaffRepo(pool, nil, nil),
-		Group:        postgres.NewGroupRepo(pool, nil, nil),
+		PgxPool:         pool,
+		User:            postgres.NewUserRepo(pool, nil, nil),
+		Registration:    postgres.NewRegistrationRepo(pool, nil, nil),
+		Student:         postgres.NewStudentRepo(pool, nil, nil),
+		Staff:           postgres.NewStaffRepo(pool, nil, nil),
+		StaffInvitation: postgres.NewStaffInvitationRepo(pool, nil, nil),
+		Group:           postgres.NewGroupRepo(pool, nil, nil),
 	}
 }
 
@@ -310,12 +319,17 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 
 	// Mail application
 	mailApp := mail.NewApp(mail.Args{
-		Mailsender: mailSender,
+		Mailsender:             mailSender,
+		StaffInvitationBaseURL: config.StaffInvitationBaseURL,
 	})
 
 	// Student application
 	studentApp := studentapp.NewApp(studentapp.Args{
 		PgxPool: repos.PgxPool,
+	})
+
+	staffApp := staffapp.NewApp(staffapp.Args{
+		StaffInvitationRepo: repos.StaffInvitation,
 	})
 
 	authApp := authapp.NewApp(authapp.Args{
@@ -330,6 +344,7 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 		Registration: regApp,
 		Mail:         mailApp,
 		Student:      studentApp,
+		Staff:        staffApp,
 		Auth:         authApp,
 	}
 }
@@ -378,6 +393,7 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 		RegistrationApp: apps.Registration,
 		AuthApp:         apps.Auth,
 		StudentApp:      apps.Student,
+		StaffApp:        apps.Staff,
 		Secret:          []byte(config.AccessTokenSecretKey),
 	})
 

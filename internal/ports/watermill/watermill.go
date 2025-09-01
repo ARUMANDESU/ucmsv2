@@ -9,7 +9,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/ARUMANDESU/ucms/internal/application/mail"
+	mailevent "github.com/ARUMANDESU/ucms/internal/application/mail/event"
 	"github.com/ARUMANDESU/ucms/internal/application/registration"
 	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
 	"github.com/ARUMANDESU/ucms/pkg/watermillx"
@@ -23,7 +23,7 @@ type Port struct {
 
 type AppEventHandlers struct {
 	Registration registration.Event
-	Mail         mail.Event
+	Mail         *mailevent.MailEventHandler
 	Student      studentapp.Event
 }
 
@@ -63,9 +63,12 @@ func NewPortForTest(router *message.Router, conn *pgxpool.Pool, wmlogger watermi
 
 func (p *Port) Run(ctx context.Context, handlers AppEventHandlers) error {
 	err := p.eventProcessor.AddHandlers(
-		cqrs.NewEventHandler("MailOnRegistrationStarted", handlers.Mail.RegistrationStarted.Handle),
-		cqrs.NewEventHandler("MailOnVerificationCodeResent", handlers.Mail.VerificationCodeResent.Handle),
-		cqrs.NewEventHandler("MailOnStudentRegistered", handlers.Mail.StudentRegistered.Handle),
+		cqrs.NewEventHandler("MailOnRegistrationStarted", handlers.Mail.HandleRegistrationStarted),
+		cqrs.NewEventHandler("MailOnVerificationCodeResent", handlers.Mail.HandleVerificationCodeResent),
+		cqrs.NewEventHandler("MailOnStudentRegistered", handlers.Mail.HandleStudentRegistered),
+		cqrs.NewEventHandler("MailOnStaffInvitationCreated", handlers.Mail.HandleStaffInvitationCreated),
+		cqrs.NewEventHandler("MailOnStaffInvitationRecipientsUpdated", handlers.Mail.HandleStaffInvitationRecipientsUpdated),
+
 		cqrs.NewEventHandler("RegistrationOnStudentRegistered", handlers.Registration.Registration.StudentHandle),
 		cqrs.NewEventHandler("RegistrationOnStaffRegistered", handlers.Registration.Registration.StaffHandle),
 	)

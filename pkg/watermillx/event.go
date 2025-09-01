@@ -14,6 +14,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 )
 
@@ -215,6 +216,7 @@ func InitializeEventSchema(ctx context.Context, conn *pgxpool.Pool, logger water
 		registration.EventStreamName,
 		user.StudentEventStreamName,
 		user.StaffEventStreamName,
+		staffinvitation.EventStreamName,
 	}
 
 	for _, eventStream := range events {

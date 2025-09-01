@@ -10,10 +10,12 @@ import (
 
 	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
 	"github.com/ARUMANDESU/ucms/internal/application/registration"
+	staffapp "github.com/ARUMANDESU/ucms/internal/application/staff"
 	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
 	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
 	"github.com/ARUMANDESU/ucms/internal/ports/http/middlewares"
 	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
+	staffhttp "github.com/ARUMANDESU/ucms/internal/ports/http/staff"
 	studenthttp "github.com/ARUMANDESU/ucms/internal/ports/http/student"
 	"github.com/ARUMANDESU/ucms/pkg/httpx"
 )
@@ -22,12 +24,14 @@ type Port struct {
 	reg     *registrationhttp.HTTP
 	auth    *authhttp.HTTP
 	student *studenthttp.HTTP
+	staff   *staffhttp.HTTP
 }
 
 type Args struct {
 	RegistrationApp *registration.App
 	AuthApp         *authapp.App
 	StudentApp      *studentapp.App
+	StaffApp        *staffapp.App
 	CookieDomain    string
 	Secret          []byte
 }
@@ -51,6 +55,11 @@ func NewPort(args Args) *Port {
 		}),
 		student: studenthttp.NewHTTP(studenthttp.Args{
 			App:        args.StudentApp,
+			Errhandler: errorHandler,
+			Middleware: m,
+		}),
+		staff: staffhttp.NewHTTP(staffhttp.Args{
+			App:        args.StaffApp,
 			Errhandler: errorHandler,
 			Middleware: m,
 		}),
@@ -85,6 +94,7 @@ func (p *Port) Route(r chi.Router) chi.Router {
 	p.reg.Route(r)
 	p.auth.Route(r)
 	p.student.Route(r)
+	p.staff.Route(r)
 
 	return r
 }

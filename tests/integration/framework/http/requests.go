@@ -6,6 +6,7 @@ import (
 
 	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
 	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
+	staffhttp "github.com/ARUMANDESU/ucms/internal/ports/http/staff"
 )
 
 var ApplicationJSONHeaders = map[string]string{"Content-Type": "application/json"}
@@ -96,4 +97,12 @@ func (h *Helper) Logout(t *testing.T, accessToken, refreshToken string) *Respons
 			}).String(),
 		}).Build(),
 	)
+}
+
+func (h *Helper) CreateStaffInvitationRequest(req staffhttp.CreateInvitationRequest) *RequestBuilder {
+	return NewRequest("POST", "/v1/staffs/invitations").WithJSON(req)
+}
+
+func (h *Helper) UpdateStaffInvitationRecipientsRequest(invitationID string, req staffhttp.UpdateInvitationRecipientsRequest) *RequestBuilder {
+	return NewRequest("PUT", "/v1/staffs/invitations/"+invitationID+"/recipients").WithJSON(req)
 }

@@ -24,7 +24,6 @@ var (
 type StaffInvitationRepo interface {
 	SaveStaffInvitation(ctx context.Context, invitation *staffinvitation.StaffInvitation) error
 	UpdateStaffInvitation(ctx context.Context, id staffinvitation.ID, fn func(context.Context, *staffinvitation.StaffInvitation) error) error
-	GetStaffInvitationByCode(ctx context.Context, code string) (*staffinvitation.StaffInvitation, error)
 }
 
 type CreateInvitation struct {

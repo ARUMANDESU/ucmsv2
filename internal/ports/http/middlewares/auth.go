@@ -159,3 +159,25 @@ func (m *Middleware) Auth(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+
+func (m *Middleware) StaffOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, span := tracer.Start(r.Context(), "StaffOnlyMiddleware")
+		defer span.End()
+
+		ctxUser, err := ctxs.UserFromCtx(ctx)
+		if err != nil {
+			m.errhandler.HandleError(w, r, span, err, "failed to get user from context")
+			return
+		}
+		ctxUser.SetSpanAttrs(span)
+
+		if ctxUser.Role != role.Staff {
+			err = errorx.NewForbidden().WithCause(fmt.Errorf("user role %s is not allowed", ctxUser.Role))
+			m.errhandler.HandleError(w, r, span, err, "user is not staff")
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
