@@ -263,3 +263,17 @@ func (h *Helper) SeedGroup(t *testing.T, groupID group.ID, name string, year str
 
 	require.NoError(t, err)
 }
+
+func (h *Helper) SeedStaff(t *testing.T, staff *user.Staff) {
+	t.Helper()
+
+	h.SeedUser(t, staff.User())
+
+	insertStaffQuery := `
+            INSERT INTO staffs (user_id)
+            VALUES ($1);
+        `
+	res, err := h.pool.Exec(t.Context(), insertStaffQuery, staff.User().ID())
+	require.NoError(t, err, "failed to insert staff")
+	require.Equal(t, int64(1), res.RowsAffected(), "expected one row to be affected when inserting staff")
+}

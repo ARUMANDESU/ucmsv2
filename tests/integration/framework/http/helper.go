@@ -13,6 +13,11 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
+	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 )
 
 type Helper struct {
@@ -198,6 +203,57 @@ func (r *Response) GetCookie(name string) *http.Cookie {
 	}
 	require.Fail(r.t, fmt.Sprintf("cookie %s not found", name))
 	return nil
+}
+
+type RequestBuilderOptions func(*RequestBuilder)
+
+func WithStaff(t *testing.T, id user.ID) RequestBuilderOptions {
+	token := builders.JWTFactory{}.
+		AccessTokenBuilder(id.String(), role.Staff.String()).
+		BuildSignedStringT(t)
+	return WithAccessTokenCookie(token)
+}
+
+func WithStudent(t *testing.T, id user.ID) RequestBuilderOptions {
+	token := builders.JWTFactory{}.
+		AccessTokenBuilder(id.String(), role.Student.String()).
+		BuildSignedStringT(t)
+	return WithAccessTokenCookie(token)
+}
+
+// WithAccessTokenCookie adds access token cookie to the request to simulate authenticated user
+func WithAccessTokenCookie(token string) RequestBuilderOptions {
+	return func(b *RequestBuilder) {
+		b.WithCookies([]string{
+			(&http.Cookie{
+				Name:     authhttp.AccessJWTCookie,
+				Value:    token,
+				Path:     "/",
+				Domain:   "localhost",
+				Secure:   true,
+				HttpOnly: true,
+				SameSite: http.SameSiteStrictMode,
+			}).String(),
+		})
+	}
+}
+
+// WithAnon removes access token cookie to simulate anonymous user
+func WithAnon() RequestBuilderOptions {
+	return func(b *RequestBuilder) {
+		b.WithCookies([]string{
+			(&http.Cookie{
+				Name:     authhttp.AccessJWTCookie,
+				Value:    "",
+				Path:     "/",
+				Domain:   "localhost",
+				Secure:   true,
+				HttpOnly: true,
+				SameSite: http.SameSiteStrictMode,
+				MaxAge:   -1, // Delete the cookie
+			}).String(),
+		})
+	}
 }
 
 type RequestBuilder struct {

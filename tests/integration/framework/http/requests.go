@@ -99,10 +99,48 @@ func (h *Helper) Logout(t *testing.T, accessToken, refreshToken string) *Respons
 	)
 }
 
-func (h *Helper) CreateStaffInvitationRequest(req staffhttp.CreateInvitationRequest) *RequestBuilder {
-	return NewRequest("POST", "/v1/staffs/invitations").WithJSON(req)
+func (h *Helper) CreateStaffInvitation(t *testing.T, req staffhttp.CreateInvitationRequest, opts ...RequestBuilderOptions) *Response {
+	t.Helper()
+	r := NewRequest("POST", "/v1/staffs/invitations").WithJSON(req)
+	for _, opt := range opts {
+		opt(r)
+	}
+	return h.Do(t, r.Build())
 }
 
-func (h *Helper) UpdateStaffInvitationRecipientsRequest(invitationID string, req staffhttp.UpdateInvitationRecipientsRequest) *RequestBuilder {
-	return NewRequest("PUT", "/v1/staffs/invitations/"+invitationID+"/recipients").WithJSON(req)
+func (h *Helper) UpdateStaffInvitationRecipients(
+	t *testing.T,
+	invitationID string,
+	req staffhttp.UpdateInvitationRecipientsRequest,
+	opts ...RequestBuilderOptions,
+) *Response {
+	t.Helper()
+	r := NewRequest("PUT", "/v1/staffs/invitations/"+invitationID+"/recipients").WithJSON(req)
+	for _, opt := range opts {
+		opt(r)
+	}
+	return h.Do(t, r.Build())
+}
+
+func (h *Helper) UpdateStaffInvitationValidity(
+	t *testing.T,
+	invitationID string,
+	req staffhttp.UpdateInvitationValidityRequest,
+	opts ...RequestBuilderOptions,
+) *Response {
+	t.Helper()
+	r := NewRequest("PUT", "/v1/staffs/invitations/"+invitationID+"/validity").WithJSON(req)
+	for _, opt := range opts {
+		opt(r)
+	}
+	return h.Do(t, r.Build())
+}
+
+func (h *Helper) DeleteStaffInvitation(t *testing.T, invitationID string, opts ...RequestBuilderOptions) *Response {
+	t.Helper()
+	r := NewRequest("DELETE", "/v1/staffs/invitations/"+invitationID)
+	for _, opt := range opts {
+		opt(r)
+	}
+	return h.Do(t, r.Build())
 }
