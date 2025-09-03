@@ -49,6 +49,7 @@ func NewVerifyHandler(args VerifyHandlerArgs) *VerifyHandler {
 }
 
 func (h *VerifyHandler) Handle(ctx context.Context, cmd Verify) error {
+	const op = "cmd.VerifyHandler.Handle"
 	ctx, span := h.tracer.Start(ctx, "VerifyHandler.Handle",
 		trace.WithAttributes(attribute.String("email", logging.RedactEmail(cmd.Email))),
 	)
@@ -59,19 +60,19 @@ func (h *VerifyHandler) Handle(ctx context.Context, cmd Verify) error {
 
 		if r.IsStatus(registration.StatusVerified) {
 			span.AddEvent("registration already verified")
-			return ErrOKAlreadyVerified
+			return errorx.Wrap(ErrOKAlreadyVerified, op)
 		}
 
 		if err := r.VerifyCode(cmd.Code); err != nil {
 			span.AddEvent("failed to verify registration code")
-			return err
+			return errorx.Wrap(err, op)
 		}
 
 		return nil
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to update registration by email")
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	return nil

@@ -9,6 +9,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/validationx"
 )
 
@@ -29,6 +30,7 @@ type RegisterStaffArgs struct {
 }
 
 func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
+	const op = "user.RegisterStaff"
 	err := validation.ValidateStruct(&p,
 		validation.Field(&p.Barcode, validation.Required),
 		validation.Field(&p.Username, validation.Required, validationx.IsUsername),
@@ -40,12 +42,12 @@ func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
 		validation.Field(&p.AvatarURL, validation.Length(0, 1000)),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	passhash, err := NewPasswordHash(p.Password)
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	now := time.Now().UTC()
@@ -90,6 +92,7 @@ type CreateInitialStaffArgs struct {
 }
 
 func CreateInitialStaff(p CreateInitialStaffArgs) (*Staff, error) {
+	const op = "user.CreateInitialStaff"
 	err := validation.ValidateStruct(&p,
 		validation.Field(&p.Barcode, validation.Required),
 		validation.Field(&p.Username, validation.Required, validationx.IsUsername),
@@ -99,12 +102,12 @@ func CreateInitialStaff(p CreateInitialStaffArgs) (*Staff, error) {
 		validation.Field(&p.Password, validationx.PasswordRules...),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	passhash, err := NewPasswordHash(p.Password)
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	now := time.Now().UTC()

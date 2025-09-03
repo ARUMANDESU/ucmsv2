@@ -1,7 +1,6 @@
 package authapp_test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -273,7 +272,6 @@ func TestRefreshHandle_FailPath(t *testing.T) {
 	s.MockUserRepo.SeedUser(t, u)
 
 	assertInvalidCredential := func(t *testing.T, err error) {
-		fmt.Printf("test case: %s, error: %v\n", t.Name(), err)
 		assert.True(t, errorx.IsCode(err, errorx.CodeInvalidCredentials), "expected invalid credentials error, got: %v", err)
 	}
 

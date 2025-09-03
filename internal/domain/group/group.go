@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
 const (
@@ -61,9 +62,10 @@ type Group struct {
 }
 
 func NewGroup(name, year string, m major.Major) (*Group, error) {
+	const op = "group.NewGroup"
 	err := validation.Validate(name, validation.Required, validation.Length(MinNameLength, MaxNameLength))
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 	err = validation.Validate(
 		year,
@@ -72,10 +74,10 @@ func NewGroup(name, year string, m major.Major) (*Group, error) {
 		validation.Match(YearPattern).Error("validation_"),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 	if !major.IsValid(m) {
-		return nil, major.ErrInvalidMajor
+		return nil, errorx.Wrap(major.ErrInvalidMajor, op)
 	}
 
 	now := time.Now().UTC()

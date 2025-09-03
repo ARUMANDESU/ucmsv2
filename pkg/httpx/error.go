@@ -68,34 +68,31 @@ func (h *ErrorHandler) Localizer(lang string) *i18n.Localizer {
 
 func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, span trace.Span, err error, message string) {
 	otelx.RecordSpanError(span, err, message)
-	slog.ErrorContext(r.Context(), "HTTP error response", "error", err.Error())
 
 	lang := r.Header.Get("Accept-Language")
 	localizer := h.Localizer(lang)
 
 	var appErrs errorx.I18nErrors
-	if errors.As(err, &appErrs) {
+	var appErr *errorx.I18nError
+	var valErrs validation.Errors
+	var valErr validation.Error
+
+	switch {
+
+	case errors.As(err, &appErrs):
 		writeError(w, r, httpErrorResponse{
 			Status:  appErrs.HTTPStatusCode(),
 			Code:    appErrs.Code(),
 			Message: appErrs.Localize(localizer),
 		})
-		return
-	}
-
-	var appErr *errorx.I18nError
-	if errors.As(err, &appErr) {
+	case errors.As(err, &appErr):
 		writeError(w, r, httpErrorResponse{
 			Status:  appErr.HTTPStatusCode(),
 			Code:    appErr.Code,
 			Message: appErr.Localize(localizer),
 			Details: appErr.Details,
 		})
-		return
-	}
-
-	var valErrs validation.Errors
-	if errors.As(err, &valErrs) {
+	case errors.As(err, &valErrs):
 		var msg strings.Builder
 		for field, fieldErr := range valErrs {
 			localizedField, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: field})
@@ -117,11 +114,7 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, span 
 			Code:    errorx.CodeValidationFailed,
 			Message: msg.String(),
 		})
-		return
-	}
-
-	var valErr validation.Error
-	if errors.As(err, &valErr) {
+	case errors.As(err, &valErr):
 		writeError(w, r, httpErrorResponse{
 			Status: http.StatusBadRequest,
 			Code:   errorx.CodeValidationFailed,
@@ -130,16 +123,18 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, span 
 				TemplateData: valErr.Params(),
 			}),
 		})
+	default:
+		slog.ErrorContext(r.Context(), "Unhandled error", "error", err)
+		internalErr := errorx.NewInternalError().WithCause(err, "handle_error")
+		writeError(w, r, httpErrorResponse{
+			Status:  internalErr.HTTPStatusCode(),
+			Code:    internalErr.Code,
+			Message: internalErr.Localize(localizer),
+		})
 		return
 	}
 
-	slog.ErrorContext(r.Context(), "Unhandled error", "error", err)
-	internalErr := errorx.NewInternalError().WithCause(err)
-	writeError(w, r, httpErrorResponse{
-		Status:  internalErr.HTTPStatusCode(),
-		Code:    internalErr.Code,
-		Message: internalErr.Localize(localizer),
-	})
+	slog.ErrorContext(r.Context(), "HTTP error response", "error", err.Error())
 }
 
 type httpErrorResponse struct {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
@@ -98,6 +99,7 @@ func (h *MailEventHandler) HandleStaffInvitationRecipientsUpdated(ctx context.Co
 }
 
 func (h *MailEventHandler) sendStaffInvitationEmail(ctx context.Context, email, code string) error {
+	const op = "mailevent.sendStaffInvitationEmail"
 	payload := mail.Payload{
 		To:      email,
 		Subject: StaffInvitationSubject,
@@ -109,7 +111,7 @@ func (h *MailEventHandler) sendStaffInvitationEmail(ctx context.Context, email, 
 		),
 	}
 	if err := h.mailsender.SendMail(ctx, payload); err != nil {
-		return fmt.Errorf("failed to send staff invitation email to %s: %w", logging.RedactEmail(email), err)
+		return errorx.Wrap(err, op)
 	}
 	return nil
 }

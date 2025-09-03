@@ -62,6 +62,7 @@ func NewStartStudentHandler(args StartStudentHandlerArgs) *StartStudentHandler {
 }
 
 func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) error {
+	const op = "cmd.StartStudentHandler.Handle"
 	ctx, span := h.tracer.Start(
 		ctx,
 		"StartStudentHandler.Handle",
@@ -72,30 +73,30 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 	user, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
 	if err != nil && !errorx.IsNotFound(err) {
 		otelx.RecordSpanError(span, err, "failed to get user by email")
-		return err
+		return errorx.Wrap(err, op)
 	}
 	if user != nil {
 		otelx.RecordSpanError(span, ErrEmailNotAvailable, "user already exists with this email")
-		return ErrEmailNotAvailable
+		return errorx.Wrap(ErrEmailNotAvailable, op)
 	}
 	span.AddEvent("user not found, proceeding with registration")
 
 	reg, err := h.repo.GetRegistrationByEmail(ctx, cmd.Email)
 	if err != nil && !errorx.IsNotFound(err) {
 		otelx.RecordSpanError(span, err, "failed to get registration by email")
-		return err
+		return errorx.Wrap(err, op)
 	}
 	if errorx.IsNotFound(err) {
 		reg, err = registration.NewRegistration(cmd.Email, h.mode)
 		if err != nil {
 			otelx.RecordSpanError(span, err, "failed to create new registration")
-			return err
+			return errorx.Wrap(err, op)
 		}
 
 		err = h.repo.SaveRegistration(ctx, reg)
 		if err != nil {
 			otelx.RecordSpanError(span, err, "failed to save new registration")
-			return err
+			return errorx.Wrap(err, op)
 		}
 		span.AddEvent("registration saved successfully",
 			trace.WithAttributes(
@@ -109,21 +110,21 @@ func (h *StartStudentHandler) Handle(ctx context.Context, cmd StartStudent) erro
 
 	if reg.IsCompleted() {
 		otelx.RecordSpanError(span, ErrEmailNotAvailable, "registration already completed with this email")
-		return ErrEmailNotAvailable
+		return errorx.Wrap(ErrEmailNotAvailable, op)
 	}
 
 	err = h.repo.UpdateRegistration(ctx, reg.ID(), func(ctx context.Context, r *registration.Registration) error {
 		err := r.ResendCode()
 		if err != nil {
 			trace.SpanFromContext(ctx).AddEvent("resend verification code failed")
-			return err
+			return errorx.Wrap(err, op)
 		}
 
 		return nil
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to resend code for existing registration")
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	return nil

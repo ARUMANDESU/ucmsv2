@@ -217,7 +217,6 @@ func TestNewStaffInvitation(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, staffInvitation)
 
-				fmt.Println(staffInvitation.Code())
 				assertStaffInvitationFields(t, staffInvitation, tt.args)
 
 				e := event.AssertSingleEvent[*staffinvitation.Created](t, staffInvitation.GetUncommittedEvents())

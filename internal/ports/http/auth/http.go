@@ -42,6 +42,7 @@ type HTTP struct {
 	cookiedomain string
 	httpOnly     bool
 	secure       bool
+	sameSite     http.SameSite
 }
 
 type Args struct {
@@ -61,6 +62,7 @@ func NewHTTP(args Args) *HTTP {
 		cookiedomain: args.CookieDomain,
 		httpOnly:     true,
 		secure:       true,
+		sameSite:     http.SameSiteStrictMode,
 	}
 
 	if h.tracer == nil {
@@ -163,7 +165,7 @@ func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   int(res.AccessTokenExp.Seconds()),
 		Secure:   h.secure,
 		HttpOnly: h.httpOnly,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: h.sameSite,
 	})
 	http.SetCookie(w, &http.Cookie{
 		Name:     RefreshJWTCookie,
@@ -174,13 +176,14 @@ func (h *HTTP) Login(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   int(res.RefreshTokenExp.Seconds()),
 		Secure:   h.secure,
 		HttpOnly: h.httpOnly,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: h.sameSite,
 	})
 
 	httpx.Success(w, r, http.StatusOK, nil)
 }
 
 func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
+	const op = "http.auth.Refresh"
 	ctx, span := h.tracer.Start(r.Context(), "Refresh")
 	defer span.End()
 
@@ -194,7 +197,7 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 	err = validation.Validate(refreshCookie.Value, validation.Required, validation.Length(1, 1000))
 	if err != nil {
 		h.resetCookies(w)
-		h.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err), "invalid refresh token in cookie")
+		h.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err, op), "invalid refresh token in cookie")
 		return
 	}
 
@@ -211,10 +214,10 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Domain:   h.cookiedomain,
 		Expires:  time.Now().Add(res.AccessTokenExp).UTC(),
-		MaxAge:   int(res.AccessTokenExp),
+		MaxAge:   int(res.AccessTokenExp.Seconds()),
 		Secure:   h.secure,
 		HttpOnly: h.httpOnly,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: h.sameSite,
 	})
 	http.SetCookie(w, &http.Cookie{
 		Name:     RefreshJWTCookie,
@@ -222,16 +225,17 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 		Path:     RefreshCookiePath,
 		Domain:   h.cookiedomain,
 		Expires:  time.Now().Add(res.RefreshTokenExp).UTC(),
-		MaxAge:   int(res.RefreshTokenExp),
+		MaxAge:   int(res.RefreshTokenExp.Seconds()),
 		Secure:   h.secure,
 		HttpOnly: h.httpOnly,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: h.sameSite,
 	})
 
 	httpx.Success(w, r, http.StatusOK, nil)
 }
 
 func (h *HTTP) Logout(w http.ResponseWriter, r *http.Request) {
+	const op = "http.auth.Logout"
 	_, span := h.tracer.Start(r.Context(), "Logout")
 	defer span.End()
 	defer h.resetCookies(w)
@@ -242,7 +246,7 @@ func (h *HTTP) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if accessCookie == nil || accessCookie.Value == "" {
-		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no access token found in cookie"))
+		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no access token found in cookie"), op)
 		h.errhandler.HandleError(w, r, span, err, "no access token found in cookie")
 		return
 	}
@@ -253,7 +257,7 @@ func (h *HTTP) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if refreshCookie == nil || refreshCookie.Value == "" {
-		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no refresh token found in cookie"))
+		err = errorx.NewInvalidCredentials().WithCause(fmt.Errorf("no refresh token found in cookie"), op)
 		h.errhandler.HandleError(w, r, span, err, "no refresh token found in cookie")
 		return
 	}
@@ -269,16 +273,20 @@ func (h *HTTP) resetCookies(w http.ResponseWriter) {
 		Name:     AccessJWTCookie,
 		Value:    "",
 		Path:     "/",
+		Domain:   h.cookiedomain,
 		MaxAge:   -1,
 		HttpOnly: h.httpOnly,
 		Secure:   h.secure,
+		SameSite: h.sameSite,
 	})
 	http.SetCookie(w, &http.Cookie{
 		Name:     RefreshJWTCookie,
 		Value:    "",
-		Path:     "/",
+		Path:     RefreshCookiePath,
+		Domain:   h.cookiedomain,
 		MaxAge:   -1,
 		HttpOnly: h.httpOnly,
 		Secure:   h.secure,
+		SameSite: h.sameSite,
 	})
 }

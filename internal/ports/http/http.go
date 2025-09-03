@@ -73,7 +73,6 @@ func (p *Port) Route(r chi.Router) chi.Router {
 
 	r.Use(otelhttp.NewMiddleware("ucmsv2-api"))
 	r.Use(middleware.CleanPath)
-	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.AllowContentType("application/json"))

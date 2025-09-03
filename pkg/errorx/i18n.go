@@ -155,8 +155,8 @@ func (e *I18nError) WithArgs(args map[string]any) *I18nError {
 	return e
 }
 
-func (e *I18nError) WithCause(cause error) *I18nError {
-	e.cause = cause
+func (e *I18nError) WithCause(cause error, op string) *I18nError {
+	e.cause = fmt.Errorf("%s: %w", op, cause)
 	return e
 }
 
@@ -168,6 +168,13 @@ func (e *I18nError) WithKey(key string) *I18nError {
 func (e *I18nError) WithDetails(details string) *I18nError {
 	e.Details = details
 	return e
+}
+
+func Wrap(err error, op string) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s: %w", op, err)
 }
 
 func New(messageKey string) *I18nError {

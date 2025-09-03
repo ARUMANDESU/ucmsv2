@@ -47,6 +47,7 @@ func NewStaffInvitationRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) 
 }
 
 func (r *StaffInvitationRepo) SaveStaffInvitation(ctx context.Context, invitation *staffinvitation.StaffInvitation) error {
+	const op = "postgres.StaffInvitationRepo.SaveStaffInvitation"
 	ctx, span := r.tracer.Start(ctx, "StaffInvitationRepo.SaveStaffInvitation")
 	defer span.End()
 
@@ -70,17 +71,17 @@ func (r *StaffInvitationRepo) SaveStaffInvitation(ctx context.Context, invitatio
 		)
 		if err != nil {
 			otelx.RecordSpanError(span, err, "failed to execute insert query")
-			return err
+			return errorx.Wrap(err, op)
 		}
 		if res.RowsAffected() == 0 {
 			otelx.RecordSpanError(span, ErrNoRowsAffected, "no rows affected when inserting staff invitation")
-			return ErrNoRowsAffected
+			return errorx.Wrap(ErrNoRowsAffected, op)
 		}
 
 		if events := invitation.GetUncommittedEvents(); len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, r.wlogger, events...); err != nil {
 				otelx.RecordSpanError(span, err, "failed to publish events")
-				return err
+				return errorx.Wrap(err, op)
 			}
 		}
 
@@ -99,6 +100,7 @@ func (r *StaffInvitationRepo) UpdateStaffInvitation(
 	id staffinvitation.ID,
 	fn func(context.Context, *staffinvitation.StaffInvitation) error,
 ) error {
+	const op = "postgres.StaffInvitationRepo.UpdateStaffInvitation"
 	ctx, span := r.tracer.Start(ctx, "StaffInvitationRepo.UpdateStaffInvitation")
 	defer span.End()
 	if fn == nil {
@@ -127,17 +129,18 @@ func (r *StaffInvitationRepo) UpdateStaffInvitation(
 		)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return errorx.NewNotFound().WithCause(err)
+				return errorx.NewNotFound().WithCause(err, op)
 			}
 			otelx.RecordSpanError(span, err, "failed to select staff invitation")
-			return err
+			return errorx.Wrap(err, op)
 		}
 
 		invitation := StaffInvitationToDomain(dto)
 
-		if err := fn(ctx, invitation); err != nil {
-			otelx.RecordSpanError(span, err, "update function failed")
-			return err
+		fnerr := fn(ctx, invitation)
+		if fnerr != nil && !errorx.IsPersistable(fnerr) {
+			otelx.RecordSpanError(span, fnerr, "update function failed")
+			return errorx.Wrap(fnerr, op)
 		}
 
 		dto = DomainToStaffInvitationDTO(invitation)
@@ -153,18 +156,23 @@ func (r *StaffInvitationRepo) UpdateStaffInvitation(
 		)
 		if err != nil {
 			otelx.RecordSpanError(span, err, "failed to execute update query")
-			return err
+			return errorx.Wrap(err, op)
 		}
 		if res.RowsAffected() == 0 {
 			otelx.RecordSpanError(span, ErrNoRowsAffected, "no rows affected when updating staff invitation")
-			return ErrNoRowsAffected
+			return errorx.Wrap(ErrNoRowsAffected, op)
 		}
 
 		if events := invitation.GetUncommittedEvents(); len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, r.wlogger, events...); err != nil {
 				otelx.RecordSpanError(span, err, "failed to publish events")
-				return err
+				return errorx.Wrap(err, op)
 			}
+		}
+
+		if fnerr != nil && errorx.IsPersistable(fnerr) {
+			otelx.RecordSpanError(span, fnerr, "update function returned a persistable error")
+			return errorx.Wrap(fnerr, op)
 		}
 
 		return nil
@@ -178,6 +186,7 @@ func (r *StaffInvitationRepo) UpdateStaffInvitation(
 }
 
 func (r *StaffInvitationRepo) GetStaffInvitationByID(ctx context.Context, id staffinvitation.ID) (*staffinvitation.StaffInvitation, error) {
+	const op = "postgres.StaffInvitationRepo.GetStaffInvitationByID"
 	ctx, span := r.tracer.Start(ctx, "StaffInvitationRepo.GetStaffInvitationByID")
 	defer span.End()
 
@@ -196,9 +205,9 @@ func (r *StaffInvitationRepo) GetStaffInvitationByID(ctx context.Context, id sta
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to execute select query")
 		if err == pgx.ErrNoRows {
-			return nil, errorx.NewNotFound().WithCause(err)
+			return nil, errorx.NewNotFound().WithCause(err, op)
 		}
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	invitation := StaffInvitationToDomain(dto)
@@ -206,6 +215,7 @@ func (r *StaffInvitationRepo) GetStaffInvitationByID(ctx context.Context, id sta
 }
 
 func (r *StaffInvitationRepo) GetStaffInvitationByCode(ctx context.Context, code string) (*staffinvitation.StaffInvitation, error) {
+	const op = "postgres.StaffInvitationRepo.GetStaffInvitationByCode"
 	ctx, span := r.tracer.Start(ctx, "StaffInvitationRepo.GetStaffInvitationByCode")
 	defer span.End()
 
@@ -224,9 +234,9 @@ func (r *StaffInvitationRepo) GetStaffInvitationByCode(ctx context.Context, code
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to execute select query")
 		if err == pgx.ErrNoRows {
-			return nil, errorx.NewNotFound().WithCause(err)
+			return nil, errorx.NewNotFound().WithCause(err, op)
 		}
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	invitation := StaffInvitationToDomain(dto)
@@ -237,6 +247,7 @@ func (r *StaffInvitationRepo) GetLatestStaffInvitationByCreatorID(
 	ctx context.Context,
 	creatorID user.ID,
 ) (*staffinvitation.StaffInvitation, error) {
+	const op = "postgres.StaffInvitationRepo.GetLatestStaffInvitationByCreatorID"
 	ctx, span := r.tracer.Start(ctx, "StaffInvitationRepo.GetLatestStaffInvitationByCreatorID")
 	defer span.End()
 
@@ -257,9 +268,9 @@ func (r *StaffInvitationRepo) GetLatestStaffInvitationByCreatorID(
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to execute select query")
 		if err == pgx.ErrNoRows {
-			return nil, errorx.NewNotFound().WithCause(err)
+			return nil, errorx.NewNotFound().WithCause(err, op)
 		}
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	invitation := StaffInvitationToDomain(dto)

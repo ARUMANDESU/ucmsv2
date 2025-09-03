@@ -73,18 +73,19 @@ func NewMiddleware(args Args) *Middleware {
 
 func (m *Middleware) Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		const op = "http.middleware.Auth"
 		ctx, span := tracer.Start(r.Context(), "AuthMiddleware")
 		defer span.End()
 
 		accessCookie, err := r.Cookie(authhttp.AccessJWTCookie)
 		if err != nil {
-			m.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err), "failed to get access token cookie")
+			m.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err, op), "failed to get access token cookie")
 			return
 		}
 
 		err = validation.Validate(accessCookie.Value, validation.Required, validation.Length(1, 1000))
 		if err != nil {
-			m.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err), "invalid access token cookie")
+			m.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err, op), "invalid access token cookie")
 			return
 		}
 
@@ -92,62 +93,62 @@ func (m *Middleware) Auth(next http.Handler) http.Handler {
 			return m.secret, nil
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 		if err != nil {
-			m.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err), "failed to parse access token")
+			m.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err, op), "failed to parse access token")
 			return
 		}
 		if !accessToken.Valid {
-			err = errorx.NewInvalidCredentials().WithCause(errors.New("invalid access token"))
+			err = errorx.NewInvalidCredentials().WithCause(errors.New("invalid access token"), op)
 			m.errhandler.HandleError(w, r, span, err, "invalid access token")
 			return
 		}
 
 		accessClaims, ok := accessToken.Claims.(jwt.MapClaims)
 		if !ok {
-			err = errorx.NewInvalidCredentials().WithCause(errors.New("failed to parse access token claims"))
+			err = errorx.NewInvalidCredentials().WithCause(errors.New("failed to parse access token claims"), op)
 			m.errhandler.HandleError(w, r, span, err, "failed to parse access token claims")
 			return
 		}
 		if accessClaims["iss"] != authapp.ISS || accessClaims["sub"] != authapp.UserSubject {
 			err = errorx.NewInvalidCredentials().
-				WithCause(fmt.Errorf("invalid access token issuer or subject: iss=%v, sub=%v", accessClaims["iss"], accessClaims["sub"]))
+				WithCause(fmt.Errorf("invalid access token issuer or subject: iss=%v, sub=%v", accessClaims["iss"], accessClaims["sub"]), op)
 			m.errhandler.HandleError(w, r, span, err, "invalid access token issuer or subject")
 			return
 		}
 		userRole, ok := accessClaims["user_role"].(string)
 		if !ok {
 			err = errorx.NewInvalidCredentials().
-				WithCause(fmt.Errorf("role not found or type assertion failed in access token claims: %T", accessClaims["user_role"]))
+				WithCause(fmt.Errorf("role not found or type assertion failed in access token claims: %T", accessClaims["user_role"]), op)
 			m.errhandler.HandleError(w, r, span, err, "role not found or type assertion failed in access token claims")
 			return
 		}
 		if userRole == "" {
-			err = errorx.NewInvalidCredentials().WithCause(errors.New("role is empty in access token claims"))
+			err = errorx.NewInvalidCredentials().WithCause(errors.New("role is empty in access token claims"), op)
 			m.errhandler.HandleError(w, r, span, err, "role is empty in access token claims")
 			return
 		}
 		uid, ok := accessClaims["uid"].(string)
 		if !ok {
 			err = errorx.NewInvalidCredentials().
-				WithCause(fmt.Errorf("user id not found or type assertion failed in access token claims: %T", accessClaims["uid"]))
+				WithCause(fmt.Errorf("user id not found or type assertion failed in access token claims: %T", accessClaims["uid"]), op)
 			m.errhandler.HandleError(w, r, span, err, "user id not found or type assertion failed in access token claims")
 			return
 		}
 		expUnix, ok := accessClaims["exp"].(float64)
 		if !ok {
 			err = errorx.NewInvalidCredentials().
-				WithCause(fmt.Errorf("expiration time not found or type assertion failed in access token claims: %T", accessClaims["exp"]))
+				WithCause(fmt.Errorf("expiration time not found or type assertion failed in access token claims: %T", accessClaims["exp"]), op)
 			m.errhandler.HandleError(w, r, span, err, "expiration time not found or type assertion failed in access token claims")
 			return
 		}
 		exp := time.Unix(int64(expUnix), 0)
 		if exp.Before(time.Now().UTC()) {
-			err = errorx.NewInvalidCredentials().WithCause(errors.New("access token is expired"))
+			err = errorx.NewInvalidCredentials().WithCause(errors.New("access token is expired"), op)
 			m.errhandler.HandleError(w, r, span, err, "access token is expired")
 			return
 		}
 		userID, err := uuid.Parse(uid)
 		if err != nil {
-			err = errorx.NewInvalidCredentials().WithCause(err)
+			err = errorx.NewInvalidCredentials().WithCause(err, op)
 			m.errhandler.HandleError(w, r, span, err, "failed to parse user id in access token claims")
 			return
 		}
@@ -162,6 +163,7 @@ func (m *Middleware) Auth(next http.Handler) http.Handler {
 
 func (m *Middleware) StaffOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		const op = "http.middleware.StaffOnly"
 		ctx, span := tracer.Start(r.Context(), "StaffOnlyMiddleware")
 		defer span.End()
 
@@ -173,7 +175,7 @@ func (m *Middleware) StaffOnly(next http.Handler) http.Handler {
 		ctxUser.SetSpanAttrs(span)
 
 		if ctxUser.Role != role.Staff {
-			err = errorx.NewForbidden().WithCause(fmt.Errorf("user role %s is not allowed", ctxUser.Role))
+			err = errorx.NewForbidden().WithCause(fmt.Errorf("user role %s is not allowed", ctxUser.Role), op)
 			m.errhandler.HandleError(w, r, span, err, "user is not staff")
 			return
 		}

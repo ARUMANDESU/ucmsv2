@@ -10,6 +10,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/validationx"
 )
 
@@ -32,6 +33,7 @@ type RegisterStudentArgs struct {
 }
 
 func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
+	const op = "user.RegisterStudent"
 	err := validation.ValidateStruct(&p,
 		validation.Field(&p.Username, validation.Required, validationx.IsUsername),
 		validation.Field(&p.Barcode, validation.Required, validation.Length(6, 20), is.Alphanumeric),
@@ -44,12 +46,12 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 		validation.Field(&p.AvatarURL, validation.Length(0, 1000)),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	passhash, err := NewPasswordHash(p.Password)
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	now := time.Now().UTC()
@@ -99,9 +101,10 @@ func RehydrateStudent(p RehydrateStudentArgs) *Student {
 }
 
 func (s *Student) SetGroupID(groupID group.ID) error {
+	const op = "user.Student.SetGroupID"
 	err := validation.Validate(groupID, validationx.Required)
 	if err != nil {
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	s.groupID = groupID

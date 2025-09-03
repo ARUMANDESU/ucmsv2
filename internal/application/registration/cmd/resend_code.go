@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -49,6 +48,7 @@ func NewResendCodeHandler(args ResendCodeHandlerArgs) *ResendCodeHandler {
 }
 
 func (h *ResendCodeHandler) Handle(ctx context.Context, cmd ResendCode) error {
+	const op = "cmd.ResendCodeHandler.Handle"
 	ctx, span := h.tracer.Start(ctx, "ResendCodeHandler.Handle",
 		trace.WithAttributes(
 			attribute.String("email", logging.RedactEmail(cmd.Email)),
@@ -58,11 +58,11 @@ func (h *ResendCodeHandler) Handle(ctx context.Context, cmd ResendCode) error {
 	user, err := h.usergetter.GetUserByEmail(ctx, cmd.Email)
 	if err != nil && !errorx.IsNotFound(err) {
 		otelx.RecordSpanError(span, err, "failed to get user by email")
-		return err
+		return errorx.Wrap(err, op)
 	}
 	if user != nil {
 		otelx.RecordSpanError(span, ErrEmailNotAvailable, "user already exists with this email")
-		return ErrEmailNotAvailable
+		return errorx.Wrap(ErrEmailNotAvailable, op)
 	}
 	span.AddEvent("user not found, proceeding to resend code")
 
@@ -75,14 +75,14 @@ func (h *ResendCodeHandler) Handle(ctx context.Context, cmd ResendCode) error {
 		err := r.ResendCode()
 		if err != nil {
 			span.AddEvent("failed to resend code")
-			return fmt.Errorf("failed to resend code: %w", err)
+			return err
 		}
 		span.AddEvent("code resent successfully")
 		return nil
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to update registration by email")
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	return nil

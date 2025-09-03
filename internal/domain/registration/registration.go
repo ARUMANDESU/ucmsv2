@@ -3,7 +3,6 @@ package registration
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/ARUMANDESU/validation"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/pkg/env"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/randcode"
 )
 
@@ -79,14 +79,15 @@ type Registration struct {
 }
 
 func NewRegistration(email string, mode env.Mode) (*Registration, error) {
+	const op = "registration.NewRegistration"
 	err := validation.Validate(&email, validation.Required, is.Email)
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	code, err := generateCode()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate verification code: %w", err)
+		return nil, errorx.Wrap(err, op)
 	}
 	now := time.Now().UTC()
 
@@ -139,13 +140,14 @@ func Rehydrate(args RehydrateArgs) *Registration {
 }
 
 func (r *Registration) VerifyCode(code string) error {
+	const op = "registration.Registration.VerifyCode"
 	if r.status != StatusPending {
-		return fmt.Errorf("%w: %w", ErrInvalidStatus, errors.New("can only verify pending registrations"))
+		return errorx.Wrap(ErrInvalidStatus, op)
 	}
 
 	if time.Now().After(r.codeExpiresAt) {
 		r.status = StatusExpired
-		return ErrCodeExpired
+		return errorx.Wrap(ErrCodeExpired, op)
 	}
 
 	if r.verificationCode != code {
@@ -157,9 +159,9 @@ func (r *Registration) VerifyCode(code string) error {
 				RegistrationID: r.id,
 				Reason:         "too many failed attempts",
 			})
-			return ErrPersistentTooManyAttempts
+			return errorx.Wrap(ErrPersistentTooManyAttempts, op)
 		}
-		return ErrPersistentVerificationCodeMismatch
+		return errorx.Wrap(ErrPersistentVerificationCodeMismatch, op)
 	}
 
 	r.updatedAt = time.Now().UTC()
@@ -174,36 +176,38 @@ func (r *Registration) VerifyCode(code string) error {
 }
 
 func (r *Registration) CheckCode(code string) error {
+	const op = "registration.Registration.CheckCode"
 	if r.status == StatusCompleted {
-		return ErrRegistrationCompleted
+		return errorx.Wrap(ErrRegistrationCompleted, op)
 	}
 	if r.status != StatusVerified {
-		return ErrVerifyFirst
+		return errorx.Wrap(ErrVerifyFirst, op)
 	}
 
 	if time.Now().After(r.codeExpiresAt) {
-		return ErrCodeExpired
+		return errorx.Wrap(ErrCodeExpired, op)
 	}
 
 	if r.verificationCode != code {
-		return ErrInvalidVerificationCode
+		return errorx.Wrap(ErrInvalidVerificationCode, op)
 	}
 
 	return nil
 }
 
 func (r *Registration) ResendCode() error {
+	const op = "registration.Registration.ResendCode"
 	if !r.resendTimeout.IsZero() && !time.Now().After(r.resendTimeout) {
-		return fmt.Errorf("%w: time left until next resend: %s", ErrWaitUntilResend, time.Until(r.resendTimeout).String())
+		return errorx.Wrap(ErrWaitUntilResend, op)
 	}
 
 	if r.IsCompleted() {
-		return ErrRegistrationCompleted
+		return errorx.Wrap(ErrRegistrationCompleted, op)
 	}
 
 	code, err := generateCode()
 	if err != nil {
-		return fmt.Errorf("failed to generate new verification code: %w", err)
+		return errorx.Wrap(err, op)
 	}
 
 	r.verificationCode = code
@@ -224,12 +228,12 @@ func (r *Registration) ResendCode() error {
 }
 
 func (r *Registration) Complete() error {
+	const op = "registration.Registration.Complete"
 	if r == nil {
-		return errors.New("registration is nil")
+		return errorx.Wrap(errors.New("registration is nil"), op)
 	}
-
 	if r.status != StatusVerified && r.status != StatusCompleted {
-		return fmt.Errorf("%w: %w", ErrInvalidStatus, errors.New("can only complete verified registrations"))
+		return errorx.Wrap(ErrInvalidStatus, op)
 	}
 
 	r.status = StatusCompleted
@@ -322,9 +326,10 @@ func (r *Registration) UpdatedAt() time.Time {
 }
 
 func generateCode() (string, error) {
+	const op = "registration.generateCode"
 	code, err := randcode.GenerateAlphaNumericCode(VerificationCodeLength)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate new verification code: %w", err)
+		return "", errorx.Wrap(err, op)
 	}
 
 	return code, nil

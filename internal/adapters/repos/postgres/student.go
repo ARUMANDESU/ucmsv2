@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -45,6 +44,7 @@ func NewStudentRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *Student
 }
 
 func (st *StudentRepo) GetStudentByID(ctx context.Context, id user.ID) (*user.Student, error) {
+	const op = "postgres.StudentRepo.GetStudentByID"
 	ctx, span := st.tracer.Start(ctx, "StudentRepo.GetStudentByID")
 	defer span.End()
 
@@ -71,16 +71,17 @@ func (st *StudentRepo) GetStudentByID(ctx context.Context, id user.ID) (*user.St
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errorx.NewNotFound().WithCause(err)
+			return nil, errorx.NewNotFound().WithCause(err, op)
 		}
 		otelx.RecordSpanError(span, err, "failed to get student by ID")
-		return nil, fmt.Errorf("failed to get student by ID: %w", err)
+		return nil, errorx.Wrap(err, op)
 	}
 
 	return StudentToDomain(dto, roleDTO, studentDTO), nil
 }
 
 func (st *StudentRepo) GetStudentByEmail(ctx context.Context, email string) (*user.Student, error) {
+	const op = "postgres.StudentRepo.GetStudentByEmail"
 	ctx, span := st.tracer.Start(ctx, "StudentRepo.GetStudentByEmail")
 	defer span.End()
 
@@ -106,21 +107,22 @@ func (st *StudentRepo) GetStudentByEmail(ctx context.Context, email string) (*us
 		&studentDTO.GroupID,
 	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errorx.NewNotFound().WithCause(err)
-		}
 		otelx.RecordSpanError(span, err, "failed to get student by email")
-		return nil, fmt.Errorf("failed to get student by email: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errorx.NewNotFound().WithCause(err, op)
+		}
+		return nil, errorx.Wrap(err, op)
 	}
 
 	return StudentToDomain(dto, roleDTO, studentDTO), nil
 }
 
 func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) error {
+	const op = "postgres.StudentRepo.SaveStudent"
 	ctx, span := st.tracer.Start(ctx, "StudentRepo.SaveStudent")
 	defer span.End()
 
-	return postgres.WithTx(ctx, st.pool, func(ctx context.Context, tx pgx.Tx) error {
+	err := postgres.WithTx(ctx, st.pool, func(ctx context.Context, tx pgx.Tx) error {
 		dto := DomainToUserDTO(student.User(), 0)
 		res, err := tx.Exec(ctx, insertUserQuery,
 			dto.ID,
@@ -137,12 +139,11 @@ func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) e
 		)
 		if err != nil {
 			otelx.RecordSpanError(span, err, "failed to insert user")
-			return err
+			return errorx.Wrap(err, op)
 		}
 		if res.RowsAffected() == 0 {
-			err := fmt.Errorf("no rows affected while inserting user: %w", ErrNoRowsAffected)
 			otelx.RecordSpanError(span, err, "no rows affected while inserting user")
-			return err
+			return errorx.Wrap(ErrNoRowsAffected, op)
 		}
 
 		insertStudentQuery := `
@@ -157,21 +158,26 @@ func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) e
 		)
 		if err != nil {
 			otelx.RecordSpanError(span, err, "failed to insert student")
-			return err
+			return errorx.Wrap(err, op)
 		}
 		if res.RowsAffected() == 0 {
-			err := fmt.Errorf("no rows affected while inserting student: %w", ErrNoRowsAffected)
 			otelx.RecordSpanError(span, err, "no rows affected while inserting student")
-			return err
+			return errorx.Wrap(ErrNoRowsAffected, op)
 		}
 
 		events := student.GetUncommittedEvents()
 		if len(events) > 0 {
 			if err := watermillx.Publish(ctx, tx, st.wlogger, events...); err != nil {
 				otelx.RecordSpanError(span, err, "failed to publish events")
-				return err
+				return errorx.Wrap(err, op)
 			}
 		}
 		return nil
 	})
+	if err != nil {
+		otelx.RecordSpanError(span, err, "failed to execute transaction")
+		return err
+	}
+
+	return nil
 }

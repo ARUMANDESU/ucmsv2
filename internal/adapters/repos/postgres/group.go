@@ -46,6 +46,7 @@ func NewGroupRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *GroupRepo
 }
 
 func (r *GroupRepo) GetGroupByID(ctx context.Context, groupID group.ID) (*group.Group, error) {
+	const op = "postgres.GroupRepo.GetGroupByID"
 	ctx, span := r.tracer.Start(ctx, "GroupRepo.GetGroupByID")
 	defer span.End()
 
@@ -67,15 +68,16 @@ func (r *GroupRepo) GetGroupByID(ctx context.Context, groupID group.ID) (*group.
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to execute query")
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errorx.NewNotFound().WithCause(err)
+			return nil, errorx.NewNotFound().WithCause(err, op)
 		}
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	return GroupToDomain(dto), nil
 }
 
 func (r *GroupRepo) SaveGroup(ctx context.Context, g *group.Group) error {
+	const op = "postgres.GroupRepo.SaveGroup"
 	ctx, span := r.tracer.Start(ctx, "GroupRepo.SaveGroup")
 	defer span.End()
 
@@ -86,10 +88,13 @@ func (r *GroupRepo) SaveGroup(ctx context.Context, g *group.Group) error {
 		VALUES ($1, $2, $3, $4, $5, $6);
 	`
 
-	_, err := r.pool.Exec(ctx, query, dto.ID, dto.Name, dto.Year, dto.Major, dto.CreatedAt, dto.UpdatedAt)
+	res, err := r.pool.Exec(ctx, query, dto.ID, dto.Name, dto.Year, dto.Major, dto.CreatedAt, dto.UpdatedAt)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to execute query")
-		return err
+		return errorx.Wrap(err, op)
+	}
+	if res.RowsAffected() == 0 {
+		return errorx.Wrap(ErrNoRowsAffected, op)
 	}
 
 	return nil

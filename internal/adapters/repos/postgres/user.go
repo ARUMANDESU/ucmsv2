@@ -46,6 +46,7 @@ func NewUserRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *UserRepo {
 }
 
 func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, error) {
+	const op = "postgres.UserRepo.GetUserByID"
 	ctx, span := r.tracer.Start(ctx, "UserRepo.GetUserByID")
 	defer span.End()
 
@@ -70,9 +71,9 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id user.ID) (*user.User, err
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to get user by id")
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errorx.NewNotFound().WithCause(err)
+			return nil, errorx.NewNotFound().WithCause(err, op)
 		}
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	return UserToDomain(dto, roleDTO), nil
@@ -103,7 +104,7 @@ func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*user.User
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to get user by email")
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errorx.NewNotFound().WithCause(err)
+			return nil, errorx.NewNotFound().WithCause(err, "get_user_by_email")
 		}
 		return nil, err
 	}
@@ -112,6 +113,7 @@ func (r *UserRepo) GetUserByEmail(ctx context.Context, email string) (*user.User
 }
 
 func (r *UserRepo) GetUserByBarcode(ctx context.Context, barcode user.Barcode) (*user.User, error) {
+	const op = "postgres.UserRepo.GetUserByBarcode"
 	ctx, span := r.tracer.Start(ctx, "UserRepo.GetUserByBarcode")
 	defer span.End()
 
@@ -136,9 +138,9 @@ func (r *UserRepo) GetUserByBarcode(ctx context.Context, barcode user.Barcode) (
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to get user by barcode")
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errorx.NewNotFound().WithCause(err)
+			return nil, errorx.NewNotFound().WithCause(err, op)
 		}
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	return UserToDomain(dto, roleDTO), nil
@@ -149,6 +151,7 @@ func (r *UserRepo) IsUserExists(
 	email, username string,
 	barcode user.Barcode,
 ) (emailExists, usernameExists, barcodeExists bool, err error) {
+	const op = "postgres.UserRepo.IsUserExists"
 	ctx, span := r.tracer.Start(ctx, "UserRepo.IsUserExists")
 	defer span.End()
 
@@ -162,7 +165,7 @@ func (r *UserRepo) IsUserExists(
 		Scan(&emailExists, &usernameExists, &barcodeExists)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to check if user exists")
-		return false, false, false, err
+		return false, false, false, errorx.Wrap(err, op)
 	}
 
 	return emailExists, usernameExists, barcodeExists, nil

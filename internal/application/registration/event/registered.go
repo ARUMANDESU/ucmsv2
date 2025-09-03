@@ -11,6 +11,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
@@ -55,6 +56,7 @@ func (h *RegistrationCompletedHandler) StudentHandle(ctx context.Context, e *use
 	if e == nil {
 		return nil
 	}
+	const op = "event.RegistrationCompletedHandler.StudentHandle"
 
 	l := h.logger.With(
 		slog.String("event", "StudentRegistered"),
@@ -74,13 +76,14 @@ func (h *RegistrationCompletedHandler) StudentHandle(ctx context.Context, e *use
 		err := reg.Complete()
 		if err != nil {
 			trace.SpanFromContext(ctx).AddEvent("failed to complete registration")
+			return err
 		}
 		return nil
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to update registration status to completed")
 		l.ErrorContext(ctx, "failed to update registration status to completed", slog.String("error", err.Error()))
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	return nil
@@ -90,7 +93,7 @@ func (h *RegistrationCompletedHandler) StaffHandle(ctx context.Context, e *user.
 	if e == nil {
 		return nil
 	}
-
+	const op = "event.RegistrationCompletedHandler.StaffHandle"
 	l := h.logger.With(
 		slog.String("event", "StaffRegistered"),
 		slog.String("staff.barcode", e.StaffBarcode.String()),
@@ -109,13 +112,14 @@ func (h *RegistrationCompletedHandler) StaffHandle(ctx context.Context, e *user.
 		err := reg.Complete()
 		if err != nil {
 			trace.SpanFromContext(ctx).AddEvent("failed to complete registration")
+			return err
 		}
 		return nil
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to update registration status to completed")
 		l.ErrorContext(ctx, "failed to update registration status to completed", slog.String("error", err.Error()))
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	return nil

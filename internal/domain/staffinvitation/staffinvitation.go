@@ -2,7 +2,6 @@ package staffinvitation
 
 import (
 	"encoding/json"
-	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -118,6 +117,7 @@ type CreateArgs struct {
 }
 
 func NewStaffInvitation(args CreateArgs) (*StaffInvitation, error) {
+	const op = "staffinvitation.NewStaffInvitation"
 	now := time.Now().UTC()
 
 	err := validation.ValidateStruct(
@@ -128,12 +128,12 @@ func NewStaffInvitation(args CreateArgs) (*StaffInvitation, error) {
 		validation.Field(&args.ValidUntil, validUntilRules(args.ValidUntil, args.ValidFrom)...),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("validation failed: %w", err)
+		return nil, errorx.Wrap(err, op)
 	}
 
 	token, err := randcode.GenerateAlphaNumericCode(CodeLength)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate code: %w", err)
+		return nil, errorx.Wrap(err, op)
 	}
 
 	staffInvitation := &StaffInvitation{
@@ -187,16 +187,17 @@ func Rehydrate(args RehydrateArgs) *StaffInvitation {
 }
 
 func (s *StaffInvitation) UpdateRecipients(userID user.ID, emails []string) error {
+	const op = "staffinvitation.StaffInvitation.UpdateRecipients"
 	if s.creatorID != userID {
-		return ErrForbidden
+		return errorx.Wrap(ErrForbidden, op)
 	}
 	if s.deletedAt != nil {
-		return ErrNotFoundOrDeleted
+		return errorx.Wrap(ErrNotFoundOrDeleted, op)
 	}
 
 	err := validation.Validate(emails, recipientsEmailRules...)
 	if err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+		return errorx.Wrap(err, op)
 	}
 
 	previousEmails := make(map[string]struct{}, len(s.recipientsEmail))
@@ -239,18 +240,19 @@ func (s *StaffInvitation) UpdateRecipients(userID user.ID, emails []string) erro
 }
 
 func (s *StaffInvitation) UpdateValidity(userID user.ID, from *time.Time, until *time.Time) error {
+	const op = "staffinvitation.StaffInvitation.UpdateValidity"
 	if s.creatorID != userID {
-		return ErrForbidden
+		return errorx.Wrap(ErrForbidden, op)
 	}
 	if s.deletedAt != nil {
-		return ErrNotFoundOrDeleted
+		return errorx.Wrap(ErrNotFoundOrDeleted, op)
 	}
 
 	if err := validation.Validate(from, validFromRules(from)...); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+		return errorx.Wrap(err, op)
 	}
 	if err := validation.Validate(until, validUntilRules(until, from)...); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+		return errorx.Wrap(err, op)
 	}
 
 	isValidFromSame := (s.validFrom == nil && from == nil) ||
@@ -276,8 +278,9 @@ func (s *StaffInvitation) UpdateValidity(userID user.ID, from *time.Time, until 
 }
 
 func (s *StaffInvitation) MarkDeleted(userID user.ID) error {
+	const op = "staffinvitation.StaffInvitation.MarkDeleted"
 	if s.creatorID != userID {
-		return ErrForbidden
+		return errorx.Wrap(ErrForbidden, op)
 	}
 	if s.deletedAt != nil {
 		return nil
@@ -295,18 +298,19 @@ func (s *StaffInvitation) MarkDeleted(userID user.ID) error {
 }
 
 func (s *StaffInvitation) ValidateInvitationAccess(email, code string) error {
+	const op = "staffinvitation.StaffInvitation.ValidateInvitationAccess"
 	if s.deletedAt != nil {
-		return ErrNotFoundOrDeleted
+		return errorx.Wrap(ErrNotFoundOrDeleted, op)
 	}
 	if email == "" || code == "" || s.code != code {
-		return ErrInvalidInvitation
+		return errorx.Wrap(ErrInvalidInvitation, op)
 	}
 
 	if slices.Contains(s.recipientsEmail, email) {
 		return nil
 	}
 
-	return ErrInvalidInvitation
+	return errorx.Wrap(ErrInvalidInvitation, op)
 }
 
 func (s *StaffInvitation) ID() ID {

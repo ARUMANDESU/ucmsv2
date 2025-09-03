@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
@@ -63,6 +63,7 @@ func NewCreateInvitationHandler(args CreateInvitationHandlerArgs) *CreateInvitat
 }
 
 func (h *CreateInvitationHandler) Handle(ctx context.Context, cmd CreateInvitation) error {
+	const op = "cmd.CreateInvitationHandler.Handle"
 	ctx, span := h.tracer.Start(ctx, "CreateInvitationHandler.Handle", trace.WithAttributes(
 		attribute.String("creator_id", cmd.CreatorID.String()),
 		attribute.Int("recipients_count", len(cmd.RecipientsEmail)),
@@ -77,13 +78,13 @@ func (h *CreateInvitationHandler) Handle(ctx context.Context, cmd CreateInvitati
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to create new staff invitation")
-		return fmt.Errorf("failed to create new staff invitation: %w", err)
+		return errorx.Wrap(err, op)
 	}
 
 	err = h.repo.SaveStaffInvitation(ctx, invitation)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to save staff invitation")
-		return fmt.Errorf("failed to save staff invitation: %w", err)
+		return errorx.Wrap(err, op)
 	}
 
 	return nil
@@ -125,6 +126,7 @@ func NewUpdateInvitationRecipientsHandler(args UpdateInvitationRecipientsHandler
 }
 
 func (h *UpdateInvitationRecipientsHandler) Handle(ctx context.Context, cmd UpdateInvitationRecipients) error {
+	const op = "cmd.UpdateInvitationRecipientsHandler.Handle"
 	ctx, span := h.tracer.Start(ctx, "UpdateInvitationRecipientsHandler.Handle", trace.WithAttributes(
 		attribute.String("invitation_id", cmd.InvitationID.String()),
 		attribute.String("creator_id", cmd.CreatorID.String()),
@@ -142,7 +144,7 @@ func (h *UpdateInvitationRecipientsHandler) Handle(ctx context.Context, cmd Upda
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to update staff invitation")
-		return fmt.Errorf("failed to update staff invitation: %w", err)
+		return errorx.Wrap(err, op)
 	}
 
 	return nil
@@ -185,6 +187,7 @@ func NewUpdateInvitationValidityHandler(args UpdateInvitationValidityHandlerArgs
 }
 
 func (h *UpdateInvitationValidityHandler) Handle(ctx context.Context, cmd UpdateInvitationValidity) error {
+	const op = "cmd.UpdateInvitationValidityHandler.Handle"
 	ctx, span := h.tracer.Start(ctx, "UpdateInvitationValidityHandler.Handle", trace.WithAttributes(
 		attribute.String("invitation_id", cmd.InvitationID.String()),
 		attribute.String("creator_id", cmd.CreatorID.String()),
@@ -201,7 +204,7 @@ func (h *UpdateInvitationValidityHandler) Handle(ctx context.Context, cmd Update
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to update staff invitation validity")
-		return fmt.Errorf("failed to update staff invitation validity: %w", err)
+		return errorx.Wrap(err, op)
 	}
 
 	return nil
@@ -242,6 +245,7 @@ func NewDeleteInvitationHandler(args DeleteInvitationHandlerArgs) *DeleteInvitat
 }
 
 func (h *DeleteInvitationHandler) Handle(ctx context.Context, cmd DeleteInvitation) error {
+	const op = "cmd.DeleteInvitationHandler.Handle"
 	ctx, span := h.tracer.Start(ctx, "DeleteInvitationHandler.Handle", trace.WithAttributes(
 		attribute.String("invitation_id", cmd.InvitationID.String()),
 		attribute.String("creator_id", cmd.CreatorID.String()),
@@ -258,7 +262,7 @@ func (h *DeleteInvitationHandler) Handle(ctx context.Context, cmd DeleteInvitati
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to delete staff invitation")
-		return fmt.Errorf("failed to delete staff invitation: %w", err)
+		return errorx.Wrap(err, op)
 	}
 
 	return nil

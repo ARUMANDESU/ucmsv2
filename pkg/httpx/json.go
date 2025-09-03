@@ -21,6 +21,7 @@ type Envelope map[string]any
 const maxRequestBodySize = 10 << 20 // 10MB
 
 func ReadJSON(w http.ResponseWriter, r *http.Request, v any) error {
+	const op = "httpx.ReadJSON"
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 
 	dec := json.NewDecoder(r.Body)
@@ -33,7 +34,7 @@ func ReadJSON(w http.ResponseWriter, r *http.Request, v any) error {
 		var invalidUnmarshalError *json.InvalidUnmarshalError
 		var maxBytesError *http.MaxBytesError
 
-		malformedErr := errorx.NewMalformedJSON().WithCause(err)
+		malformedErr := errorx.NewMalformedJSON().WithCause(err, op)
 		switch {
 		case errors.As(err, &syntaxError):
 			_ = malformedErr.WithDetails(fmt.Sprintf("badly-formed JSON (at character %d)", syntaxError.Offset))
@@ -74,17 +75,18 @@ func ReadJSON(w http.ResponseWriter, r *http.Request, v any) error {
 	// This is to ensure that the body contains only a single JSON value.
 	err = dec.Decode(&struct{}{})
 	if err != io.EOF {
-		return errorx.NewMalformedJSON().WithDetails("body must only contain a single JSON value").WithCause(err)
+		return errorx.NewMalformedJSON().WithDetails("body must only contain a single JSON value").WithCause(err, op)
 	}
 
 	return nil
 }
 
 func ReadUUIDUrlParam(r *http.Request, param string) (uuid.UUID, error) {
+	const op = "httpx.ReadUUIDUrlParam"
 	idStr := chi.URLParam(r, param)
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		return uuid.Nil, errorx.NewInvalidRequest().WithCause(err)
+		return uuid.Nil, errorx.NewInvalidRequest().WithCause(err, op)
 	}
 	return id, nil
 }

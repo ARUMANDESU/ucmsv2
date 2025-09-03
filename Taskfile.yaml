@@ -1,50 +1,48 @@
 # https://taskfile.dev
-version: '3'
-
-vars:
+version: "3"
 
 tasks:
-  openapi:http:
-    desc: Generate OpenAPI HTTP files
-    cmds:
-      - ./scripts/openapi-http.sh registration internal/ports/http registrationhttp
-      - ./scripts/openapi-http.sh student internal/ports/http studenthttp
+    openapi:http:
+        desc: Generate OpenAPI HTTP files
+        cmds:
+            - ./scripts/openapi-http.sh registration internal/ports/http registrationhttp
+            - ./scripts/openapi-http.sh student internal/ports/http studenthttp
 
-  http:
-    cmds:
-      - cmd: go run ./cmd/api/
-        ignore_error: true
-  http:local:
-    desc: Run HTTP server with local environment (.env.local)
-    dotenv: 
-      - .env.local
-    cmds:
-      - cmd: go run ./cmd/api/
-        ignore_error: true
-  http:dev:
-    desc: Run HTTP server with dev environment (.env.dev)
-    dotenv: 
-      - .env.dev
-    cmds:
-      - cmd: go run ./cmd/api/
-        ignore_error: true
+    http:
+        cmds:
+            - cmd: go run ./cmd/api/
+              ignore_error: true
+    http:local:
+        desc: Run HTTP server with local environment (.env.local)
+        dotenv:
+            - .env.local
+        cmds:
+            - cmd: go run ./cmd/api/
+              ignore_error: true
+    http:dev:
+        desc: Run HTTP server with dev environment (.env.dev)
+        dotenv:
+            - .env.dev
+        cmds:
+            - cmd: go run ./cmd/api/
+              ignore_error: true
 
-  test:unit:
-    desc: Run unit tests
-    cmds:
-      - cmd: gotest -v ./internal/...
-      - cmd: gotest -v ./pkg/...
-        ignore_error: true
-  test:integration:
-    desc: Run integration tests
-    cmds:
-      - cmd: gotest -v ./tests/...
-        ignore_error: true
-  test:
-    desc: Run all tests (unit and integration)
-    deps: [test:unit, test:integration]
+    test:unit:
+        desc: Run unit tests
+        cmds:
+            - cmd: gotest -v ./internal/...
+            - cmd: gotest -v ./pkg/...
+              ignore_error: true
+    test:integration:
+        desc: Run integration tests
+        cmds:
+            - cmd: gotest -v ./tests/...
+              ignore_error: true
+    test:
+        desc: Run all tests (unit and integration)
+        deps: [test:unit, test:integration]
 
-  docker:local:
-    desc: Run local Postgres database in Docker
-    cmds:
-      - cmd: docker run -d -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=ucms -p 8765:5432 postgres:16.8
+    docker:local:
+        desc: Run local Postgres database in Docker
+        cmds:
+            - cmd: docker run --name ucmsv2-postgres -d -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=ucms -p 8765:5432 postgres:16.8

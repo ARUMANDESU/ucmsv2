@@ -81,6 +81,7 @@ type GroupInfo struct {
 }
 
 func (h *HTTP) GetStudent(w http.ResponseWriter, r *http.Request) {
+	const op = "studenthttp.HTTP.GetStudent"
 	ctx, span := h.tracer.Start(r.Context(), "GetStudent")
 	defer span.End()
 
@@ -98,7 +99,7 @@ func (h *HTTP) GetStudent(w http.ResponseWriter, r *http.Request) {
 	}
 	if res == nil {
 		err := errors.New("returned student is nil")
-		h.errhandler.HandleError(w, r, span, errorx.NewInternalError().WithCause(err), "failed to get student")
+		h.errhandler.HandleError(w, r, span, errorx.NewInternalError().WithCause(err, op), "failed to get student")
 		return
 	}
 

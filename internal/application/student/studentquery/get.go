@@ -73,6 +73,7 @@ func NewGetStudentHandler(args GetStudentHandlerArgs) *GetStudentHandler {
 }
 
 func (h *GetStudentHandler) Handle(ctx context.Context, query GetStudent) (*GetStudentResponse, error) {
+	const op = "studentquery.GetStudentHandler.Handle"
 	ctx, span := h.tracer.Start(ctx, "GetStudentHandler.Handle",
 		trace.WithAttributes(attribute.String("student.id", query.ID.String())),
 	)
@@ -93,10 +94,9 @@ func (h *GetStudentHandler) Handle(ctx context.Context, query GetStudent) (*GetS
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to get student by id")
 		if errors.Is(err, pgx.ErrNoRows) {
-			h.logger.Warn("student not found", "id", query.ID.String())
-			return nil, errorx.NewNotFound().WithCause(err)
+			return nil, errorx.NewNotFound().WithCause(err, op)
 		}
-		return nil, err
+		return nil, errorx.Wrap(err, op)
 	}
 
 	return &res, nil

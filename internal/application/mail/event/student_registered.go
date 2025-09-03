@@ -12,6 +12,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
@@ -22,6 +23,7 @@ func (h *MailEventHandler) HandleStudentRegistered(ctx context.Context, e *user.
 	if e == nil {
 		return nil
 	}
+	const op = "mailevent.MailEventHandler.HandleStudentRegistered"
 	ctx, span := h.tracer.Start(ctx, "MailEventHandler.HandleStudentRegistered",
 		trace.WithNewRoot(),
 		trace.WithLinks(trace.LinkFromContext(e.Extract())),
@@ -42,7 +44,7 @@ func (h *MailEventHandler) HandleStudentRegistered(ctx context.Context, e *user.
 	if err != nil {
 		otelx.RecordSpanError(span, err, "invalid student registration data")
 		l.ErrorContext(ctx, "invalid student registration data", "error", err.Error())
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	payload := mail.Payload{
@@ -58,7 +60,7 @@ func (h *MailEventHandler) HandleStudentRegistered(ctx context.Context, e *user.
 	if err := h.mailsender.SendMail(ctx, payload); err != nil {
 		otelx.RecordSpanError(span, err, "failed to send registration email")
 		l.ErrorContext(ctx, "failed to send registration email", slog.Any("error", err))
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	return nil

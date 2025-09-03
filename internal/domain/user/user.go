@@ -13,6 +13,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 	"github.com/ARUMANDESU/ucms/pkg/env"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
 const PasswordCostFactor = 12 // Future-proofing; default is 10 in 2025.08.18
@@ -111,12 +112,13 @@ func RehydrateUser(p RehydrateUserArgs) *User {
 }
 
 func (u *User) SetFirstName(firstName string) error {
+	const op = "user.User.SetFirstName"
 	if u == nil {
-		return errors.New("user is nil")
+		return errorx.Wrap(errors.New("user is nil"), op)
 	}
 	err := validation.Validate(firstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen))
 	if err != nil {
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	u.firstName = firstName
@@ -125,12 +127,13 @@ func (u *User) SetFirstName(firstName string) error {
 }
 
 func (u *User) SetLastName(lastName string) error {
+	const op = "user.User.SetLastName"
 	if u == nil {
-		return errors.New("user is nil")
+		return errorx.Wrap(errors.New("user is nil"), op)
 	}
 	err := validation.Validate(lastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen))
 	if err != nil {
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	u.lastName = lastName
@@ -139,12 +142,13 @@ func (u *User) SetLastName(lastName string) error {
 }
 
 func (u *User) SetAvatarURL(avatarURL string) error {
+	const op = "user.User.SetAvatarURL"
 	if u == nil {
-		return errors.New("user is nil")
+		return errorx.Wrap(errors.New("user is nil"), op)
 	}
 	err := validation.Validate(avatarURL, validation.Length(1, MaxAvatarURLLen))
 	if err != nil {
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	u.avatarURL = avatarURL
@@ -245,13 +249,14 @@ func (u *User) UpdatedAt() time.Time {
 }
 
 func NewPasswordHash(password string) ([]byte, error) {
+	const op = "user.NewPasswordHash"
 	costFactor := PasswordCostFactor
 	if env.Current() == env.Test {
 		costFactor = bcrypt.MinCost
 	}
 	passhash, err := bcrypt.GenerateFromPassword([]byte(password), costFactor)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate password hash from password: %w", err)
+		return nil, fmt.Errorf("%s: failed to generate password hash: %w", op, err)
 	}
 	return passhash, nil
 }

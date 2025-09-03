@@ -12,6 +12,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
@@ -22,6 +23,7 @@ func (h *MailEventHandler) HandleRegistrationStarted(ctx context.Context, e *reg
 	if e == nil {
 		return nil
 	}
+	const op = "mailevent.MailEventHandler.HandleRegistrationStarted"
 
 	l := h.logger.With(slog.String("event", "RegistrationStarted"), slog.String("registration.id", e.RegistrationID.String()))
 	ctx, span := h.tracer.Start(
@@ -43,7 +45,7 @@ func (h *MailEventHandler) HandleRegistrationStarted(ctx context.Context, e *reg
 	if err != nil {
 		otelx.RecordSpanError(span, err, "validation failed")
 		l.ErrorContext(ctx, "validation failed", slog.Any("error", err))
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	payload := mail.Payload{
@@ -54,7 +56,7 @@ func (h *MailEventHandler) HandleRegistrationStarted(ctx context.Context, e *reg
 	if err := h.mailsender.SendMail(ctx, payload); err != nil {
 		otelx.RecordSpanError(span, err, "failed to send email verification code")
 		l.ErrorContext(ctx, "Failed to send email verification code", slog.Any("error", err))
-		return fmt.Errorf("failed to send email verification code: %w", err)
+		return errorx.Wrap(err, op)
 	}
 
 	return nil

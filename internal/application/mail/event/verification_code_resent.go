@@ -12,6 +12,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
@@ -22,6 +23,7 @@ func (h *MailEventHandler) HandleVerificationCodeResent(ctx context.Context, e *
 	if e == nil {
 		return nil
 	}
+	const op = "mailevent.MailEventHandler.HandleVerificationCodeResent"
 	l := h.logger.With(
 		slog.String("event", "VerificationCodeResent"),
 		slog.String("registration.id", e.RegistrationID.String()),
@@ -50,7 +52,7 @@ func (h *MailEventHandler) HandleVerificationCodeResent(ctx context.Context, e *
 	if err != nil {
 		otelx.RecordSpanError(span, err, "invalid verification code resent data")
 		l.ErrorContext(ctx, "invalid verification code resent data", slog.Any("error", err))
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	if err := h.mailsender.SendMail(ctx, mail.Payload{
@@ -60,7 +62,7 @@ func (h *MailEventHandler) HandleVerificationCodeResent(ctx context.Context, e *
 	}); err != nil {
 		otelx.RecordSpanError(span, err, "failed to send verification code resent email")
 		h.logger.ErrorContext(ctx, "failed to send verification code resent email", slog.Any("error", err))
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	return nil

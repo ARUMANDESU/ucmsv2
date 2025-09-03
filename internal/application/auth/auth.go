@@ -112,6 +112,7 @@ type LoginResponse struct {
 
 // LoginHandle handles user login logic and return access jwt token
 func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error) {
+	const op = "authapp.App.LoginHandle"
 	ctx, span := a.tracer.Start(
 		ctx,
 		"App.LoginHandle",
@@ -138,15 +139,15 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to get user by email or barcode")
 		if errorx.IsNotFound(err) {
-			return LoginResponse{}, ErrWrongEmailOrBarcodeOrPassword.WithCause(err)
+			return LoginResponse{}, ErrWrongEmailOrBarcodeOrPassword.WithCause(err, op)
 		}
-		return LoginResponse{}, err
+		return LoginResponse{}, errorx.Wrap(err, op)
 	}
 
 	err = u.ComparePassword(cmd.Password)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to compare user password")
-		return LoginResponse{}, ErrWrongEmailOrBarcodeOrPassword.WithCause(err)
+		return LoginResponse{}, ErrWrongEmailOrBarcodeOrPassword.WithCause(err, op)
 	}
 
 	accessToken := jwt.NewWithClaims(a.signingMethod, jwt.MapClaims{
@@ -170,12 +171,12 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 	accessjwt, err := accessToken.SignedString(a.accessTokenSecretKey)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to sign access token")
-		return LoginResponse{}, err
+		return LoginResponse{}, errorx.Wrap(err, op)
 	}
 	refreshjwt, err := refreshToken.SignedString(a.refreshTokenSecretKey)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to sign refresh token")
-		return LoginResponse{}, err
+		return LoginResponse{}, errorx.Wrap(err, op)
 	}
 
 	return LoginResponse{
@@ -191,6 +192,7 @@ type Refresh struct {
 }
 
 func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, error) {
+	const op = "authapp.App.RefreshHandle"
 	ctx, span := a.tracer.Start(
 		ctx,
 		"App.RefreshHandle",
@@ -202,52 +204,54 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 	)
 	defer span.End()
 
-	refreshToken, err := jwt.Parse(cmd.RefreshToken, func(t *jwt.Token) (any, error) {
-		return a.refreshTokenSecretKey, nil
-	}, jwt.WithValidMethods([]string{a.signingMethod.Alg()}))
+	refreshToken, err := jwt.Parse(
+		cmd.RefreshToken,
+		func(t *jwt.Token) (any, error) { return a.refreshTokenSecretKey, nil },
+		jwt.WithValidMethods([]string{a.signingMethod.Alg()}),
+	)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to parse refresh token")
-		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err, op)
 	}
 
 	refreshClaims, ok := refreshToken.Claims.(jwt.MapClaims)
 	if !ok {
 		otelx.RecordSpanError(span, err, "invalid refresh token claims type")
-		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err, op)
 	}
 	if refreshClaims["iss"] != ISS || refreshClaims["sub"] != RefreshSubject {
 		err = errors.New("invalid refresh token issuer or subject")
 		otelx.RecordSpanError(span, err, "invalid refresh token claims")
-		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err, op)
 	}
 	expUnix, ok := refreshClaims["exp"].(float64)
 	if !ok {
 		otelx.RecordSpanError(span, err, "invalid refresh token exp claim type")
-		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err, op)
 	}
 	exp := time.Unix(int64(expUnix), 0)
 	if exp.Before(time.Now().UTC()) {
 		otelx.RecordSpanError(span, err, "refresh token is expired")
-		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err, op)
 	}
 	uid, ok := refreshClaims["uid"].(string)
 	if !ok {
 		err := errors.New("missing or invalid user id in refresh token claims")
 		otelx.RecordSpanError(span, err, "invalid refresh token uid claim type")
-		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err, op)
 	}
 	span.SetAttributes(attribute.String("uid", uid))
 
 	userID, err := uuid.Parse(uid)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "invalid user id format in refresh token claims")
-		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
+		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err, op)
 	}
 
 	u, err := a.usergetter.GetUserByID(ctx, user.ID(userID))
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to get user by id from refresh token claims")
-		return LoginResponse{}, errorx.NewInternalError().WithCause(err)
+		return LoginResponse{}, errorx.NewInternalError().WithCause(err, op)
 	}
 
 	accessToken := jwt.NewWithClaims(a.signingMethod, jwt.MapClaims{
@@ -262,7 +266,7 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 	accessjwt, err := accessToken.SignedString(a.accessTokenSecretKey)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to sign access token")
-		return LoginResponse{}, errorx.NewInternalError().WithCause(err)
+		return LoginResponse{}, errorx.NewInternalError().WithCause(err, op)
 	}
 
 	return LoginResponse{

@@ -68,6 +68,7 @@ func NewStudentCompleteHandler(args StudentCompleteHandlerArgs) *StudentComplete
 }
 
 func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete) error {
+	const op = "cmd.StudentCompleteHandler.Handle"
 	ctx, span := h.tracer.Start(ctx, "StudentCompleteHandler.Handle",
 		trace.WithAttributes(
 			attribute.String("student.email", logging.RedactEmail(cmd.Email)),
@@ -79,7 +80,7 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 	emailExists, usernameExists, barcodeExists, err := h.usergetter.IsUserExists(ctx, cmd.Email, cmd.Username, cmd.Barcode)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to check if user exists")
-		return err
+		return errorx.Wrap(err, op)
 	}
 	if emailExists || usernameExists || barcodeExists {
 		errs := make(errorx.I18nErrors, 0)
@@ -93,28 +94,28 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 			errs = append(errs, ErrBarcodeNotAvailable)
 		}
 		otelx.RecordSpanError(span, errs, "validation error: user already exists")
-		return errs
+		return errorx.Wrap(errs, op)
 	}
 
 	_, err = h.groupgetter.GetGroupByID(ctx, group.ID(cmd.GroupID))
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to get group by ID")
 		if errorx.IsNotFound(err) {
-			return errorx.NewResourceNotFound(i18nx.FieldGroup).WithCause(err)
+			return errorx.NewResourceNotFound(i18nx.FieldGroup).WithCause(err, op)
 		}
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	reg, err := h.regRepo.GetRegistrationByEmail(ctx, cmd.Email)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to get registration by email")
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	err = reg.CheckCode(cmd.VerificationCode)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to verify code")
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	student, err := user.RegisterStudent(user.RegisterStudentArgs{
@@ -130,13 +131,13 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to register student")
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	err = h.studentSaver.SaveStudent(ctx, student)
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to save student")
-		return err
+		return errorx.Wrap(err, op)
 	}
 
 	return nil

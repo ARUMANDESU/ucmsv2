@@ -33,14 +33,15 @@ func WithUser(ctx context.Context, user *User) context.Context {
 }
 
 func UserFromCtx(ctx context.Context) (*User, error) {
+	const op = "ctxs.UserFromCtx"
 	val := ctx.Value(UserKey)
 	if val == nil {
-		return nil, errorx.NewInternalError().WithCause(ErrNotFoundInContext)
+		return nil, errorx.NewInternalError().WithCause(ErrNotFoundInContext, op)
 	}
 
 	user, ok := val.(*User)
 	if !ok {
-		return nil, errorx.NewInternalError().WithCause(ErrInvalidTypeInContext)
+		return nil, errorx.NewInternalError().WithCause(ErrInvalidTypeInContext, op)
 	}
 	return user, nil
 }
