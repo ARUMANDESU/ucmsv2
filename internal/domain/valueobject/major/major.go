@@ -1,8 +1,11 @@
 package major
 
-import "github.com/ARUMANDESU/ucms/pkg/errorx"
+import (
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/i18nx"
+)
 
-var ErrInvalidMajor = errorx.NewValidationFieldFailed("major")
+var ErrInvalidMajor = errorx.NewValidationFieldFailed(i18nx.FieldMajor)
 
 type Major string
 

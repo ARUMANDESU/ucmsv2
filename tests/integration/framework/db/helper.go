@@ -194,11 +194,29 @@ func (h *Helper) RequireStudentExistsByEmail(t *testing.T, email string) *user.S
 	return user.NewStudentAssertions(student)
 }
 
-func (h *Helper) RequireStaffInvitationExists(t *testing.T, code string) *staffinvitation.Assertion {
+func (h *Helper) RequireStaffInvitationExists(t *testing.T, id staffinvitation.ID) *staffinvitation.Assertion {
+	t.Helper()
+
+	invitation, err := h.staffInvitation.GetStaffInvitationByID(t.Context(), id)
+	require.NoError(t, err, "staff invitation not found for id: %s", id)
+
+	return staffinvitation.NewAssertion(t, invitation)
+}
+
+func (h *Helper) RequireStaffInvitationExistsByCode(t *testing.T, code string) *staffinvitation.Assertion {
 	t.Helper()
 
 	invitation, err := h.staffInvitation.GetStaffInvitationByCode(t.Context(), code)
 	require.NoError(t, err, "staff invitation not found for code: %s", code)
+
+	return staffinvitation.NewAssertion(t, invitation)
+}
+
+func (h *Helper) RequireLatestStaffInvitationByCreatorID(t *testing.T, creatorID user.ID) *staffinvitation.Assertion {
+	t.Helper()
+
+	invitation, err := h.staffInvitation.GetLatestStaffInvitationByCreatorID(t.Context(), creatorID)
+	require.NoError(t, err, "no staff invitation found for creator_id: %s", creatorID)
 
 	return staffinvitation.NewAssertion(t, invitation)
 }
@@ -268,4 +286,9 @@ func (h *Helper) SeedGroup(t *testing.T, groupID group.ID, name string, year str
 func (h *Helper) SeedStaff(t *testing.T, staff *user.Staff) {
 	t.Helper()
 	require.NoError(t, h.staff.SaveStaff(t.Context(), staff))
+}
+
+func (h *Helper) SeedStaffInvitation(t *testing.T, invitation *staffinvitation.StaffInvitation) {
+	t.Helper()
+	require.NoError(t, h.staffInvitation.SaveStaffInvitation(t.Context(), invitation))
 }

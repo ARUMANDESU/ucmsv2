@@ -32,3 +32,9 @@ other = "Academic Group"
 
 [username]
 other = "Username"
+
+[status]
+other = "Status"
+
+[recipients_email]
+other = "Recipients' Email"

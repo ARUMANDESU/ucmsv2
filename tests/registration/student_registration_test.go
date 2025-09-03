@@ -1458,7 +1458,7 @@ func (s *RegistrationIntegrationSuite) TestGetVerificationCodeEndpoint() {
 		response.RequireStatus(http.StatusOK)
 
 		var respData map[string]any
-		response.ParseJSON(&respData)
+		response.RequireParseJSON(&respData)
 		require.Equal(t, expectedCode, respData["verification_code"])
 	})
 

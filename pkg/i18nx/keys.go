@@ -108,6 +108,8 @@ const (
 	FieldGroup            = "group"
 	FieldUsername         = "username"
 	FieldStatus           = "status"
+	FieldRecipientsEmail  = "recipients_email"
+	FieldMajor            = "major"
 )
 
 // Template argument keys (snake_case naming)

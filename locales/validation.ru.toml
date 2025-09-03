@@ -40,6 +40,21 @@ other = "длина должна быть от {{.min}} до {{.max}}"
 [validation_length_empty_required]
 other = "значение должно быть пустым"
 
+[validation_count_too_many]
+other = "количество должно быть не больше {{.max}}"
+
+[validation_count_too_few]
+other = "количество должно быть не меньше {{.min}}"
+
+[validation_count_invalid]
+other = "количество должно быть ровно {{.min}}"
+
+[validation_count_out_of_range]
+other = "количество должно быть от {{.min}} до {{.max}}"
+
+[validation_count_empty_required]
+other = "значение должно быть пустым"
+
 [validation_min_greater_equal_than_required]
 other = "должно быть не меньше {{.threshold}}"
 

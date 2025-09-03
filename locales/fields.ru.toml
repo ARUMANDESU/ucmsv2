@@ -32,3 +32,9 @@ other = "Академическая группа"
 
 [username]
 other = "Имя пользователя"
+
+[status]
+other = "Статус"
+
+[recipients_email]
+other = "Электронная почта получателей"

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -10,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 	"github.com/ARUMANDESU/ucms/pkg/postgres"
@@ -124,6 +126,9 @@ func (r *StaffInvitationRepo) UpdateStaffInvitation(
 			&dto.UpdatedAt, &dto.DeletedAt,
 		)
 		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return errorx.NewNotFound().WithCause(err)
+			}
 			otelx.RecordSpanError(span, err, "failed to select staff invitation")
 			return err
 		}
@@ -172,6 +177,34 @@ func (r *StaffInvitationRepo) UpdateStaffInvitation(
 	return nil
 }
 
+func (r *StaffInvitationRepo) GetStaffInvitationByID(ctx context.Context, id staffinvitation.ID) (*staffinvitation.StaffInvitation, error) {
+	ctx, span := r.tracer.Start(ctx, "StaffInvitationRepo.GetStaffInvitationByID")
+	defer span.End()
+
+	query := `
+        SELECT id, creator_id, code, recipients_email, valid_from, valid_until, created_at, updated_at, deleted_at
+        FROM staff_invitations
+        WHERE id = $1;
+    `
+
+	var dto StaffInvitationDTO
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&dto.ID, &dto.CreatorID, &dto.Code,
+		&dto.RecipientsEmail, &dto.ValidFrom, &dto.ValidUntil,
+		&dto.CreatedAt, &dto.UpdatedAt, &dto.DeletedAt,
+	)
+	if err != nil {
+		otelx.RecordSpanError(span, err, "failed to execute select query")
+		if err == pgx.ErrNoRows {
+			return nil, errorx.NewNotFound().WithCause(err)
+		}
+		return nil, err
+	}
+
+	invitation := StaffInvitationToDomain(dto)
+	return invitation, nil
+}
+
 func (r *StaffInvitationRepo) GetStaffInvitationByCode(ctx context.Context, code string) (*staffinvitation.StaffInvitation, error) {
 	ctx, span := r.tracer.Start(ctx, "StaffInvitationRepo.GetStaffInvitationByCode")
 	defer span.End()
@@ -184,6 +217,39 @@ func (r *StaffInvitationRepo) GetStaffInvitationByCode(ctx context.Context, code
 
 	var dto StaffInvitationDTO
 	err := r.pool.QueryRow(ctx, query, code).Scan(
+		&dto.ID, &dto.CreatorID, &dto.Code,
+		&dto.RecipientsEmail, &dto.ValidFrom, &dto.ValidUntil,
+		&dto.CreatedAt, &dto.UpdatedAt, &dto.DeletedAt,
+	)
+	if err != nil {
+		otelx.RecordSpanError(span, err, "failed to execute select query")
+		if err == pgx.ErrNoRows {
+			return nil, errorx.NewNotFound().WithCause(err)
+		}
+		return nil, err
+	}
+
+	invitation := StaffInvitationToDomain(dto)
+	return invitation, nil
+}
+
+func (r *StaffInvitationRepo) GetLatestStaffInvitationByCreatorID(
+	ctx context.Context,
+	creatorID user.ID,
+) (*staffinvitation.StaffInvitation, error) {
+	ctx, span := r.tracer.Start(ctx, "StaffInvitationRepo.GetLatestStaffInvitationByCreatorID")
+	defer span.End()
+
+	query := `
+        SELECT id, creator_id, code, recipients_email, valid_from, valid_until, created_at, updated_at, deleted_at
+        FROM staff_invitations
+        WHERE creator_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1;
+    `
+
+	var dto StaffInvitationDTO
+	err := r.pool.QueryRow(ctx, query, creatorID).Scan(
 		&dto.ID, &dto.CreatorID, &dto.Code,
 		&dto.RecipientsEmail, &dto.ValidFrom, &dto.ValidUntil,
 		&dto.CreatedAt, &dto.UpdatedAt, &dto.DeletedAt,

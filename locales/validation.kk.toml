@@ -26,7 +26,7 @@ other = "дұрыс пішімде болуы тиіс"
 other = "{{.base}} еселенген болуы тиіс"
 
 [validation_length_too_long]
-other = "ұзындығы {{.max}}-тен аспауы тиіс"
+other = "ұзындығы {{.max}} аспауы тиіс"
 
 [validation_length_too_short]
 other = "ұзындығы кемінде {{.min}} болуы тиіс"
@@ -38,6 +38,21 @@ other = "ұзындығы дәл {{.min}} болуы тиіс"
 other = "ұзындығы {{.min}}–{{.max}} аралығында болуы тиіс"
 
 [validation_length_empty_required]
+other = "мән бос болуы тиіс"
+
+[validation_count_too_many]
+other = "саны {{.max}} аспауы тиіс"
+
+[validation_count_too_few]
+other = "саны кемінде {{.min}} болуы тиіс"
+
+[validation_count_invalid]
+other = "саны дәл {{.min}} болуы тиіс"
+
+[validation_count_out_of_range]
+other = "саны {{.min}}–{{.max}} аралығында болуы тиіс"
+
+[validation_count_empty_required]
 other = "мән бос болуы тиіс"
 
 [validation_min_greater_equal_than_required]

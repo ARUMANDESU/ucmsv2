@@ -40,6 +40,21 @@ other = "the length must be between {{.min}} and {{.max}}"
 [validation_length_empty_required]
 other = "the value must be empty"
 
+[validation_count_too_many]
+other = "the count must be no more than {{.max}}"
+
+[validation_count_too_few]
+other = "the count must be no less than {{.min}}"
+
+[validation_count_invalid]
+other = "the count must be exactly {{.min}}"
+
+[validation_count_out_of_range]
+other = "the count must be between {{.min}} and {{.max}}"
+
+[validation_count_empty_required]
+other = "the value must be empty"
+
 [validation_min_greater_equal_than_required]
 other = "must be no less than {{.threshold}}"
 

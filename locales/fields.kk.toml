@@ -32,3 +32,9 @@ other = "Академиялық топ"
 
 [username]
 other = "Пайдаланушы аты"
+
+[status]
+other = "Статус"
+
+[recipients_email]
+other = "Алушылардың электрондық поштасы"

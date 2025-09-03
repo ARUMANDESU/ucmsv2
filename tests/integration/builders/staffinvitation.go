@@ -5,6 +5,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/pkg/randcode"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 )
 
@@ -21,9 +22,10 @@ type StaffInvitationBuilder struct {
 }
 
 func NewStaffInvitationBuilder() *StaffInvitationBuilder {
+	code, _ := randcode.GenerateAlphaNumericCode(staffinvitation.CodeLength)
 	return &StaffInvitationBuilder{
 		id:              staffinvitation.NewID(),
-		code:            "default-code",
+		code:            code,
 		recipientsEmail: []string{fixtures.TestStaff2.Email},
 		creatorID:       fixtures.TestStaff.ID,
 		createdAt:       time.Now(),

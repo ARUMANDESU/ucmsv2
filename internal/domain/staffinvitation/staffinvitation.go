@@ -24,8 +24,9 @@ import (
 const EventStreamName = "events_staff_invitation"
 
 const (
-	CodeLength = 20
-	MaxEmails  = 25
+	CodeLength         = 20
+	MaxEmails          = 25
+	ValidFromThreshold = time.Minute
 )
 
 var (
@@ -60,7 +61,7 @@ var (
 			rules = append(rules, validation.Min(time.Now().UTC()).ErrorObject(ErrTimeInPast))
 
 			if validFrom != nil {
-				rules = append(rules, validation.Min(*validFrom).ErrorObject(ErrTimeBeforeThreshold))
+				rules = append(rules, validation.Min(validFrom.Add(ValidFromThreshold)).ErrorObject(ErrTimeBeforeThreshold))
 			}
 		}
 		return rules
@@ -516,6 +517,16 @@ func (a *Assertion) AssertDeletedAt(expected *time.Time) *Assertion {
 	} else {
 		assert.NotNil(a.t, a.s.deletedAt, "DeletedAt should not be nil")
 		assert.WithinDuration(a.t, *expected, *a.s.deletedAt, time.Second, "DeletedAt should match")
+	}
+	return a
+}
+
+func (a *Assertion) AssertDeleted(expected bool) *Assertion {
+	a.t.Helper()
+	if expected {
+		assert.NotNil(a.t, a.s.deletedAt, "StaffInvitation should be deleted")
+	} else {
+		assert.Nil(a.t, a.s.deletedAt, "StaffInvitation should not be deleted")
 	}
 	return a
 }

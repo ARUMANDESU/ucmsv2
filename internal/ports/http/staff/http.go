@@ -211,7 +211,7 @@ func (h *HTTP) UpdateInvitationRecipients(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httpx.Success(w, r, http.StatusNoContent, nil)
+	httpx.Success(w, r, http.StatusOK, nil)
 }
 
 type UpdateInvitationValidityRequest struct {
@@ -275,7 +275,7 @@ func (h *HTTP) UpdateInvitationValidity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httpx.Success(w, r, http.StatusNoContent, nil)
+	httpx.Success(w, r, http.StatusOK, nil)
 }
 
 func (h *HTTP) DeleteInvitation(w http.ResponseWriter, r *http.Request) {
@@ -305,5 +305,5 @@ func (h *HTTP) DeleteInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.Success(w, r, http.StatusNoContent, nil)
+	httpx.Success(w, r, http.StatusOK, nil)
 }

@@ -176,6 +176,16 @@ func TestNewStaffInvitation(t *testing.T) {
 			wantErr: validation.Errors{"valid_until": staffinvitation.ErrTimeInPast},
 		},
 		{
+			name: "invalid with both validFrom and validUntil equal",
+			args: staffinvitation.CreateArgs{
+				RecipientsEmail: []string{testEmail1, testEmail2},
+				CreatorID:       fixtures.TestStaff.ID,
+				ValidFrom:       &minuteLater,
+				ValidUntil:      &minuteLater,
+			},
+			wantErr: validation.Errors{"valid_until": staffinvitation.ErrTimeBeforeThreshold},
+		},
+		{
 			name: "recipients email exceeds maximum",
 			args: staffinvitation.CreateArgs{
 				RecipientsEmail: generateTestEmails(staffinvitation.MaxEmails + 1),

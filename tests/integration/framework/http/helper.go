@@ -85,14 +85,29 @@ func (h *Helper) Do(t *testing.T, req Request) *Response {
 func (r *Response) AssertStatus(expected int) *Response {
 	r.t.Helper()
 
-	assert.Equal(r.t, expected, r.Result().StatusCode, "unexpected status code: %d, expected: %d", r.Result().StatusCode, expected)
+	assert.Equal(r.t, expected, r.Result().StatusCode,
+		"unexpected status code: %d(%s), expected: %d(%s); message: %s; details: %s",
+		r.Result().StatusCode,
+		http.StatusText(r.Result().StatusCode),
+		expected,
+		http.StatusText(expected),
+		r.getMessage(),
+		r.getDetails(),
+	)
 	return r
 }
 
 func (r *Response) RequireStatus(expected int) *Response {
 	r.t.Helper()
 
-	require.Equal(r.t, expected, r.Result().StatusCode, "unexpected status code: %d, expected: %d", r.Result().StatusCode, expected)
+	require.Equal(r.t, expected, r.Result().StatusCode, "unexpected status code: %d(%s), expected: %d(%s); message: %s; details: %s",
+		r.Result().StatusCode,
+		http.StatusText(r.Result().StatusCode),
+		expected,
+		http.StatusText(expected),
+		r.getMessage(),
+		r.getDetails(),
+	)
 	return r
 }
 
@@ -108,7 +123,7 @@ func (r *Response) AssertMessage(expected string) *Response {
 	r.t.Helper()
 
 	var resp map[string]any
-	r.ParseJSON(&resp)
+	r.RequireParseJSON(&resp)
 	message, ok := resp["message"].(string)
 	require.True(r.t, ok, "expected message to be a string")
 	assert.Equal(r.t, expected, message, "unexpected message in response")
@@ -123,7 +138,7 @@ func (r *Response) AssertContainsMessage(expected string) *Response {
 	}
 
 	var resp map[string]any
-	r.ParseJSON(&resp)
+	r.RequireParseJSON(&resp)
 	message, ok := resp["message"].(string)
 	require.True(r.t, ok, "expected message to be a string")
 	assert.Contains(r.t, message, expected, "message does not contain expected text")
@@ -136,7 +151,7 @@ func (r *Response) AssertSuccess() *Response {
 	r.AssertStatus(http.StatusOK)
 
 	var resp map[string]any
-	r.ParseJSON(&resp)
+	r.RequireParseJSON(&resp)
 	assert.True(r.t, resp["success"].(bool), "expected succeeded=true")
 
 	return r
@@ -147,7 +162,7 @@ func (r *Response) RequireSuccess() *Response {
 	r.RequireStatus(http.StatusOK)
 
 	var resp map[string]any
-	r.ParseJSON(&resp)
+	r.RequireParseJSON(&resp)
 	require.True(r.t, resp["success"].(bool), "expected succeeded=true")
 
 	return r
@@ -168,7 +183,7 @@ func (r *Response) AssertError(expectedStatus int, expectedMessage string) *Resp
 	r.AssertStatus(expectedStatus)
 
 	var resp map[string]any
-	r.ParseJSON(&resp)
+	r.RequireParseJSON(&resp)
 	require.False(r.t, resp["succeeded"].(bool), "expected succeeded=false")
 	assert.Contains(r.t, resp["message"].(string), expectedMessage)
 	return r
@@ -181,10 +196,23 @@ func (r *Response) AssertBadRequest() *Response {
 	return r
 }
 
-func (r *Response) ParseJSON(v any) *Response {
+func (r *Response) RequireParseJSON(v any) *Response {
 	r.t.Helper()
 
 	require.NotEmpty(r.t, r.Body, "response body is empty")
+
+	err := json.Unmarshal(r.Body.Bytes(), v)
+	require.NoError(r.t, err, "failed to parse JSON response: %s", r.Body.String())
+
+	return r
+}
+
+func (r *Response) ParseJSONIfExists(v any) *Response {
+	r.t.Helper()
+
+	if r.Body.Len() == 0 {
+		return r
+	}
 
 	err := json.Unmarshal(r.Body.Bytes(), v)
 	require.NoError(r.t, err, "failed to parse JSON response: %s", r.Body.String())
@@ -203,6 +231,26 @@ func (r *Response) GetCookie(name string) *http.Cookie {
 	}
 	require.Fail(r.t, fmt.Sprintf("cookie %s not found", name))
 	return nil
+}
+
+func (r *Response) getMessage() string {
+	var resp map[string]any
+	r.ParseJSONIfExists(&resp)
+	message, ok := resp["message"].(string)
+	if !ok {
+		return ""
+	}
+	return message
+}
+
+func (r *Response) getDetails() string {
+	var resp map[string]any
+	r.ParseJSONIfExists(&resp)
+	details, ok := resp["details"].(string)
+	if !ok {
+		return ""
+	}
+	return details
 }
 
 type RequestBuilderOptions func(*RequestBuilder)

@@ -45,26 +45,23 @@ func (r *GroupRepo) GetGroupByName(_ context.Context, name string) (*group.Group
 	return nil, errorx.NewNotFound()
 }
 
-func (r *GroupRepo) SeedGroup(ctx context.Context, group *group.Group) error {
+func (r *GroupRepo) SeedGroup(t *testing.T, group *group.Group) {
+	t.Helper()
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if group == nil {
-		return errorx.NewValidationFieldFailed("group").WithArgs(map[string]any{"Field": "group"})
-	}
-
 	if _, exists := r.dbByID[group.ID()]; exists {
-		return errorx.NewDuplicateEntryWithField("group", "id")
+		t.Fatalf("Group with ID %s already exists in the mock repo", group.ID())
+		return
 	}
 
 	if _, exists := r.dbByName[group.Name()]; exists {
-		return errorx.NewDuplicateEntryWithField("group", "name")
+		t.Fatalf("Group with name %s already exists in the mock repo", group.Name())
+		return
 	}
 
 	r.dbByID[group.ID()] = group
 	r.dbByName[group.Name()] = group
-
-	return nil
 }
 
 func (r *GroupRepo) AssertGroupNotExists(t *testing.T, id group.ID) *GroupRepo {
