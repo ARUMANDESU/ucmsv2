@@ -1,4 +1,4 @@
-package event
+package mailevent
 
 import (
 	"context"
@@ -15,6 +15,8 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
+
+const RegistrationStartedSubject = "Email Verification Code"
 
 func (h *MailEventHandler) HandleRegistrationStarted(ctx context.Context, e *registration.RegistrationStarted) error {
 	if e == nil {
@@ -46,7 +48,7 @@ func (h *MailEventHandler) HandleRegistrationStarted(ctx context.Context, e *reg
 
 	payload := mail.Payload{
 		To:      e.Email,
-		Subject: "Email Verification Code",
+		Subject: RegistrationStartedSubject,
 		Body:    fmt.Sprintf("Your email verification code is: %s", e.VerificationCode),
 	}
 	if err := h.mailsender.SendMail(ctx, payload); err != nil {

@@ -1,4 +1,4 @@
-package event
+package mailevent
 
 import (
 	"context"
@@ -13,6 +13,10 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
+)
+
+const (
+	StaffInvitationSubject = "Staff Invitation"
 )
 
 func (h *MailEventHandler) HandleStaffInvitationCreated(ctx context.Context, e *staffinvitation.Created) error {
@@ -96,7 +100,7 @@ func (h *MailEventHandler) HandleStaffInvitationRecipientsUpdated(ctx context.Co
 func (h *MailEventHandler) sendStaffInvitationEmail(ctx context.Context, email, code string) error {
 	payload := mail.Payload{
 		To:      email,
-		Subject: "Staff Invitation",
+		Subject: StaffInvitationSubject,
 		Body: fmt.Sprintf(
 			"You have been invited to join as staff. Please use the following link to accept the invitation:\n\n%s/%s?email=%s",
 			h.staffInvitationBaseURL,

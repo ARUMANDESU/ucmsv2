@@ -1,4 +1,4 @@
-package event
+package mailevent
 
 import (
 	"context"
@@ -15,6 +15,8 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
+
+const WelcomeSubject = "Welcome to UCMS"
 
 func (h *MailEventHandler) HandleStudentRegistered(ctx context.Context, e *user.StudentRegistered) error {
 	if e == nil {
@@ -45,7 +47,7 @@ func (h *MailEventHandler) HandleStudentRegistered(ctx context.Context, e *user.
 
 	payload := mail.Payload{
 		To:      e.Email,
-		Subject: "Welcome to UCMS",
+		Subject: WelcomeSubject,
 		Body: fmt.Sprintf(
 			"Hello %s %s,\n\nWelcome to UCMS! Your registration is successful.\n\nBest regards,\nUCMS Team",
 			e.FirstName,

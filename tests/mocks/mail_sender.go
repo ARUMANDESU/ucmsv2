@@ -6,6 +6,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
 )
@@ -57,4 +60,21 @@ func (m *MockMailSender) AssertMailSent(t *testing.T, email, subject string) {
 		}
 	}
 	t.Errorf("Expected mail to %s with subject containing %s not found", email, subject)
+}
+
+// EventuallyRequireMailSent checks periodically for up to 5 seconds if an email with the specified subject has been sent to the given address.
+func (m *MockMailSender) EventuallyRequireMailSent(t *testing.T, email, subject string) *mail.Payload {
+	t.Helper()
+	var foundMail mail.Payload
+	require.Eventually(t, func() bool {
+		mails := m.GetSentMails()
+		for _, mail := range mails {
+			if mail.To == email && strings.Contains(mail.Subject, subject) {
+				foundMail = mail
+				return true
+			}
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Expected mail to %s with subject containing %s not found within timeout", email, subject)
+	return &foundMail
 }

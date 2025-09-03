@@ -1,4 +1,4 @@
-package event
+package mailevent
 
 import (
 	"context"
@@ -15,6 +15,8 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
+
+const VerificationCodeResentSubject = "Verification Code Resent"
 
 func (h *MailEventHandler) HandleVerificationCodeResent(ctx context.Context, e *registration.VerificationCodeResent) error {
 	if e == nil {
@@ -53,7 +55,7 @@ func (h *MailEventHandler) HandleVerificationCodeResent(ctx context.Context, e *
 
 	if err := h.mailsender.SendMail(ctx, mail.Payload{
 		To:      e.Email,
-		Subject: "Verification Code Resent",
+		Subject: VerificationCodeResentSubject,
 		Body:    fmt.Sprintf("Your verification code has been resent: %s", e.VerificationCode),
 	}); err != nil {
 		otelx.RecordSpanError(span, err, "failed to send verification code resent email")

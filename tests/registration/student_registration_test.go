@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	mailevent "github.com/ARUMANDESU/ucms/internal/application/mail/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
@@ -69,7 +70,7 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 		mails := s.MockMailSender.GetSentMails()
 		s.Require().Len(mails, 1)
 		s.Equal(email, mails[0].To)
-		s.Contains(mails[0].Subject, "Email Verification Code")
+		s.Contains(mails[0].Subject, mailevent.RegistrationStartedSubject)
 		s.Contains(mails[0].Body, reg.Registration.VerificationCode())
 		s.MockMailSender.Reset()
 	})
@@ -220,7 +221,7 @@ func (s *RegistrationIntegrationSuite) TestConcurrentRegistrations() {
 	mails := s.MockMailSender.GetSentMails()
 	s.Require().Len(mails, 1)
 	s.Equal(email, mails[0].To)
-	s.Contains(mails[0].Subject, "Email Verification Code")
+	s.Contains(mails[0].Subject, mailevent.RegistrationStartedSubject)
 	s.Contains(mails[0].Body, e.VerificationCode)
 }
 

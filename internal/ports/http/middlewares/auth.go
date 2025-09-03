@@ -107,7 +107,7 @@ func (m *Middleware) Auth(next http.Handler) http.Handler {
 			m.errhandler.HandleError(w, r, span, err, "failed to parse access token claims")
 			return
 		}
-		if accessClaims["iss"] != "ucmsv2_auth" || accessClaims["sub"] != "user" {
+		if accessClaims["iss"] != authapp.ISS || accessClaims["sub"] != authapp.UserSubject {
 			err = errorx.NewInvalidCredentials().
 				WithCause(fmt.Errorf("invalid access token issuer or subject: iss=%v, sub=%v", accessClaims["iss"], accessClaims["sub"]))
 			m.errhandler.HandleError(w, r, span, err, "invalid access token issuer or subject")

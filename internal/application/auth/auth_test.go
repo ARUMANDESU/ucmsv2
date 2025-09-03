@@ -52,8 +52,8 @@ func (a *AppSuite) assertAccessToken(t *testing.T, token, uid, role string) {
 	t.Helper()
 	authapp.NewJWTTokenAssertion(t, token, a.AccessTokenSecretKey).
 		AssertValid().
-		AssertISS("ucmsv2_auth").
-		AssertSub("user").
+		AssertISS(authapp.ISS).
+		AssertSub(authapp.UserSubject).
 		AssertExp(time.Now().Add(a.AccessTokenExpDuration)).
 		AssertIAT(time.Now()).
 		AssertUID(uid).
@@ -64,13 +64,13 @@ func (a *AppSuite) assertRefreshToken(t *testing.T, token, uid string) {
 	t.Helper()
 	authapp.NewJWTTokenAssertion(t, token, a.RefreshTokenSecretKey).
 		AssertValid().
-		AssertISS("ucmsv2_auth").
-		AssertSub("refresh").
+		AssertISS(authapp.ISS).
+		AssertSub(authapp.RefreshSubject).
 		AssertExp(time.Now().Add(a.RefreshTokenExpDuration)).
 		AssertIAT(time.Now()).
 		AssertUID(uid).
 		AssertJTINotEmpty().
-		AssertScope("refresh")
+		AssertScope(authapp.RefreshScope)
 }
 
 func TestLoginHandle_HappyPath(t *testing.T) {

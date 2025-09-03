@@ -16,8 +16,6 @@ import (
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 )
 
-var ErrJSONSyntax = errorx.NewInvalidRequest().WithKey("error_json_syntax")
-
 type Envelope map[string]any
 
 const maxRequestBodySize = 10 << 20 // 10MB

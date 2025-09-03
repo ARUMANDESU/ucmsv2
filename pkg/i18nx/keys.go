@@ -4,6 +4,7 @@ package i18nx
 const (
 	// Client errors
 	KeyInvalid                   = "invalid"
+	KeyMalformedJSON             = "malformed_json"
 	KeyValidationFailed          = "validation_failed"
 	KeyValidationFailedField     = "validation_failed_field"
 	KeyUnauthorized              = "unauthorized"
@@ -13,6 +14,7 @@ const (
 	KeyAccessDenied              = "access_denied"
 	KeyNotFound                  = "not_found"
 	KeyNotFoundWithType          = "not_found_with_type"
+	KeyNotFoundOrDeleted         = "not_found_or_deleted"
 	KeyMethodNotAllowed          = "method_not_allowed"
 	KeyConflict                  = "conflict"
 	KeyDuplicateEntry            = "duplicate_entry"
@@ -57,6 +59,7 @@ const (
 	KeyUsernameNotAvailable = "error_username_not_available"
 
 	// Staff invitation specific
+	KeyInvalidInvitation       = "invalid_invitation"
 	KeyTimestampInPast         = "timestamp_in_past"
 	KeyAtLeastOneEmail         = "at_least_one_email"
 	KeyEmailAlreadyExistsField = "email_already_exists_field"
@@ -69,39 +72,27 @@ const (
 )
 
 // Validation message keys (project-specific validation errors)
+//
+//	Custom validation rules
 const (
-	ValidationRequired                = "validation_required"
-	ValidationNilOrNotEmptyRequired   = "validation_nil_or_not_empty_required"
-	ValidationNil                     = "validation_nil"
-	ValidationEmpty                   = "validation_empty"
-	ValidationInInvalid               = "validation_in_invalid"
-	ValidationNotInInvalid            = "validation_not_in_invalid"
-	ValidationMatchInvalid            = "validation_match_invalid"
-	ValidationMultipleOfInvalid       = "validation_multiple_of_invalid"
-	ValidationLengthTooLong           = "validation_length_too_long"
-	ValidationLengthTooShort          = "validation_length_too_short"
-	ValidationLengthInvalid           = "validation_length_invalid"
-	ValidationLengthOutOfRange        = "validation_length_out_of_range"
-	ValidationLengthEmptyRequired     = "validation_length_empty_required"
-	ValidationMinGreaterEqualRequired = "validation_min_greater_equal_than_required"
-	ValidationMaxLessEqualRequired    = "validation_max_less_equal_than_required"
-	ValidationMinGreaterRequired      = "validation_min_greater_than_required"
-	ValidationMaxLessRequired         = "validation_max_less_than_required"
-	ValidationNotNilRequired          = "validation_not_nil_required"
-	ValidationKeyWrongType            = "validation_key_wrong_type"
-	ValidationKeyMissing              = "validation_key_missing"
-	ValidationKeyUnexpected           = "validation_key_unexpected"
-	ValidationDateInvalid             = "validation_date_invalid"
-	ValidationDateOutOfRange          = "validation_date_out_of_range"
+	ValidationIsEmail             = "validation_is_email"
+	ValidationIsPassword          = "validation_is_password"
+	ValidationIsName              = "validation_is_name"
+	ValidationIsUsername          = "validation_is_username"
+	ValidationNoDuplicate         = "validation_no_duplicate"
+	ValidationTimeInPast          = "validation_time_in_past"
+	ValidationTimeBeforeThreshold = "validation_time_before_threshold"
+)
 
-	// Custom validation rules
-	ValidationIsEmail         = "validation_is_email"
-	ValidationIsPassword      = "validation_is_password"
-	ValidationIsName          = "validation_is_name"
-	ValidationIsUsername      = "validation_is_username"
-	ValidationNoDuplicate     = "validation_no_duplicate"
-	ValidationTimeInPast      = "validation_time_in_past"
-	ValidationTimeBeforeStart = "validation_time_before_start"
+// Validation messages (English defaults)
+const (
+	MsgValidationIsEmailOther             = "must be a valid email address"
+	MsgValidationIsPasswordOther          = "must contain at least 8 characters with uppercase, lowercase, number, and special character"
+	MsgValidationIsNameOther              = "must contain only letters, spaces, and common name characters"
+	MsgValidationIsUsernameOther          = "must be between 3 and 30 characters long, start with a letter, and contain only lowercase letters, digits, periods, and underscores. Cannot contain consecutive periods or underscores, or period followed by underscore or vice versa"
+	MsgValidationNoDuplicateOther         = "duplicate values are not allowed"
+	MsgValidationTimeInPastOther          = "time cannot be in the past"
+	MsgValidationTimeBeforeThresholdOther = "time must be after {{.threshold}}"
 )
 
 // Field name keys
@@ -116,6 +107,7 @@ const (
 	FieldGroupID          = "group_id"
 	FieldGroup            = "group"
 	FieldUsername         = "username"
+	FieldStatus           = "status"
 )
 
 // Template argument keys (snake_case naming)
@@ -126,4 +118,5 @@ const (
 	ArgLocaleResourceType = "locale_resource_type"
 	ArgRetryAfter         = "retry_after"
 	ArgMaxEmails          = "max_emails"
+	ArgThreshold          = "threshold"
 )

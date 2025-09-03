@@ -199,7 +199,7 @@ func NewValidationFieldFailed(field string) *I18nError {
 
 func NewMalformedJSON() *I18nError {
 	return &I18nError{
-		MessageKey: i18nx.KeyInvalid,
+		MessageKey: i18nx.KeyMalformedJSON,
 		Code:       CodeMalformedJSON,
 		HTTPCode:   http.StatusBadRequest,
 	}

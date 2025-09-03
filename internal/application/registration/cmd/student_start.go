@@ -12,11 +12,12 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/pkg/env"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/i18nx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
-var ErrEmailNotAvailable = errorx.NewDuplicateEntry().WithKey("error_email_not_available")
+var ErrEmailNotAvailable = errorx.NewDuplicateEntry().WithKey(i18nx.KeyEmailNotAvailable)
 
 var (
 	tracer = otel.Tracer("ucms/application/registration/cmd")

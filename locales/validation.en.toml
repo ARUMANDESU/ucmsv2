@@ -234,8 +234,22 @@ other = "must be a valid social security number"
 [validation_is_semver]
 other = "must be a valid semantic version"
 
+# ---- custom validation rules ----
+
 [validation_is_password]
 other = "must contain at least 8 characters with uppercase, lowercase, number, and special character"
 
 [validation_is_username]
 other = "must be between 3 and 30 characters long, start with a letter, and contain only lowercase letters, digits, periods, and underscores. Cannot contain consecutive periods or underscores, or period followed by underscore or vice versa"
+
+[validation_is_name]
+other = "must contain only letters, spaces, and common name characters"
+
+[validation_no_duplicate]
+other = "duplicate values are not allowed"
+
+[validation_time_in_past]
+other = "time cannot be in the past"
+
+[validation_time_before_threshold]
+other = "time must be after {{.threshold}}"

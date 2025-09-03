@@ -11,6 +11,7 @@ import (
 	"github.com/ARUMANDESU/validation/is"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
@@ -28,11 +29,11 @@ const (
 )
 
 var (
-	ErrTimeInPast        = validation.NewError(i18nx.ValidationTimeInPast, "the time must be in the future")
-	ErrTimeBeforeStart   = validation.NewError(i18nx.ValidationTimeBeforeStart, "the time must be after the start time")
-	ErrForbidden         = errorx.NewForbidden()
-	ErrNotFoundOrDeleted = errorx.NewNotFound().WithKey("not_found_or_deleted")
-	ErrInvalidInvitation = errorx.NewInvalidRequest().WithKey("invalid_invitation")
+	ErrTimeInPast          = validation.NewError(i18nx.ValidationTimeInPast, i18nx.MsgValidationTimeInPastOther)
+	ErrTimeBeforeThreshold = validation.NewError(i18nx.ValidationTimeBeforeThreshold, i18nx.MsgValidationTimeBeforeThresholdOther)
+	ErrForbidden           = errorx.NewForbidden()
+	ErrNotFoundOrDeleted   = errorx.NewNotFound().WithKey(i18nx.KeyNotFoundOrDeleted)
+	ErrInvalidInvitation   = errorx.NewInvalidRequest().WithKey(i18nx.KeyInvalidInvitation)
 )
 
 var (
@@ -59,7 +60,7 @@ var (
 			rules = append(rules, validation.Min(time.Now().UTC()).ErrorObject(ErrTimeInPast))
 
 			if validFrom != nil {
-				rules = append(rules, validation.Min(*validFrom).ErrorObject(ErrTimeBeforeStart))
+				rules = append(rules, validation.Min(*validFrom).ErrorObject(ErrTimeBeforeThreshold))
 			}
 		}
 		return rules
@@ -470,13 +471,23 @@ func (a *Assertion) AssertRecipientsEmail(expected []string) *Assertion {
 
 func (a *Assertion) AssertValidFrom(expected *time.Time) *Assertion {
 	a.t.Helper()
-	assert.Equal(a.t, expected, a.s.validFrom, "ValidFrom should match")
+	if expected == nil {
+		assert.Nil(a.t, a.s.validFrom, "ValidFrom should be nil")
+	} else {
+		require.NotNil(a.t, a.s.validFrom, "ValidFrom should not be nil")
+		assert.WithinDuration(a.t, *expected, *a.s.validFrom, time.Second, "ValidFrom should match")
+	}
 	return a
 }
 
 func (a *Assertion) AssertValidUntil(expected *time.Time) *Assertion {
 	a.t.Helper()
-	assert.Equal(a.t, expected, a.s.validUntil, "ValidUntil should match")
+	if expected == nil {
+		assert.Nil(a.t, a.s.validUntil, "ValidUntil should be nil")
+	} else {
+		require.NotNil(a.t, a.s.validUntil, "ValidUntil should not be nil")
+		assert.WithinDuration(a.t, *expected, *a.s.validUntil, time.Second, "ValidUntil should match")
+	}
 	return a
 }
 

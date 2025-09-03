@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	ErrBarcodeNotAvailable  = errorx.NewDuplicateEntry().WithKey("error_barcode_not_available")
-	ErrUsernameNotAvailable = errorx.NewDuplicateEntry().WithKey("error_username_not_available")
+	ErrBarcodeNotAvailable  = errorx.NewDuplicateEntry().WithKey(i18nx.KeyBarcodeNotAvailable)
+	ErrUsernameNotAvailable = errorx.NewDuplicateEntry().WithKey(i18nx.KeyUsernameNotAvailable)
 )
 
 type StudentComplete struct {

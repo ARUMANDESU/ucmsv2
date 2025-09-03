@@ -1,21 +1,21 @@
 package mail
 
 import (
-	"github.com/ARUMANDESU/ucms/internal/application/mail/event"
+	mailevent "github.com/ARUMANDESU/ucms/internal/application/mail/event"
 )
 
 type App struct {
-	Event *event.MailEventHandler
+	Event *mailevent.MailEventHandler
 }
 
 type Args struct {
-	Mailsender             event.MailSender
+	Mailsender             mailevent.MailSender
 	StaffInvitationBaseURL string
 }
 
 func NewApp(args Args) *App {
 	return &App{
-		Event: event.NewMailEventHandler(event.MailEventHandlerArgs{
+		Event: mailevent.NewMailEventHandler(mailevent.MailEventHandlerArgs{
 			Mailsender:             args.Mailsender,
 			StaffInvitationBaseURL: args.StaffInvitationBaseURL,
 		}),

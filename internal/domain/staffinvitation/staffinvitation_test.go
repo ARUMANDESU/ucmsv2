@@ -164,7 +164,7 @@ func TestNewStaffInvitation(t *testing.T) {
 				ValidFrom:       &twoMinutesLater,
 				ValidUntil:      &minuteLater,
 			},
-			wantErr: validation.Errors{"valid_until": staffinvitation.ErrTimeBeforeStart},
+			wantErr: validation.Errors{"valid_until": staffinvitation.ErrTimeBeforeThreshold},
 		},
 		{
 			name: "invalid with validUntil in the past",
@@ -516,7 +516,7 @@ func TestStaffInvitation_UpdateValidity(t *testing.T) {
 			userID:          fixtures.TestStaff.ID,
 			validFrom:       timePointer(time.Now().Add(2 * time.Minute)),
 			validUntil:      timePointer(time.Now().Add(1 * time.Minute)),
-			wantErr:         staffinvitation.ErrTimeBeforeStart,
+			wantErr:         staffinvitation.ErrTimeBeforeThreshold,
 			isValidationErr: true,
 			wantValidFrom:   nil,
 			wantValidUntil:  nil,

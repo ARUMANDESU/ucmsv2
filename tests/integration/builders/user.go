@@ -61,7 +61,7 @@ func NewUserBuilder() *UserBuilder {
 
 	return &UserBuilder{
 		id:        user.NewID(),
-		barcode:   fixtures.TestStudent.Barcode,
+		barcode:   user.Barcode(fmt.Sprintf("100%03d", rand.Uint()%1000)),
 		username:  fmt.Sprintf("user_%d_%d", rand.Uint()%1000, now.UnixNano()),
 		firstName: fixtures.TestStudent.FirstName,
 		lastName:  fixtures.TestStudent.LastName,

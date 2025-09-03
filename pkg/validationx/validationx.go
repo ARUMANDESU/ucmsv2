@@ -16,18 +16,10 @@ import (
 )
 
 var (
-	ErrInvalidPasswordFormat = validation.NewError(
-		i18nx.ValidationIsPassword,
-		"must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one digit, and one special character",
-	)
-	ErrInvalidNameFormat = validation.NewError(
-		i18nx.ValidationIsName,
-		"must be a valid name containing only letters, spaces, hyphens, apostrophes, and periods")
-	ErrInvalidUsernameFormat = validation.NewError(
-		i18nx.ValidationIsUsername,
-		"must be between 3 and 30 characters long, start with a letter, and contain only letters, digits, periods, and underscores. Cannot contain consecutive periods or underscores, or period followed by underscore or vice versa",
-	)
-	ErrDuplicate = validation.NewError(i18nx.ValidationNoDuplicate, "must not contain duplicate entries")
+	ErrInvalidPasswordFormat = validation.NewError(i18nx.ValidationIsPassword, i18nx.MsgValidationIsPasswordOther)
+	ErrInvalidNameFormat     = validation.NewError(i18nx.ValidationIsName, i18nx.MsgValidationIsNameOther)
+	ErrInvalidUsernameFormat = validation.NewError(i18nx.ValidationIsUsername, i18nx.MsgValidationIsUsernameOther)
+	ErrDuplicate             = validation.NewError(i18nx.ValidationNoDuplicate, i18nx.MsgValidationNoDuplicateOther)
 )
 
 var (

@@ -18,6 +18,7 @@ import (
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/i18nx"
 	"github.com/ARUMANDESU/ucms/pkg/logging"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
@@ -25,6 +26,10 @@ import (
 const (
 	AccessTokenExpDuration  = 30 * time.Minute
 	RefreshTokenExpDuration = 14 * 24 * time.Hour
+	ISS                     = "ucmsv2_auth"
+	UserSubject             = "user"
+	RefreshSubject          = "refresh"
+	RefreshScope            = "refresh"
 )
 
 var (
@@ -32,7 +37,7 @@ var (
 	logger = otelslog.NewLogger("ucms/internal/application/auth")
 )
 
-var ErrWrongEmailOrBarcodeOrPassword = errorx.NewUnauthorized().WithKey("wrong_email_or_barcode_or_password")
+var ErrWrongEmailOrBarcodeOrPassword = errorx.NewUnauthorized().WithKey(i18nx.KeyWrongEmailBarcodePassword)
 
 type UserGetter interface {
 	GetUserByID(ctx context.Context, id user.ID) (*user.User, error)
@@ -145,21 +150,21 @@ func (a *App) LoginHandle(ctx context.Context, cmd Login) (LoginResponse, error)
 	}
 
 	accessToken := jwt.NewWithClaims(a.signingMethod, jwt.MapClaims{
-		"iss":       "ucmsv2_auth",
-		"sub":       "user",
+		"iss":       ISS,
+		"sub":       UserSubject,
 		"exp":       time.Now().Add(a.accessTokenExpDuration).Unix(),
 		"iat":       time.Now().Unix(),
 		"uid":       u.ID().String(),
 		"user_role": u.Role().String(),
 	})
 	refreshToken := jwt.NewWithClaims(a.signingMethod, jwt.MapClaims{
-		"iss":   "ucmsv2_auth",
-		"sub":   "refresh",
+		"iss":   ISS,
+		"sub":   RefreshSubject,
 		"exp":   time.Now().Add(a.refreshTokenExpDuration).Unix(),
 		"iat":   time.Now().Unix(),
 		"jti":   uuid.New().String(),
 		"uid":   u.ID().String(),
-		"scope": "refresh",
+		"scope": RefreshScope,
 	})
 
 	accessjwt, err := accessToken.SignedString(a.accessTokenSecretKey)
@@ -210,7 +215,7 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 		otelx.RecordSpanError(span, err, "invalid refresh token claims type")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
 	}
-	if refreshClaims["iss"] != "ucmsv2_auth" || refreshClaims["sub"] != "refresh" {
+	if refreshClaims["iss"] != ISS || refreshClaims["sub"] != RefreshSubject {
 		err = errors.New("invalid refresh token issuer or subject")
 		otelx.RecordSpanError(span, err, "invalid refresh token claims")
 		return LoginResponse{}, errorx.NewInvalidCredentials().WithCause(err)
@@ -246,8 +251,8 @@ func (a *App) RefreshHandle(ctx context.Context, cmd Refresh) (LoginResponse, er
 	}
 
 	accessToken := jwt.NewWithClaims(a.signingMethod, jwt.MapClaims{
-		"iss":       "ucmsv2_auth",
-		"sub":       "user",
+		"iss":       ISS,
+		"sub":       UserSubject,
 		"exp":       time.Now().Add(a.accessTokenExpDuration).Unix(),
 		"iat":       time.Now().Unix(),
 		"uid":       u.ID().String(),

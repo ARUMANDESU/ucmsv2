@@ -240,8 +240,8 @@ func (s *AuthIntegrationSuite) assertValidAccessToken(t *testing.T, resp *httpfr
 		AssertValid().
 		AssertUID(expectedUID).
 		AssertUserRole(expectedRole).
-		AssertISS("ucmsv2_auth").
-		AssertSub("user")
+		AssertISS(authapp.ISS).
+		AssertSub(authapp.UserSubject)
 }
 
 func (s *AuthIntegrationSuite) assertValidRefreshToken(t *testing.T, resp *httpframework.Response, expectedUID string) {
@@ -258,8 +258,8 @@ func (s *AuthIntegrationSuite) assertValidRefreshToken(t *testing.T, resp *httpf
 	authapp.NewJWTTokenAssertion(t, refreshCookie.Value, []byte(fixtures.RefreshTokenSecretKey)).
 		AssertValid().
 		AssertUID(expectedUID).
-		AssertISS("ucmsv2_auth").
-		AssertSub("refresh").
+		AssertISS(authapp.ISS).
+		AssertSub(authapp.RefreshSubject).
 		AssertJTINotEmpty().
 		AssertScope("refresh")
 }
@@ -541,7 +541,7 @@ func (s *AuthIntegrationSuite) TestAuth_ContentTypeAndHeaders() {
 			Body: `{"email_barcode": "test@example.com", "password": "incomplete json"`,
 		}
 
-		s.HTTP.Do(t, req).AssertStatus(http.StatusBadRequest)
+		s.HTTP.Do(t, req).AssertStatus(http.StatusBadRequest).AssertContainsMessage("Invalid JSON format")
 	})
 }
 
@@ -874,7 +874,7 @@ func (s *AuthIntegrationSuite) TestAuth_AdvancedInjectionVectors() {
 			loginField:      strings.Repeat("A", 10000),
 			password:        fixtures.TestStudent.Password,
 			expectedStatus:  http.StatusBadRequest,
-			expectedMessage: "Invalid request",
+			expectedMessage: "Invalid JSON format",
 			description:     "Buffer overflow with long input",
 		},
 		{
@@ -1102,7 +1102,7 @@ func (s *AuthIntegrationSuite) TestAuth_PasswordFieldInjections() {
 			name:            "Very Long Password",
 			password:        strings.Repeat("A", 10000),
 			expectedStatus:  http.StatusBadRequest,
-			expectedMessage: "Invalid request",
+			expectedMessage: "Invalid JSON format",
 		},
 
 		{

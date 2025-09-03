@@ -21,8 +21,8 @@ func (f JWTFactory) AccessTokenBuilder(userID, userRole string) *JWTBuilder {
 		WithCookieName("ucmsv2_access").
 		WithCookiePath("/").
 		WithCookieDomain("localhost").
-		WithIssuer("ucmsv2_auth").
-		WithSubject("user").
+		WithIssuer(authapp.ISS).
+		WithSubject(authapp.UserSubject).
 		WithIssuedAt(time.Now()).
 		WithExpiration(time.Now().Add(authapp.AccessTokenExpDuration)).
 		WithDuration(authapp.AccessTokenExpDuration).
@@ -37,14 +37,14 @@ func (f JWTFactory) RefreshTokenBuilder(userID string) *JWTBuilder {
 		WithCookieName("ucmsv2_refresh").
 		WithCookiePath("/v1/auth/refresh").
 		WithCookieDomain("localhost").
-		WithIssuer("ucmsv2_auth").
-		WithSubject("refresh").
+		WithIssuer(authapp.ISS).
+		WithSubject(authapp.RefreshSubject).
 		WithIssuedAt(time.Now()).
 		WithExpiration(time.Now().Add(authapp.RefreshTokenExpDuration)).
 		WithDuration(authapp.RefreshTokenExpDuration).
 		WithUserID(userID).
 		WithJTI(uuid.New().String()).
-		WithClaim("scope", "refresh").
+		WithClaim("scope", authapp.RefreshScope).
 		WithSecret([]byte(fixtures.RefreshTokenSecretKey)).
 		WithSigningMethod(jwt.SigningMethodHS256)
 }
