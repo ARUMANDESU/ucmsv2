@@ -13,6 +13,88 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 )
 
+type UserAssertions struct {
+	t    *testing.T
+	user *User
+}
+
+func NewUserAssertions(t *testing.T, u *User) *UserAssertions {
+	return &UserAssertions{t: t, user: u}
+}
+
+func (u *UserAssertions) AssertIDNotEmpty() *UserAssertions {
+	u.t.Helper()
+	assert.NotEmpty(u.t, u.user.id, "ID should not be empty")
+	return u
+}
+
+func (u *UserAssertions) AssertID(expected ID) *UserAssertions {
+	u.t.Helper()
+	assert.Equal(u.t, expected, u.user.id, "ID mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertBarcode(expected Barcode) *UserAssertions {
+	u.t.Helper()
+	assert.Equal(u.t, expected, u.user.barcode, "Barcode mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertUsername(expected string) *UserAssertions {
+	u.t.Helper()
+	assert.Equal(u.t, expected, u.user.username, "Username mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertFirstName(expected string) *UserAssertions {
+	u.t.Helper()
+	assert.Equal(u.t, expected, u.user.firstName, "FirstName mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertLastName(expected string) *UserAssertions {
+	u.t.Helper()
+	assert.Equal(u.t, expected, u.user.lastName, "LastName mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertAvatarURL(expected string) *UserAssertions {
+	u.t.Helper()
+	assert.Equal(u.t, expected, u.user.avatarURL, "AvatarURL mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertEmail(expected string) *UserAssertions {
+	u.t.Helper()
+	assert.Equal(u.t, expected, u.user.email, "Email mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertRole(expected role.Global) *UserAssertions {
+	u.t.Helper()
+	assert.Equal(u.t, expected, u.user.role, "Role mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertPassword(expected string) *UserAssertions {
+	u.t.Helper()
+	err := bcrypt.CompareHashAndPassword(u.user.passHash, []byte(expected))
+	assert.NoError(u.t, err, "PassHash mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertCreatedAtWithin(expected time.Time, delta time.Duration) *UserAssertions {
+	u.t.Helper()
+	assert.WithinDuration(u.t, expected, u.user.createdAt, delta, "CreatedAt mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertUpdatedAtWithin(expected time.Time, delta time.Duration) *UserAssertions {
+	u.t.Helper()
+	assert.WithinDuration(u.t, expected, u.user.updatedAt, delta, "UpdatedAt mismatch")
+	return u
+}
+
 type StaffAssertions struct {
 	staff *Staff
 }

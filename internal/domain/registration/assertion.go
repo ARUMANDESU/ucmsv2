@@ -9,22 +9,22 @@ import (
 )
 
 type RegistrationAssertion struct {
-	registration *Registration
+	Registration *Registration
 }
 
 func NewRegistrationAssertion(reg *Registration) *RegistrationAssertion {
-	return &RegistrationAssertion{registration: reg}
+	return &RegistrationAssertion{Registration: reg}
 }
 
 func (ra *RegistrationAssertion) AssertStatus(t *testing.T, expected Status) *RegistrationAssertion {
 	t.Helper()
-	assert.Equal(t, expected, ra.registration.status, "Expected registration status to be %s, got %s", expected, ra.registration.status)
+	assert.Equal(t, expected, ra.Registration.status, "Expected registration status to be %s, got %s", expected, ra.Registration.status)
 	return ra
 }
 
 func (ra *RegistrationAssertion) AssertEmail(t *testing.T, expected string) *RegistrationAssertion {
 	t.Helper()
-	assert.Equal(t, expected, ra.registration.email, "Expected registration email to be %s, got %s", expected, ra.registration.email)
+	assert.Equal(t, expected, ra.Registration.email, "Expected registration email to be %s, got %s", expected, ra.Registration.email)
 	return ra
 }
 
@@ -33,17 +33,17 @@ func (ra *RegistrationAssertion) AssertVerificationCode(t *testing.T, expected s
 	assert.Equal(
 		t,
 		expected,
-		ra.registration.verificationCode,
+		ra.Registration.verificationCode,
 		"Expected registration verification code to be %s, got %s",
 		expected,
-		ra.registration.verificationCode,
+		ra.Registration.verificationCode,
 	)
 	return ra
 }
 
 func (ra *RegistrationAssertion) AssertVerificationCodeNotEmpty(t *testing.T) *RegistrationAssertion {
 	t.Helper()
-	assert.NotEmpty(t, ra.registration.verificationCode, "Expected registration verification code to not be empty")
+	assert.NotEmpty(t, ra.Registration.verificationCode, "Expected registration verification code to not be empty")
 	return ra
 }
 
@@ -52,10 +52,10 @@ func (ra *RegistrationAssertion) AssertVerificationCodeIsNot(t *testing.T, expec
 	assert.NotEqual(
 		t,
 		expected,
-		ra.registration.verificationCode,
+		ra.Registration.verificationCode,
 		"Expected registration verification code to not be %s, got %s",
 		expected,
-		ra.registration.verificationCode,
+		ra.Registration.verificationCode,
 	)
 	return ra
 }
@@ -65,10 +65,10 @@ func (ra *RegistrationAssertion) AssertCodeAttempts(t *testing.T, expected int8)
 	assert.Equal(
 		t,
 		expected,
-		ra.registration.codeAttempts,
+		ra.Registration.codeAttempts,
 		"Expected registration code attempts to be %d, got %d",
 		expected,
-		ra.registration.codeAttempts,
+		ra.Registration.codeAttempts,
 	)
 	return ra
 }
@@ -78,11 +78,11 @@ func (ra *RegistrationAssertion) AssertCodeExpiresAt(t *testing.T, expected time
 	assert.WithinDuration(
 		t,
 		expected,
-		ra.registration.codeExpiresAt,
+		ra.Registration.codeExpiresAt,
 		1*time.Second,
 		"Expected registration code expires at to be within 1 second of %s, got %s",
 		expected,
-		ra.registration.codeExpiresAt,
+		ra.Registration.codeExpiresAt,
 	)
 	return ra
 }
@@ -92,11 +92,11 @@ func (ra *RegistrationAssertion) AssertResendTimeout(t *testing.T, expected time
 	assert.WithinDuration(
 		t,
 		expected,
-		ra.registration.resendTimeout,
+		ra.Registration.resendTimeout,
 		1*time.Second,
 		"Expected registration resend timeout to be within 1 second of %s, got %s",
 		expected,
-		ra.registration.resendTimeout,
+		ra.Registration.resendTimeout,
 	)
 	return ra
 }
@@ -106,9 +106,19 @@ func (ra *RegistrationAssertion) AssertResendNotAvailable(t *testing.T) *Registr
 	assert.True(
 		t,
 		// check if resend timeout is in the future, because if it is, then resend is not available
-		ra.registration.resendTimeout.After(time.Now()),
+		ra.Registration.resendTimeout.After(time.Now()),
 		"Expected registration resend timeout to be in the future, got %s; current time is %s",
-		ra.registration.resendTimeout,
+		ra.Registration.resendTimeout,
+		time.Now(),
+	)
+	return ra
+}
+
+func (ra *RegistrationAssertion) AssertIsNotExpired(t *testing.T) *RegistrationAssertion {
+	t.Helper()
+	assert.True(t, ra.Registration.codeExpiresAt.After(time.Now()),
+		"Expected registration code to not be expired, but it is; code expires at %s, current time is %s",
+		ra.Registration.codeExpiresAt,
 		time.Now(),
 	)
 	return ra
@@ -116,21 +126,21 @@ func (ra *RegistrationAssertion) AssertResendNotAvailable(t *testing.T) *Registr
 
 func (ra *RegistrationAssertion) AssertEventsCount(t *testing.T, expected int) *RegistrationAssertion {
 	t.Helper()
-	events := ra.registration.GetUncommittedEvents()
+	events := ra.Registration.GetUncommittedEvents()
 	assert.Len(t, events, expected, "Expected %d uncommitted events, got %d", expected, len(events))
 	return ra
 }
 
 func (ra *RegistrationAssertion) AssertNoEvents(t *testing.T) *RegistrationAssertion {
 	t.Helper()
-	events := ra.registration.GetUncommittedEvents()
+	events := ra.Registration.GetUncommittedEvents()
 	assert.Empty(t, events, "Expected no uncommitted events, got %d", len(events))
 	return ra
 }
 
 func (ra *RegistrationAssertion) AssertEventExists(t *testing.T, eventType string) *RegistrationAssertion {
 	t.Helper()
-	events := ra.registration.GetUncommittedEvents()
+	events := ra.Registration.GetUncommittedEvents()
 	for _, ev := range events {
 		if fmt.Sprintf("%T", ev) == eventType {
 			return ra

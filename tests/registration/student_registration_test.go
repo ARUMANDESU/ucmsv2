@@ -13,12 +13,12 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 	"github.com/ARUMANDESU/ucms/tests/integration/framework"
-	"github.com/ARUMANDESU/ucms/tests/integration/framework/db"
 	"github.com/ARUMANDESU/ucms/tests/integration/framework/event"
 	frameworkhttp "github.com/ARUMANDESU/ucms/tests/integration/framework/http"
 )
@@ -41,12 +41,12 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 			AssertAccepted()
 	})
 
-	var reg *db.RegistrationAssertion
+	var reg *registration.RegistrationAssertion
 	s.T().Run("Verify Registration", func(t *testing.T) {
 		reg = s.DB.RequireRegistrationExists(t, email).
-			AssertStatus(registration.StatusPending).
-			AssertVerificationCode().
-			AssertIsNotExpired()
+			AssertStatus(t, registration.StatusPending).
+			AssertVerificationCodeNotEmpty(t).
+			AssertIsNotExpired(t)
 	})
 
 	var e *registration.RegistrationStarted
@@ -54,9 +54,9 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 		e = event.RequireEvent(t, s.Event, e)
 		require.NotNil(t, e, "Expected RegistrationStarted event to be emitted")
 		registration.NewRegistrationStartedAssertion(e).
-			AssertRegistrationID(t, reg.GetID()).
+			AssertRegistrationID(t, reg.Registration.ID()).
 			AssertEmail(t, email).
-			AssertVerificationCode(t, reg.GetVerificationCode())
+			AssertVerificationCode(t, reg.Registration.VerificationCode())
 	})
 
 	// 4. Verify email sent (wait for async event processing)
@@ -70,19 +70,19 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 		s.Require().Len(mails, 1)
 		s.Equal(email, mails[0].To)
 		s.Contains(mails[0].Subject, "Email Verification Code")
-		s.Contains(mails[0].Body, reg.GetVerificationCode())
+		s.Contains(mails[0].Body, reg.Registration.VerificationCode())
 		s.MockMailSender.Reset()
 	})
 
 	s.T().Run("Complete Registration", func(t *testing.T) {
-		s.HTTP.VerifyRegistrationCode(t, email, reg.GetVerificationCode()).
+		s.HTTP.VerifyRegistrationCode(t, email, reg.Registration.VerificationCode()).
 			AssertSuccess()
 	})
 
 	s.T().Run("Complete Student Registration", func(t *testing.T) {
 		s.HTTP.CompleteStudentRegistration(t, registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
-			VerificationCode: reg.GetVerificationCode(),
+			VerificationCode: reg.Registration.VerificationCode(),
 			Password:         fixtures.TestStudent.Password,
 			Barcode:          fixtures.TestStudent.Barcode.String(),
 			Username:         fixtures.TestStudent.Username,
@@ -97,17 +97,15 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 			return s.DB.CheckUserExists(t, email)
 		}, 5*time.Second, 100*time.Millisecond, "Student should be created within 5 seconds")
 
-		s.DB.RequireUserExists(t, email).
-			AssertRole(role.Student).
-			AssertFullName(fixtures.TestStudent.FirstName, fixtures.TestStudent.LastName).
-			AssertIsStudent().
-			AssertInGroupID(uuid.UUID(fixtures.SEGroup.ID)).
-			AssertMajor(fixtures.SEGroup.Major.String())
+		s.DB.RequireStudentExistsByEmail(t, email).
+			AssertRole(t, role.Student).
+			AssertFirstName(t, fixtures.TestStudent.FirstName).
+			AssertLastName(t, fixtures.TestStudent.LastName).
+			AssertGroupID(t, fixtures.SEGroup.ID)
 	})
 
 	s.T().Run("Verify Registration Status", func(t *testing.T) {
-		s.DB.RequireRegistrationExists(t, email).
-			EventuallyHasStatus(registration.StatusCompleted)
+		s.DB.RequireRegistrationExists(t, email).AssertStatus(t, registration.StatusCompleted)
 	})
 
 	s.T().Run("Verify Welcome Email Sent", func(t *testing.T) {
@@ -265,8 +263,8 @@ func (s *RegistrationIntegrationSuite) TestVerificationCodeHandling() {
 			AssertStatus(http.StatusTooManyRequests)
 
 		s.DB.RequireRegistrationExists(t, email).
-			AssertStatus(registration.StatusExpired).
-			AssertCodeAttempts(3)
+			AssertStatus(t, registration.StatusExpired).
+			AssertCodeAttempts(t, 3)
 	})
 
 	s.T().Run("Verify Already Expired Code", func(t *testing.T) {
@@ -275,7 +273,7 @@ func (s *RegistrationIntegrationSuite) TestVerificationCodeHandling() {
 		s.DB.SeedRegistration(s.T(), expiredReg)
 
 		reg := s.DB.RequireRegistrationExists(t, email)
-		s.HTTP.VerifyRegistrationCode(t, email, reg.GetVerificationCode()).
+		s.HTTP.VerifyRegistrationCode(t, email, reg.Registration.VerificationCode()).
 			AssertStatus(http.StatusUnprocessableEntity)
 	})
 }
@@ -302,8 +300,7 @@ func (s *RegistrationIntegrationSuite) TestCompleteRegistrationValidation() {
 		s.setupVerifiedRegistration(email)
 		student := s.Builder.User.Student("existing@test.com")
 
-		s.DB.SeedUser(s.T(), student.User())
-		s.DB.SeedStudent(s.T(), student.User().ID(), fixtures.SEGroup.ID)
+		s.DB.SeedStudent(s.T(), student)
 
 		s.HTTP.CompleteStudentRegistration(s.T(), registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
@@ -345,7 +342,7 @@ func (s *RegistrationIntegrationSuite) TestRegistrationStates() {
 
 		s.HTTP.CompleteStudentRegistration(t, registrationhttp.CompleteStudentRegistrationRequest{
 			Email:            email,
-			VerificationCode: reg.GetVerificationCode(),
+			VerificationCode: reg.Registration.VerificationCode(),
 			Password:         fixtures.TestStudent.Password,
 			Barcode:          "STU003",
 			Username:         "noverifyuser",
@@ -727,7 +724,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 				s.HTTP.StartStudentRegistration(t, email).AssertAccepted()
 				reg := s.DB.RequireRegistrationExists(t, email)
 				req.Email = email
-				req.VerificationCode = reg.GetVerificationCode()
+				req.VerificationCode = reg.Registration.VerificationCode()
 				req.Barcode = "110012"
 				req.Username = "notverifieduser"
 			},
@@ -784,8 +781,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 
 				diffEmail := "duplicate-barcode2@test.com"
 				existingStudent := builders.NewStudentBuilder().WithEmail(diffEmail).WithBarcode("110016").Build()
-				s.DB.SeedUser(t, existingStudent.User())
-				s.DB.SeedStudent(t, existingStudent.User().ID(), fixtures.SEGroup.ID)
+				s.DB.SeedStudent(t, existingStudent)
 
 				req.Email = email
 				req.VerificationCode = s.getVerificationCode(email)
@@ -803,8 +799,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 
 				// Create an existing user with the same email
 				existingUser := builders.NewStudentBuilder().WithEmail(email).WithBarcode("110017").Build()
-				s.DB.SeedUser(t, existingUser.User())
-				s.DB.SeedStudent(t, existingUser.User().ID(), fixtures.SEGroup.ID)
+				s.DB.SeedStudent(t, existingUser)
 
 				req.Email = email
 				req.VerificationCode = s.getVerificationCode(email)
@@ -821,8 +816,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_StudentComplete_Business
 				s.setupVerifiedRegistration(email)
 
 				existingUser := builders.NewStudentBuilder().WithUsername("takenusername").WithBarcode("110018").Build()
-				s.DB.SeedUser(t, existingUser.User())
-				s.DB.SeedStudent(t, existingUser.User().ID(), fixtures.SEGroup.ID)
+				s.DB.SeedStudent(t, existingUser)
 
 				req.Email = email
 				req.Username = existingUser.User().Username()
@@ -954,7 +948,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 		expectedMessage string
 		description     string
 		setupBefore     bool
-		assertFunc      func(t *testing.T, u *db.UserAssertion)
+		assertFunc      func(t *testing.T, u *user.UserAssertions)
 	}{
 		// Advanced SQL Injection Variants
 		{
@@ -992,7 +986,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 			},
 			expectedStatus: http.StatusOK,
 			setupBefore:    true,
-			assertFunc: func(t *testing.T, u *db.UserAssertion) {
+			assertFunc: func(t *testing.T, u *user.UserAssertions) {
 				u.AssertFirstName("admin'--")
 			},
 		},
@@ -1180,7 +1174,7 @@ func (s *RegistrationIntegrationSuite) TestRegistration_AdvancedInjectionVectors
 			expectedStatus: http.StatusOK,
 			setupBefore:    true,
 			description:    "Unicode normalization bypass",
-			assertFunc: func(t *testing.T, u *db.UserAssertion) {
+			assertFunc: func(t *testing.T, u *user.UserAssertions) {
 				u.AssertFirstName("ＡＤＭİＮ")
 			},
 		},
@@ -1431,7 +1425,7 @@ func (s *RegistrationIntegrationSuite) setupVerifiedRegistration(email string) {
 	}
 	s.HTTP.StartStudentRegistration(s.T(), email).RequireAccepted()
 	reg := s.DB.RequireRegistrationExists(s.T(), email)
-	s.HTTP.VerifyRegistrationCode(s.T(), email, reg.GetVerificationCode()).RequireSuccess()
+	s.HTTP.VerifyRegistrationCode(s.T(), email, reg.Registration.VerificationCode()).RequireSuccess()
 }
 
 func (s *RegistrationIntegrationSuite) setupCompletedRegistration(email string) {
@@ -1449,7 +1443,7 @@ func (s *RegistrationIntegrationSuite) setupCompletedRegistration(email string) 
 }
 
 func (s *RegistrationIntegrationSuite) getVerificationCode(email string) string {
-	return s.DB.RequireRegistrationExists(s.T(), email).GetVerificationCode()
+	return s.DB.RequireRegistrationExists(s.T(), email).Registration.VerificationCode()
 }
 
 func (s *RegistrationIntegrationSuite) TestGetVerificationCodeEndpoint() {

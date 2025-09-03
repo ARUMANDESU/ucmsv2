@@ -251,7 +251,7 @@ func (s *IntegrationTestSuite) startWatermillRouter() {
 
 func (s *IntegrationTestSuite) initializeHelpers() {
 	s.HTTP = http.NewHelper(s.httpHandler)
-	s.DB = db.NewHelper(s.pgPool)
+	s.DB = db.NewHelper(db.Args{Pool: s.pgPool})
 	s.Event = event.NewHelper(s.pgPool)
 	s.Builder = builders.NewFactory()
 }

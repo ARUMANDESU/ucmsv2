@@ -74,3 +74,23 @@ func (r *GroupRepo) GetGroupByID(ctx context.Context, groupID group.ID) (*group.
 
 	return GroupToDomain(dto), nil
 }
+
+func (r *GroupRepo) SaveGroup(ctx context.Context, g *group.Group) error {
+	ctx, span := r.tracer.Start(ctx, "GroupRepo.SaveGroup")
+	defer span.End()
+
+	dto := DomainToGroupDTO(g)
+
+	query := `
+		INSERT INTO groups (id, name, year, major, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6);
+	`
+
+	_, err := r.pool.Exec(ctx, query, dto.ID, dto.Name, dto.Year, dto.Major, dto.CreatedAt, dto.UpdatedAt)
+	if err != nil {
+		otelx.RecordSpanError(span, err, "failed to execute query")
+		return err
+	}
+
+	return nil
+}

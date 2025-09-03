@@ -134,6 +134,36 @@ func UserToDomain(dto UserDTO, roleDTO GlobalRoleDTO) *user.User {
 	})
 }
 
+func StudentToDomain(userDTO UserDTO, roleDTO GlobalRoleDTO, studentDTO StudentDTO) *user.Student {
+	return user.RehydrateStudent(user.RehydrateStudentArgs{
+		RehydrateUserArgs: user.RehydrateUserArgs{
+			ID:        user.ID(userDTO.ID),
+			Barcode:   user.Barcode(userDTO.Barcode),
+			Username:  userDTO.Username,
+			FirstName: userDTO.FirstName,
+			LastName:  userDTO.LastName,
+			Role:      role.Global(roleDTO.Name),
+			AvatarURL: userDTO.AvatarURL,
+			Email:     userDTO.Email,
+			PassHash:  userDTO.Passhash,
+			CreatedAt: userDTO.CreatedAt,
+			UpdatedAt: userDTO.UpdatedAt,
+		},
+		GroupID: group.ID(studentDTO.GroupID),
+	})
+}
+
+func DomainToGroupDTO(g *group.Group) GroupDTO {
+	return GroupDTO{
+		ID:        uuid.UUID(g.ID()),
+		Name:      g.Name(),
+		Major:     g.Major().String(),
+		Year:      g.Year(),
+		CreatedAt: g.CreatedAt(),
+		UpdatedAt: g.UpdatedAt(),
+	}
+}
+
 func GroupToDomain(dto GroupDTO) *group.Group {
 	return group.Rehydrate(group.RehydrateArgs{
 		ID:    group.ID(dto.ID),

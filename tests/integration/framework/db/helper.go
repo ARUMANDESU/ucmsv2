@@ -3,28 +3,75 @@ package db
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"testing"
+	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ARUMANDESU/ucms/internal/adapters/repos/postgres"
 	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
 )
 
 type Helper struct {
-	pool *pgxpool.Pool
+	pool            *pgxpool.Pool
+	group           *postgres.GroupRepo
+	user            *postgres.UserRepo
+	student         *postgres.StudentRepo
+	staff           *postgres.StaffRepo
+	staffInvitation *postgres.StaffInvitationRepo
+	registration    *postgres.RegistrationRepo
 }
 
-func NewHelper(pool *pgxpool.Pool) *Helper {
-	return &Helper{pool: pool}
+type Args struct {
+	Pool            *pgxpool.Pool
+	Group           *postgres.GroupRepo
+	User            *postgres.UserRepo
+	Student         *postgres.StudentRepo
+	Staff           *postgres.StaffRepo
+	StaffInvitation *postgres.StaffInvitationRepo
+	Registration    *postgres.RegistrationRepo
+}
+
+func NewHelper(args Args) *Helper {
+	if args.Pool == nil {
+		panic("pgxpool.Pool is required")
+	}
+	if args.User == nil {
+		args.User = postgres.NewUserRepo(args.Pool, nil, nil)
+	}
+	if args.Student == nil {
+		args.Student = postgres.NewStudentRepo(args.Pool, nil, nil)
+	}
+	if args.Group == nil {
+		args.Group = postgres.NewGroupRepo(args.Pool, nil, nil)
+	}
+	if args.Staff == nil {
+		args.Staff = postgres.NewStaffRepo(args.Pool, nil, nil)
+	}
+	if args.StaffInvitation == nil {
+		args.StaffInvitation = postgres.NewStaffInvitationRepo(args.Pool, nil, nil)
+	}
+	if args.Registration == nil {
+		args.Registration = postgres.NewRegistrationRepo(args.Pool, nil, nil)
+	}
+
+	return &Helper{
+		pool:            args.Pool,
+		user:            args.User,
+		student:         args.Student,
+		group:           args.Group,
+		staff:           args.Staff,
+		staffInvitation: args.StaffInvitation,
+		registration:    args.Registration,
+	}
 }
 
 func (h *Helper) QueryOne(t *testing.T, query string, args ...any) pgx.Row {
@@ -58,6 +105,7 @@ func (h *Helper) TruncateAll(t *testing.T) {
 		"students",
 		"users",
 		"groups",
+		"staff_invitations",
 	}
 
 	ctx := context.Background()
@@ -67,24 +115,13 @@ func (h *Helper) TruncateAll(t *testing.T) {
 	}
 }
 
-func (h *Helper) RequireRegistrationExists(t *testing.T, email string) *RegistrationAssertion {
+func (h *Helper) RequireRegistrationExists(t *testing.T, email string) *registration.RegistrationAssertion {
 	t.Helper()
 
-	var r RegistrationRow
-	err := h.pool.QueryRow(context.Background(), `
-        SELECT id, email, status, verification_code, code_attempts, 
-               code_expires_at, resend_timeout, created_at, updated_at
-        FROM registrations
-        WHERE email = $1
-    `, email).Scan(
-		&r.ID, &r.Email, &r.Status, &r.VerificationCode,
-		&r.CodeAttempts, &r.CodeExpiresAt, &r.ResendTimeout,
-		&r.CreatedAt, &r.UpdatedAt,
-	)
-
+	reg, err := h.registration.GetRegistrationByEmail(t.Context(), email)
 	require.NoError(t, err, "registration not found for email: %s", email)
 
-	return &RegistrationAssertion{t: t, row: r, db: h}
+	return registration.NewRegistrationAssertion(reg)
 }
 
 func (h *Helper) RequireRegistrationNotExists(t *testing.T, email string) {
@@ -116,45 +153,16 @@ func (h *Helper) CheckUserExists(t *testing.T, email string) bool {
 	err := h.pool.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", email).Scan(&exists)
 	require.NoError(t, err)
 
-	rows, err := h.pool.Query(t.Context(), "SELECT id, barcode, email, first_name, last_name, role_id FROM users")
-	assert.NoError(t, err)
-	defer rows.Close()
-
-	for rows.Next() {
-		var id uuid.UUID
-		var barcode, email, firstName, lastName string
-		var roleID int16
-		err := rows.Scan(&id, &barcode, &email, &firstName, &lastName, &roleID)
-		require.NoError(t, err)
-		slog.Info("user:", slog.String("id", id.String()), slog.String("barcode", barcode), slog.String("email", email),
-			slog.String("first_name", firstName), slog.String("last_name", lastName),
-			slog.Int("role_id", int(roleID)),
-		)
-	}
-
-	require.NoError(t, err)
 	return exists
 }
 
-func (h *Helper) RequireUserExists(t *testing.T, email string) *UserAssertion {
+func (h *Helper) RequireUserExists(t *testing.T, email string) *user.UserAssertions {
 	t.Helper()
 
-	var u UserRow
-	err := h.pool.QueryRow(context.Background(), `
-        SELECT u.id, u.barcode, u.username, u.email, u.first_name, u.last_name, u.role_id, 
-               u.avatar_url, u.pass_hash, u.created_at, u.updated_at,
-               gr.name as role_name
-        FROM users u
-        JOIN global_roles gr ON u.role_id = gr.id
-        WHERE u.email = $1
-    `, email).Scan(
-		&u.ID, &u.Barcode, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.RoleID,
-		&u.AvatarURL, &u.PassHash, &u.CreatedAt, &u.UpdatedAt, &u.RoleName,
-	)
-
+	u, err := h.user.GetUserByEmail(t.Context(), email)
 	require.NoError(t, err, "user not found for email: %s", email)
 
-	return &UserAssertion{t: t, row: u, db: h}
+	return user.NewUserAssertions(t, u)
 }
 
 func (h *Helper) RequireUserNotExists(t *testing.T, email string) {
@@ -168,24 +176,31 @@ func (h *Helper) RequireUserNotExists(t *testing.T, email string) {
 	assert.Equal(t, 0, count, "expected no user for email %s", email)
 }
 
-func (h *Helper) RequireStudentExists(t *testing.T, userID user.ID) *StudentAssertion {
+func (h *Helper) RequireStudentExists(t *testing.T, id user.ID) *user.StudentAssertions {
 	t.Helper()
 
-	var s StudentRow
-	err := h.pool.QueryRow(context.Background(), `
-        SELECT s.user_id, s.group_id, s.created_at, s.updated_at,
-               g.name as group_name, g.year, g.major
-        FROM students s
-        JOIN groups g ON s.group_id = g.id
-        WHERE s.user_id = $1
-    `, userID).Scan(
-		&s.UserID, &s.GroupID, &s.CreatedAt, &s.UpdatedAt,
-		&s.GroupName, &s.Year, &s.Major,
-	)
+	student, err := h.student.GetStudentByID(t.Context(), id)
+	require.NoError(t, err, "student not found for user_id: %s", id)
 
-	require.NoError(t, err, "student not found for user_id: %s", userID)
+	return user.NewStudentAssertions(student)
+}
 
-	return &StudentAssertion{t: t, row: s}
+func (h *Helper) RequireStudentExistsByEmail(t *testing.T, email string) *user.StudentAssertions {
+	t.Helper()
+
+	student, err := h.student.GetStudentByEmail(t.Context(), email)
+	require.NoError(t, err, "student not found for email: %s", email)
+
+	return user.NewStudentAssertions(student)
+}
+
+func (h *Helper) RequireStaffInvitationExists(t *testing.T, code string) *staffinvitation.Assertion {
+	t.Helper()
+
+	invitation, err := h.staffInvitation.GetStaffInvitationByCode(t.Context(), code)
+	require.NoError(t, err, "staff invitation not found for code: %s", code)
+
+	return staffinvitation.NewAssertion(t, invitation)
 }
 
 func (h *Helper) CheckGroupExists(t *testing.T, groupID group.ID) bool {
@@ -201,17 +216,7 @@ func (h *Helper) CheckGroupExists(t *testing.T, groupID group.ID) bool {
 
 func (h *Helper) SeedRegistration(t *testing.T, r *registration.Registration) {
 	t.Helper()
-
-	_, err := h.pool.Exec(context.Background(), `
-        INSERT INTO registrations (id, email, status, verification_code, 
-                                 code_attempts, code_expires_at, resend_timeout, 
-                                 created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    `, uuid.UUID(r.ID()), r.Email(), string(r.Status()), r.VerificationCode(),
-		r.CodeAttempts(), r.CodeExpiresAt(), r.ResendTimeout(),
-		r.CreatedAt(), r.UpdatedAt())
-
-	require.NoError(t, err)
+	require.NoError(t, h.registration.SaveRegistration(t.Context(), r))
 }
 
 func (h *Helper) SeedUser(t *testing.T, u *user.User) {
@@ -242,38 +247,25 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
 	require.NoError(t, err)
 }
 
-func (h *Helper) SeedStudent(t *testing.T, userID user.ID, groupID group.ID) {
+func (h *Helper) SeedStudent(t *testing.T, student *user.Student) {
 	t.Helper()
-
-	_, err := h.pool.Exec(context.Background(), `
-        INSERT INTO students (user_id, group_id, created_at, updated_at)
-        VALUES ($1, $2, NOW(), NOW())
-    `, userID, groupID)
-
-	require.NoError(t, err)
+	require.NoError(t, h.student.SaveStudent(t.Context(), student))
 }
 
 func (h *Helper) SeedGroup(t *testing.T, groupID group.ID, name string, year string, major major.Major) {
 	t.Helper()
-
-	_, err := h.pool.Exec(context.Background(), `
-        INSERT INTO groups (id, name, year, major, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, NOW(), NOW())
-    `, groupID, name, year, major)
-
-	require.NoError(t, err)
+	g := group.Rehydrate(group.RehydrateArgs{
+		ID:        groupID,
+		Name:      name,
+		Major:     major,
+		Year:      year,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+	require.NoError(t, h.group.SaveGroup(t.Context(), g))
 }
 
 func (h *Helper) SeedStaff(t *testing.T, staff *user.Staff) {
 	t.Helper()
-
-	h.SeedUser(t, staff.User())
-
-	insertStaffQuery := `
-            INSERT INTO staffs (user_id)
-            VALUES ($1);
-        `
-	res, err := h.pool.Exec(t.Context(), insertStaffQuery, staff.User().ID())
-	require.NoError(t, err, "failed to insert staff")
-	require.Equal(t, int64(1), res.RowsAffected(), "expected one row to be affected when inserting staff")
+	require.NoError(t, h.staff.SaveStaff(t.Context(), staff))
 }

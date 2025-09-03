@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -11,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 	"github.com/ARUMANDESU/ucms/pkg/postgres"
 	"github.com/ARUMANDESU/ucms/pkg/watermillx"
@@ -40,6 +42,78 @@ func NewStudentRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *Student
 		pool:    pool,
 		wlogger: watermill.NewSlogLogger(l),
 	}
+}
+
+func (st *StudentRepo) GetStudentByID(ctx context.Context, id user.ID) (*user.Student, error) {
+	ctx, span := st.tracer.Start(ctx, "StudentRepo.GetStudentByID")
+	defer span.End()
+
+	query := `
+        SELECT  u.id, u.barcode, u.username, u.role_id,
+                u.first_name, u.last_name, u.avatar_url,
+                u.email, u.pass_hash, u.created_at, u.updated_at,
+                gr.id, gr.name,
+                s.group_id
+        FROM users u
+        JOIN global_roles gr ON u.role_id = gr.id
+        JOIN students s ON u.id = s.user_id
+        WHERE u.id = $1;
+    `
+	var dto UserDTO
+	var roleDTO GlobalRoleDTO
+	var studentDTO StudentDTO
+	err := st.pool.QueryRow(ctx, query, id).Scan(
+		&dto.ID, &dto.Barcode, &dto.Username, &dto.RoleID,
+		&dto.FirstName, &dto.LastName, &dto.AvatarURL,
+		&dto.Email, &dto.Passhash, &dto.CreatedAt, &dto.UpdatedAt,
+		&dto.RoleID, &roleDTO.Name,
+		&studentDTO.GroupID,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errorx.NewNotFound().WithCause(err)
+		}
+		otelx.RecordSpanError(span, err, "failed to get student by ID")
+		return nil, fmt.Errorf("failed to get student by ID: %w", err)
+	}
+
+	return StudentToDomain(dto, roleDTO, studentDTO), nil
+}
+
+func (st *StudentRepo) GetStudentByEmail(ctx context.Context, email string) (*user.Student, error) {
+	ctx, span := st.tracer.Start(ctx, "StudentRepo.GetStudentByEmail")
+	defer span.End()
+
+	query := `
+        SELECT  u.id, u.barcode, u.username, u.role_id,
+                u.first_name, u.last_name, u.avatar_url,
+                u.email, u.pass_hash, u.created_at, u.updated_at,
+                gr.id, gr.name,
+                s.group_id
+        FROM users u
+        JOIN global_roles gr ON u.role_id = gr.id
+        JOIN students s ON u.id = s.user_id
+        WHERE u.email = $1;
+    `
+	var dto UserDTO
+	var roleDTO GlobalRoleDTO
+	var studentDTO StudentDTO
+	err := st.pool.QueryRow(ctx, query, email).Scan(
+		&dto.ID, &dto.Barcode, &dto.Username, &dto.RoleID,
+		&dto.FirstName, &dto.LastName, &dto.AvatarURL,
+		&dto.Email, &dto.Passhash, &dto.CreatedAt, &dto.UpdatedAt,
+		&dto.RoleID, &roleDTO.Name,
+		&studentDTO.GroupID,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errorx.NewNotFound().WithCause(err)
+		}
+		otelx.RecordSpanError(span, err, "failed to get student by email")
+		return nil, fmt.Errorf("failed to get student by email: %w", err)
+	}
+
+	return StudentToDomain(dto, roleDTO, studentDTO), nil
 }
 
 func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) error {
