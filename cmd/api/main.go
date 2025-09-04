@@ -15,6 +15,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
@@ -54,14 +55,16 @@ type Application struct {
 
 // Config holds all configuration for the application
 type Config struct {
-	Mode                   env.Mode
-	Port                   string
-	PgDSN                  string
-	LogPath                string
-	InitialStaff           *user.CreateInitialStaffArgs
-	AccessTokenSecretKey   string
-	RefreshTokenSecretKey  string
-	StaffInvitationBaseURL string
+	Mode                     env.Mode
+	Port                     string
+	PgDSN                    string
+	LogPath                  string
+	InitialStaff             *user.CreateInitialStaffArgs
+	AccessTokenSecretKey     string
+	RefreshTokenSecretKey    string
+	StaffInvitationBaseURL   string
+	AccestInvitationPageURL  string
+	InvitationTokenSecretKey string
 }
 
 func main() {
@@ -205,6 +208,8 @@ func loadConfig() *Config {
 	accessTokenSecretKey := getEnvOrDefault("ACCESS_TOKEN_SECRET", "default_access_secret")
 	refreshTokenSecretKey := getEnvOrDefault("REFRESH_TOKEN_SECRET", "default_refresh_secret")
 	staffInvitationBaseURL := getEnvOrDefault("STAFF_INVITATION_BASE_URL", "http://localhost:3000/invitations/accept")
+	acceptInvitationPageURL := getEnvOrDefault("STAFF_INVITATION_PAGE_URL", "http://localhost:3000/invitations/accept")
+	invitationTokenSecretKey := getEnvOrDefault("INVITATION_TOKEN_SECRET", "default_invitation_secret")
 
 	var initialStaff *user.CreateInitialStaffArgs
 	if os.Getenv("INITIAL_STAFF_EMAIL") != "" {
@@ -219,14 +224,16 @@ func loadConfig() *Config {
 	}
 
 	return &Config{
-		Mode:                   mode,
-		Port:                   port,
-		PgDSN:                  pgdsn,
-		LogPath:                logPath,
-		InitialStaff:           initialStaff,
-		AccessTokenSecretKey:   accessTokenSecretKey,
-		RefreshTokenSecretKey:  refreshTokenSecretKey,
-		StaffInvitationBaseURL: staffInvitationBaseURL,
+		Mode:                     mode,
+		Port:                     port,
+		PgDSN:                    pgdsn,
+		LogPath:                  logPath,
+		InitialStaff:             initialStaff,
+		AccessTokenSecretKey:     accessTokenSecretKey,
+		RefreshTokenSecretKey:    refreshTokenSecretKey,
+		StaffInvitationBaseURL:   staffInvitationBaseURL,
+		AccestInvitationPageURL:  acceptInvitationPageURL,
+		InvitationTokenSecretKey: invitationTokenSecretKey,
 	}
 }
 
@@ -319,8 +326,9 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 
 	// Mail application
 	mailApp := mail.NewApp(mail.Args{
-		Mailsender:             mailSender,
-		StaffInvitationBaseURL: config.StaffInvitationBaseURL,
+		Mailsender:              mailSender,
+		StaffInvitationBaseURL:  config.StaffInvitationBaseURL,
+		InvitationCreatorGetter: repos.Staff,
 	})
 
 	// Student application
@@ -330,6 +338,7 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 
 	staffApp := staffapp.NewApp(staffapp.Args{
 		StaffInvitationRepo: repos.StaffInvitation,
+		StaffRepo:           repos.Staff,
 	})
 
 	authApp := authapp.NewApp(authapp.Args{
@@ -390,11 +399,16 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 
 	// Set up HTTP ports
 	httpPort := httpport.NewPort(httpport.Args{
-		RegistrationApp: apps.Registration,
-		AuthApp:         apps.Auth,
-		StudentApp:      apps.Student,
-		StaffApp:        apps.Staff,
-		Secret:          []byte(config.AccessTokenSecretKey),
+		RegistrationApp:         apps.Registration,
+		AuthApp:                 apps.Auth,
+		StudentApp:              apps.Student,
+		StaffApp:                apps.Staff,
+		Secret:                  []byte(config.AccessTokenSecretKey),
+		CookieDomain:            "",
+		AcceptInvitationPageURL: config.AccestInvitationPageURL,
+		InvitationTokenAlg:      jwt.SigningMethodHS256,
+		InvitationTokenKey:      config.InvitationTokenSecretKey,
+		InvitationTokenExp:      15 * time.Minute,
 	})
 
 	httpPort.Route(router)

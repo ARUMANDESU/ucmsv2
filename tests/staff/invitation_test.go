@@ -12,9 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	mailevent "github.com/ARUMANDESU/ucms/internal/application/mail/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	staffhttp "github.com/ARUMANDESU/ucms/internal/ports/http/staff"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
@@ -33,7 +31,7 @@ func TestStaffInvitationSuite(t *testing.T) {
 func (s *StaffInvitationSuite) TestCreate_HappyPath() {
 	t := s.T()
 
-	staffUser := s.seedStaff(t, fixtures.TestStaff.Email)
+	staffUser := s.SeedStaff(t, fixtures.TestStaff.Email)
 
 	t.Run("two recipients, no validity period", func(t *testing.T) {
 		s.HTTP.CreateStaffInvitation(t,
@@ -192,9 +190,9 @@ func (s *StaffInvitationSuite) TestCreate_HappyPath() {
 func (s *StaffInvitationSuite) TestCreate_FailPath() {
 	t := s.T()
 
-	staffUser := s.seedStaff(t, fixtures.TestStaff.Email)
-	groupID := s.seedGroup(t)
-	studentUser := s.seedStudent(t, fixtures.TestStudent.Email, groupID)
+	staffUser := s.SeedStaff(t, fixtures.TestStaff.Email)
+	groupID := s.SeedGroup(t)
+	studentUser := s.SeedStudent(t, fixtures.TestStudent.Email, groupID)
 	authOpts := []httpframework.RequestBuilderOptions{
 		httpframework.WithStaff(t, staffUser.User().ID()),
 	}
@@ -436,7 +434,7 @@ func (s *StaffInvitationSuite) TestCreate_FailPath() {
 func (s *StaffInvitationSuite) TestUpdateRecipients_HappyPath() {
 	t := s.T()
 
-	staffUser := s.seedStaff(t, fixtures.TestStaff.Email)
+	staffUser := s.SeedStaff(t, fixtures.TestStaff.Email)
 
 	t.Run("update recipients of existing invitation", func(t *testing.T) {
 		invitation := builders.NewStaffInvitationBuilder().
@@ -504,9 +502,9 @@ func (s *StaffInvitationSuite) TestUpdateRecipients_HappyPath() {
 func (s *StaffInvitationSuite) TestUpdateRecipients_FailPath() {
 	t := s.T()
 
-	staffUser := s.seedStaff(t, fixtures.TestStaff.Email)
-	groupID := s.seedGroup(t)
-	studentUser := s.seedStudent(t, fixtures.TestStudent.Email, groupID)
+	staffUser := s.SeedStaff(t, fixtures.TestStaff.Email)
+	groupID := s.SeedGroup(t)
+	studentUser := s.SeedStudent(t, fixtures.TestStudent.Email, groupID)
 	invitation := builders.NewStaffInvitationBuilder().
 		WithRecipientsEmail([]string{fixtures.ValidStaff2Email}).
 		WithCreatorID(staffUser.User().ID()).
@@ -632,7 +630,7 @@ func (s *StaffInvitationSuite) TestUpdateRecipients_FailPath() {
 func (s *StaffInvitationSuite) TestUpdateValidity_HappyPath() {
 	t := s.T()
 
-	staffUser := s.seedStaff(t, fixtures.TestStaff.Email)
+	staffUser := s.SeedStaff(t, fixtures.TestStaff.Email)
 
 	t.Run("update validity period of existing invitation", func(t *testing.T) {
 		invitation := builders.NewStaffInvitationBuilder().
@@ -710,9 +708,9 @@ func (s *StaffInvitationSuite) TestUpdateValidity_HappyPath() {
 func (s *StaffInvitationSuite) TestUpdateValidity_FailPath() {
 	t := s.T()
 
-	staffUser := s.seedStaff(t, fixtures.TestStaff.Email)
-	groupID := s.seedGroup(t)
-	studentUser := s.seedStudent(t, fixtures.TestStudent.Email, groupID)
+	staffUser := s.SeedStaff(t, fixtures.TestStaff.Email)
+	groupID := s.SeedGroup(t)
+	studentUser := s.SeedStudent(t, fixtures.TestStudent.Email, groupID)
 
 	invitation := builders.NewStaffInvitationBuilder().
 		WithRecipientsEmail([]string{fixtures.ValidStaff2Email}).
@@ -840,7 +838,7 @@ func (s *StaffInvitationSuite) TestUpdateValidity_FailPath() {
 func (s *StaffInvitationSuite) TestDeleteInvitation_HappyPath() {
 	t := s.T()
 
-	staffUser := s.seedStaff(t, fixtures.TestStaff.Email)
+	staffUser := s.SeedStaff(t, fixtures.TestStaff.Email)
 
 	t.Run("delete existing invitation", func(t *testing.T) {
 		invitation := builders.NewStaffInvitationBuilder().
@@ -891,9 +889,9 @@ func (s *StaffInvitationSuite) TestDeleteInvitation_HappyPath() {
 func (s *StaffInvitationSuite) TestDeleteInvitation_FailPath() {
 	t := s.T()
 
-	staffUser := s.seedStaff(t, fixtures.TestStaff.Email)
-	groupID := s.seedGroup(t)
-	studentUser := s.seedStudent(t, fixtures.TestStudent.Email, groupID)
+	staffUser := s.SeedStaff(t, fixtures.TestStaff.Email)
+	groupID := s.SeedGroup(t)
+	studentUser := s.SeedStudent(t, fixtures.TestStudent.Email, groupID)
 
 	invitation := builders.NewStaffInvitationBuilder().
 		WithRecipientsEmail([]string{fixtures.ValidStaff2Email}).
@@ -962,25 +960,4 @@ func ptrToTime(t time.Time) *time.Time {
 
 func randomEmail() string {
 	return strings.ToLower(uuid.NewString()[:8] + "@test.com")
-}
-
-func (s *StaffInvitationSuite) seedStaff(t *testing.T, email string) *user.Staff {
-	t.Helper()
-	staffUser := s.Builder.User.Staff(email)
-	s.DB.SeedStaff(t, staffUser)
-	return staffUser
-}
-
-func (s *StaffInvitationSuite) seedGroup(t *testing.T) group.ID {
-	t.Helper()
-	groupID := group.NewID()
-	s.DB.SeedGroup(t, groupID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
-	return groupID
-}
-
-func (s *StaffInvitationSuite) seedStudent(t *testing.T, email string, groupID group.ID) *user.Student {
-	t.Helper()
-	studentUser := builders.NewStudentBuilder().WithEmail(email).WithGroupID(groupID).Build()
-	s.DB.SeedStudent(t, studentUser)
-	return studentUser
 }

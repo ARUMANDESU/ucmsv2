@@ -5,9 +5,9 @@ import (
 
 	"github.com/ARUMANDESU/validation"
 	"github.com/ARUMANDESU/validation/is"
+	"github.com/google/uuid"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
 	"github.com/ARUMANDESU/ucms/pkg/validationx"
@@ -18,28 +18,26 @@ type Staff struct {
 	user User
 }
 
-type RegisterStaffArgs struct {
-	Barcode        Barcode         `json:"barcode"`
-	Username       string          `json:"username"`
-	RegistrationID registration.ID `json:"registration_id"`
-	FirstName      string          `json:"first_name"`
-	LastName       string          `json:"last_name"`
-	AvatarURL      string          `json:"avatar_url"`
-	Email          string          `json:"email"`
-	Password       string          `json:"password"`
+type AcceptStaffInvitationArgs struct {
+	Barcode      Barcode   `json:"barcode"`
+	Username     string    `json:"username"`
+	Email        string    `json:"email"`
+	Password     string    `json:"password"`
+	FirstName    string    `json:"first_name"`
+	LastName     string    `json:"last_name"`
+	InvitationID uuid.UUID `json:"invitation_id"`
 }
 
-func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
-	const op = "user.RegisterStaff"
+func AcceptStaffInvitation(p AcceptStaffInvitationArgs) (*Staff, error) {
+	const op = "user.AcceptStaffInvitation"
 	err := validation.ValidateStruct(&p,
 		validation.Field(&p.Barcode, validation.Required),
 		validation.Field(&p.Username, validation.Required, validationx.IsUsername),
-		validation.Field(&p.RegistrationID, validationx.Required),
 		validation.Field(&p.Email, validation.Required, is.EmailFormat),
 		validation.Field(&p.FirstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen)),
 		validation.Field(&p.LastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen)),
 		validation.Field(&p.Password, validationx.PasswordRules...),
-		validation.Field(&p.AvatarURL, validation.Length(0, 1000)),
+		validation.Field(&p.InvitationID, validationx.Required, is.UUID),
 	)
 	if err != nil {
 		return nil, errorx.Wrap(err, op)
@@ -59,7 +57,7 @@ func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
 			username:  p.Username,
 			firstName: p.FirstName,
 			lastName:  p.LastName,
-			avatarURL: p.AvatarURL,
+			avatarURL: "",
 			role:      role.Staff,
 			email:     p.Email,
 			passHash:  passhash,
@@ -68,15 +66,15 @@ func RegisterStaff(p RegisterStaffArgs) (*Staff, error) {
 		},
 	}
 
-	staff.AddEvent(&StaffRegistered{
-		Header:         event.NewEventHeader(),
-		StaffID:        staff.user.id,
-		StaffBarcode:   p.Barcode,
-		StaffUsername:  p.Username,
-		RegistrationID: p.RegistrationID,
-		FirstName:      p.FirstName,
-		LastName:       p.LastName,
-		Email:          p.Email,
+	staff.AddEvent(&StaffInvitationAccepted{
+		Header:        event.NewEventHeader(),
+		StaffID:       staff.user.id,
+		StaffBarcode:  p.Barcode,
+		StaffUsername: p.Username,
+		FirstName:     p.FirstName,
+		LastName:      p.LastName,
+		Email:         p.Email,
+		InvitationID:  p.InvitationID,
 	})
 
 	return staff, nil

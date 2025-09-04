@@ -200,3 +200,21 @@ func StaffInvitationToDomain(dto StaffInvitationDTO) *staffinvitation.StaffInvit
 		DeletedAt:       dto.DeletedAt,
 	})
 }
+
+func StaffToDomain(userDTO UserDTO, roleDTO GlobalRoleDTO, staffDTO StaffDTO) *user.Staff {
+	return user.RehydrateStaff(user.RehydrateStaffArgs{
+		RehydrateUserArgs: user.RehydrateUserArgs{
+			ID:        user.ID(userDTO.ID),
+			Barcode:   user.Barcode(userDTO.Barcode),
+			Username:  userDTO.Username,
+			FirstName: userDTO.FirstName,
+			LastName:  userDTO.LastName,
+			Role:      role.Global(roleDTO.Name),
+			AvatarURL: userDTO.AvatarURL,
+			Email:     userDTO.Email,
+			PassHash:  userDTO.Passhash,
+			CreatedAt: userDTO.CreatedAt,
+			UpdatedAt: userDTO.UpdatedAt,
+		},
+	})
+}

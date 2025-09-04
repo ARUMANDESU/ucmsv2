@@ -88,39 +88,3 @@ func (h *RegistrationCompletedHandler) StudentHandle(ctx context.Context, e *use
 
 	return nil
 }
-
-func (h *RegistrationCompletedHandler) StaffHandle(ctx context.Context, e *user.StaffRegistered) error {
-	if e == nil {
-		return nil
-	}
-	const op = "event.RegistrationCompletedHandler.StaffHandle"
-	l := h.logger.With(
-		slog.String("event", "StaffRegistered"),
-		slog.String("staff.barcode", e.StaffBarcode.String()),
-		slog.String("staff.email", logging.RedactEmail(e.Email)),
-		slog.String("registration.id", e.RegistrationID.String()),
-	)
-	ctx, span := h.tracer.Start(ctx, "RegistrationCompletedHandler.StaffHandle",
-		trace.WithAttributes(
-			attribute.String("staff.barcode", e.StaffBarcode.String()),
-			attribute.String("staff.email", logging.RedactEmail(e.Email)),
-			attribute.String("registration.id", e.RegistrationID.String()),
-		))
-	defer span.End()
-
-	err := h.regRepo.UpdateRegistration(ctx, e.RegistrationID, func(ctx context.Context, reg *registration.Registration) error {
-		err := reg.Complete()
-		if err != nil {
-			trace.SpanFromContext(ctx).AddEvent("failed to complete registration")
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		otelx.RecordSpanError(span, err, "failed to update registration status to completed")
-		l.ErrorContext(ctx, "failed to update registration status to completed", slog.String("error", err.Error()))
-		return errorx.Wrap(err, op)
-	}
-
-	return nil
-}

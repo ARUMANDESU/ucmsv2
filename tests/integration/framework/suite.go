@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -28,6 +29,8 @@ import (
 	registrationapp "github.com/ARUMANDESU/ucms/internal/application/registration"
 	staffapp "github.com/ARUMANDESU/ucms/internal/application/staff"
 	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
+	"github.com/ARUMANDESU/ucms/internal/domain/group"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	httpport "github.com/ARUMANDESU/ucms/internal/ports/http"
 	watermillport "github.com/ARUMANDESU/ucms/internal/ports/watermill"
 	"github.com/ARUMANDESU/ucms/pkg/env"
@@ -43,6 +46,8 @@ import (
 
 type IntegrationTestSuite struct {
 	suite.Suite
+
+	HTTPPort *httpport.Port
 
 	// Infrastructure
 	pgContainer     *postgres.PostgresContainer
@@ -74,6 +79,7 @@ type Application struct {
 	Registration *registrationapp.App
 	Mail         *mail.App
 	Student      *studentapp.App
+	Staff        *staffapp.App
 	Auth         *authapp.App
 }
 
@@ -148,6 +154,7 @@ func (s *IntegrationTestSuite) createApplication() {
 	userRepo := postgresrepo.NewUserRepo(s.pgPool, nil, nil)
 	studentRepo := postgresrepo.NewStudentRepo(s.pgPool, nil, nil)
 	staffInvitationRepo := postgresrepo.NewStaffInvitationRepo(s.pgPool, nil, nil)
+	staffRepo := postgresrepo.NewStaffRepo(s.pgPool, nil, nil)
 	groupRepo := postgresrepo.NewGroupRepo(s.pgPool, nil, nil)
 
 	s.MockMailSender = mocks.NewMockMailSender()
@@ -162,8 +169,9 @@ func (s *IntegrationTestSuite) createApplication() {
 		PgxPool:      s.pgPool,
 	})
 	mailApp := mail.NewApp(mail.Args{
-		Mailsender:             s.MockMailSender,
-		StaffInvitationBaseURL: "http://localhost:3000/invitations/staff",
+		Mailsender:              s.MockMailSender,
+		StaffInvitationBaseURL:  "http://localhost:3000/invitations/staff",
+		InvitationCreatorGetter: staffRepo,
 	})
 
 	studentApp := studentapp.NewApp(studentapp.Args{
@@ -174,6 +182,7 @@ func (s *IntegrationTestSuite) createApplication() {
 
 	staffApp := staffapp.NewApp(staffapp.Args{
 		StaffInvitationRepo: staffInvitationRepo,
+		StaffRepo:           staffRepo,
 	})
 
 	authApp := authapp.NewApp(authapp.Args{
@@ -190,19 +199,24 @@ func (s *IntegrationTestSuite) createApplication() {
 		Registration: regApp,
 		Mail:         mailApp,
 		Student:      studentApp,
+		Staff:        staffApp,
 		Auth:         authApp,
 	}
 
 	s.httpHandler = chi.NewRouter()
-	httpPort := httpport.NewPort(httpport.Args{
-		RegistrationApp: regApp,
-		AuthApp:         authApp,
-		StudentApp:      studentApp,
-		StaffApp:        staffApp,
-		CookieDomain:    "localhost",
-		Secret:          []byte(fixtures.AccessTokenSecretKey),
+	s.HTTPPort = httpport.NewPort(httpport.Args{
+		RegistrationApp:         regApp,
+		AuthApp:                 authApp,
+		StudentApp:              studentApp,
+		StaffApp:                staffApp,
+		CookieDomain:            "localhost",
+		Secret:                  []byte(fixtures.AccessTokenSecretKey),
+		AcceptInvitationPageURL: fixtures.StaffInvitationAcceptPageURL,
+		InvitationTokenAlg:      fixtures.InvitationTokenAlg,
+		InvitationTokenKey:      fixtures.InvitationTokenKey,
+		InvitationTokenExp:      fixtures.InvitationTokenExp,
 	})
-	httpPort.Route(s.httpHandler)
+	s.HTTPPort.Route(s.httpHandler)
 }
 
 func (s *IntegrationTestSuite) createWatermillPort() {
@@ -292,19 +306,6 @@ func (s *IntegrationTestSuite) AfterTest(suiteName, testName string) {
 	if duration > 2*time.Second {
 		s.T().Logf("SLOW TEST: %s took %v", testName, duration)
 	}
-	// s.T().Logf("Cleaning up after test: %s.%s", suiteName, testName)
-	// spans := s.traceRecorder.Ended()
-	// s.T().Logf("Total spans recorded: %d", len(spans))
-	// for _, span := range spans {
-	// 	s.T().Logf("Span: %s, Name: %s, Status: %s", span.SpanContext().TraceID(), span.Name(), span.Status().Code.String())
-	// 	attrs := span.Attributes()
-	// 	attrjsonbytes, _ := json.MarshalIndent(attrs, "", "  ")
-	// 	s.T().Logf("Attributes: %s", string(attrjsonbytes))
-	// 	events := span.Events()
-	// 	eventjsonbytes, _ := json.MarshalIndent(events, "", "  ")
-	// 	s.T().Logf("Events: %s", string(eventjsonbytes))
-	// 	fmt.Println("")
-	// }
 	s.T().Logf("Cleaning up after test: %s.%s", suiteName, testName)
 	s.Event.ClearAllEvents(s.T())
 	s.traceRecorder.Reset()
@@ -315,4 +316,25 @@ func (s *IntegrationTestSuite) AfterTest(suiteName, testName string) {
 // Context returns a test context with timeout
 func (s *IntegrationTestSuite) Context() context.Context {
 	return s.T().Context()
+}
+
+func (s *IntegrationTestSuite) SeedStaff(t *testing.T, email string) *user.Staff {
+	t.Helper()
+	staffUser := s.Builder.User.Staff(email)
+	s.DB.SeedStaff(t, staffUser)
+	return staffUser
+}
+
+func (s *IntegrationTestSuite) SeedGroup(t *testing.T) group.ID {
+	t.Helper()
+	groupID := group.NewID()
+	s.DB.SeedGroup(t, groupID, fixtures.SEGroup.Name, fixtures.SEGroup.Year, fixtures.SEGroup.Major)
+	return groupID
+}
+
+func (s *IntegrationTestSuite) SeedStudent(t *testing.T, email string, groupID group.ID) *user.Student {
+	t.Helper()
+	studentUser := builders.NewStudentBuilder().WithEmail(email).WithGroupID(groupID).Build()
+	s.DB.SeedStudent(t, studentUser)
+	return studentUser
 }

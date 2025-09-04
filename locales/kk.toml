@@ -16,6 +16,9 @@ other = "Аутентификация қажет"
 [invalid_credentials]
 other = "Кіру деректері жарамсыз"
 
+[invalid_invitation]
+other = "Жарамсыз шақыру немесе ондай шақыру жоқ"
+
 [token_expired]
 other = "Кіру токенінің мерзімі өтті"
 
@@ -29,6 +32,9 @@ other = "Рұқсат жеткіліксіз"
 other = "Ресурс табылмады"
 [not_found_with_type]
 other = "{{.locale_resource_type}} табылмады"
+
+[not_found_or_deleted]
+other = "Ресурс табылмады немесе жойылған"
 
 [method_not_allowed]
 other = "HTTP әдісіне рұқсат берілмеген"

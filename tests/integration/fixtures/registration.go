@@ -82,8 +82,8 @@ var (
 		Barcode:   TestStudent2Barcode,
 		Username:  "teststudent2",
 		Email:     ValidStudent2Email,
-		FirstName: "Test",
-		LastName:  "Student2",
+		FirstName: "Testtwo",
+		LastName:  "Studenttwo",
 		Password:  "AnotherPass123!",
 		GroupID:   ITGroup.ID,
 		Major:     major.IT,
@@ -120,8 +120,8 @@ var (
 		Barcode:   TestStaff2Barcode,
 		Username:  "teststaff2",
 		Email:     ValidStaff2Email,
-		FirstName: "Test2",
-		LastName:  "Staff2",
+		FirstName: "Testtwo",
+		LastName:  "Stafftwo",
 		Password:  "StaffPass456!",
 	}
 )

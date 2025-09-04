@@ -194,6 +194,35 @@ func (h *Helper) RequireStudentExistsByEmail(t *testing.T, email string) *user.S
 	return user.NewStudentAssertions(student)
 }
 
+func (h *Helper) RequireStaffExists(t *testing.T, id user.ID) *user.StaffAssertions {
+	t.Helper()
+
+	staff, err := h.staff.GetStaffByID(t.Context(), id)
+	require.NoError(t, err, "staff not found for user_id: %s", id)
+
+	return user.NewStaffAssertions(staff)
+}
+
+func (h *Helper) RequireStaffExistsByEmail(t *testing.T, email string) *user.StaffAssertions {
+	t.Helper()
+
+	staff, err := h.staff.GetStaffByEmail(t.Context(), email)
+	require.NoError(t, err, "staff not found for email: %s", email)
+
+	return user.NewStaffAssertions(staff)
+}
+
+func (h *Helper) RequireStaffNotExistsByEmail(t *testing.T, email string) {
+	t.Helper()
+
+	var count int
+	err := h.pool.QueryRow(context.Background(),
+		"SELECT COUNT(*) FROM staffs s JOIN users u ON s.user_id = u.id WHERE u.email = $1", email).Scan(&count)
+
+	require.NoError(t, err)
+	assert.Equal(t, 0, count, "expected no staff for email %s", email)
+}
+
 func (h *Helper) RequireStaffInvitationExists(t *testing.T, id staffinvitation.ID) *staffinvitation.Assertion {
 	t.Helper()
 

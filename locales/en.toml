@@ -16,6 +16,9 @@ other = "Authentication required"
 [invalid_credentials]
 other = "Invalid Credentials"
 
+[invalid_invitation]
+other = "Invalid invitation or does not exist"
+
 [token_expired]
 other = "Access token has expired"
 
@@ -29,6 +32,9 @@ other = "Insufficient permissions"
 other = "Resource not found"
 [not_found_with_type]
 other = "{{.locale_resource_type}} not found"
+
+[not_found_or_deleted]
+other = "Resource not found or has been deleted"
 
 [method_not_allowed]
 other = "HTTP method not allowed"

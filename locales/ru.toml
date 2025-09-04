@@ -16,6 +16,9 @@ other = "Требуется аутентификация"
 [invalid_credentials]
 other = "Недействительные учетные данные"
 
+[invalid_invitation]
+other = "Недействительное приглашение или оно не существует"
+
 [token_expired]
 other = "Срок действия токена истек"
 
@@ -29,6 +32,9 @@ other = "Недостаточно прав доступа"
 other = "Ресурс не найден"
 [not_found_with_type]
 other = "{{.locale_resource_type}} не найден"
+
+[not_found_or_deleted]
+other = "Ресурс не найден или был удален"
 
 [method_not_allowed]
 other = "HTTP метод не разрешен"

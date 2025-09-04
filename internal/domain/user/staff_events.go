@@ -1,29 +1,32 @@
 package user
 
 import (
+	"github.com/google/uuid"
+
 	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 )
 
 const StaffEventStreamName = "events_staff"
 
-type StaffRegistered struct {
+type StaffInvitationAccepted struct {
 	event.Header
-	StaffID        ID
-	StaffBarcode   Barcode
-	StaffUsername  string
-	RegistrationID registration.ID
-	FirstName      string
-	LastName       string
-	Email          string
+	event.Otel
+	StaffID       ID
+	StaffBarcode  Barcode
+	StaffUsername string
+	FirstName     string
+	LastName      string
+	Email         string
+	InvitationID  uuid.UUID
 }
 
-func (e *StaffRegistered) GetStreamName() string {
+func (e *StaffInvitationAccepted) GetStreamName() string {
 	return StaffEventStreamName
 }
 
 type InitialStaffCreated struct {
 	event.Header
+	event.Otel
 	StaffID       ID
 	StaffBarcode  Barcode
 	StaffUsername string

@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
@@ -28,12 +29,16 @@ type Port struct {
 }
 
 type Args struct {
-	RegistrationApp *registration.App
-	AuthApp         *authapp.App
-	StudentApp      *studentapp.App
-	StaffApp        *staffapp.App
-	CookieDomain    string
-	Secret          []byte
+	RegistrationApp         *registration.App
+	AuthApp                 *authapp.App
+	StudentApp              *studentapp.App
+	StaffApp                *staffapp.App
+	CookieDomain            string
+	Secret                  []byte
+	AcceptInvitationPageURL string
+	InvitationTokenAlg      jwt.SigningMethod
+	InvitationTokenKey      string
+	InvitationTokenExp      time.Duration
 }
 
 func NewPort(args Args) *Port {
@@ -59,9 +64,13 @@ func NewPort(args Args) *Port {
 			Middleware: m,
 		}),
 		staff: staffhttp.NewHTTP(staffhttp.Args{
-			App:        args.StaffApp,
-			Errhandler: errorHandler,
-			Middleware: m,
+			App:                     args.StaffApp,
+			Errhandler:              errorHandler,
+			Middleware:              m,
+			AcceptInvitationPageURL: args.AcceptInvitationPageURL,
+			InvitationTokenAlg:      args.InvitationTokenAlg,
+			InvitationTokenKey:      args.InvitationTokenKey,
+			InvitationTokenExp:      args.InvitationTokenExp,
 		}),
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -13,6 +14,7 @@ import (
 	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"github.com/ARUMANDESU/ucms/pkg/i18nx"
 	"github.com/ARUMANDESU/ucms/pkg/otelx"
 )
 
@@ -21,9 +23,26 @@ var (
 	logger = otelslog.NewLogger("ucms/internal/application/staff/cmd")
 )
 
+var (
+	ErrEmailNotAvailable    = errorx.NewDuplicateEntry().WithKey(i18nx.KeyEmailNotAvailable)
+	ErrBarcodeNotAvailable  = errorx.NewDuplicateEntry().WithKey(i18nx.KeyBarcodeNotAvailable)
+	ErrUsernameNotAvailable = errorx.NewDuplicateEntry().WithKey(i18nx.KeyUsernameNotAvailable)
+)
+
 type StaffInvitationRepo interface {
 	SaveStaffInvitation(ctx context.Context, invitation *staffinvitation.StaffInvitation) error
 	UpdateStaffInvitation(ctx context.Context, id staffinvitation.ID, fn func(context.Context, *staffinvitation.StaffInvitation) error) error
+	GetStaffInvitationByCode(ctx context.Context, code string) (*staffinvitation.StaffInvitation, error)
+}
+
+type StaffRepo interface {
+	IsStaffExists(
+		ctx context.Context,
+		email string,
+		username string,
+		barcode user.Barcode,
+	) (emailExists bool, usernameExists bool, barcodeExists bool, err error)
+	SaveStaff(ctx context.Context, staff *user.Staff) error
 }
 
 type CreateInvitation struct {
@@ -262,6 +281,175 @@ func (h *DeleteInvitationHandler) Handle(ctx context.Context, cmd DeleteInvitati
 	})
 	if err != nil {
 		otelx.RecordSpanError(span, err, "failed to delete staff invitation")
+		return errorx.Wrap(err, op)
+	}
+
+	return nil
+}
+
+type ValidateInvitation struct {
+	InvitationCode string
+	Email          string
+}
+
+type ValidateInvitationHandler struct {
+	tracer trace.Tracer
+	logger *slog.Logger
+	repo   StaffInvitationRepo
+}
+
+type ValidateInvitationHandlerArgs struct {
+	Tracer              trace.Tracer
+	Logger              *slog.Logger
+	StaffInvitationRepo StaffInvitationRepo
+}
+
+func NewValidateInvitationHandler(args ValidateInvitationHandlerArgs) *ValidateInvitationHandler {
+	h := &ValidateInvitationHandler{
+		tracer: args.Tracer,
+		logger: args.Logger,
+		repo:   args.StaffInvitationRepo,
+	}
+
+	if h.tracer == nil {
+		h.tracer = tracer
+	}
+	if h.logger == nil {
+		h.logger = logger
+	}
+
+	return h
+}
+
+func (h *ValidateInvitationHandler) Handle(ctx context.Context, cmd ValidateInvitation) error {
+	const op = "cmd.ValidateInvitationHandler.Handle"
+	ctx, span := h.tracer.Start(ctx, "ValidateInvitationHandler.Handle", trace.WithAttributes(
+		attribute.String("invitation_code", cmd.InvitationCode),
+		attribute.String("email", cmd.Email),
+	))
+	defer span.End()
+
+	invitation, err := h.repo.GetStaffInvitationByCode(ctx, cmd.InvitationCode)
+	if err != nil {
+		otelx.RecordSpanError(span, err, "failed to get staff invitation by code")
+		if errorx.IsNotFound(err) {
+			return staffinvitation.ErrNotFoundOrDeleted.WithCause(err, op)
+		}
+		return errorx.Wrap(err, op)
+	}
+
+	if err := invitation.ValidateInvitationAccess(cmd.Email, cmd.InvitationCode); err != nil {
+		otelx.RecordSpanError(span, err, "invitation validation failed")
+		return errorx.Wrap(err, op)
+	}
+
+	return nil
+}
+
+type AcceptInvitation struct {
+	InvitationCode string
+	Email          string
+	Barcode        user.Barcode
+	Username       string
+	Password       string
+	FirstName      string
+	LastName       string
+}
+
+type AcceptInvitationHandler struct {
+	tracer    trace.Tracer
+	logger    *slog.Logger
+	repo      StaffInvitationRepo
+	staffRepo StaffRepo
+}
+
+type AcceptInvitationHandlerArgs struct {
+	Tracer              trace.Tracer
+	Logger              *slog.Logger
+	StaffInvitationRepo StaffInvitationRepo
+	StaffRepo           StaffRepo
+}
+
+func NewAcceptInvitationHandler(args AcceptInvitationHandlerArgs) *AcceptInvitationHandler {
+	h := &AcceptInvitationHandler{
+		tracer:    args.Tracer,
+		logger:    args.Logger,
+		repo:      args.StaffInvitationRepo,
+		staffRepo: args.StaffRepo,
+	}
+
+	if h.tracer == nil {
+		h.tracer = tracer
+	}
+	if h.logger == nil {
+		h.logger = logger
+	}
+
+	return h
+}
+
+func (h *AcceptInvitationHandler) Handle(ctx context.Context, cmd AcceptInvitation) error {
+	const op = "cmd.AcceptInvitationHandler.Handle"
+	ctx, span := h.tracer.Start(ctx, "AcceptInvitationHandler.Handle", trace.WithAttributes(
+		attribute.String("invitation_code", cmd.InvitationCode),
+		attribute.String("email", cmd.Email),
+		attribute.String("barcode", cmd.Barcode.String()),
+		attribute.String("username", cmd.Username),
+	))
+	defer span.End()
+
+	invitation, err := h.repo.GetStaffInvitationByCode(ctx, cmd.InvitationCode)
+	if err != nil {
+		otelx.RecordSpanError(span, err, "failed to get staff invitation by code")
+		if errorx.IsNotFound(err) {
+			return staffinvitation.ErrNotFoundOrDeleted.WithCause(err, op)
+		}
+		return errorx.Wrap(err, op)
+	}
+
+	if err := invitation.ValidateInvitationAccess(cmd.Email, cmd.InvitationCode); err != nil {
+		otelx.RecordSpanError(span, err, "invitation validation failed")
+		return errorx.Wrap(err, op)
+	}
+
+	emailExists, usernameExists, barcodeExists, err := h.staffRepo.IsStaffExists(ctx, cmd.Email, cmd.Username, cmd.Barcode)
+	if err != nil {
+		otelx.RecordSpanError(span, err, "failed to check if staff exists")
+		return errorx.Wrap(err, op)
+	}
+
+	if emailExists || usernameExists || barcodeExists {
+		errs := make(errorx.I18nErrors, 0)
+		if emailExists {
+			errs = append(errs, ErrEmailNotAvailable)
+		}
+		if usernameExists {
+			errs = append(errs, ErrUsernameNotAvailable)
+		}
+		if barcodeExists {
+			errs = append(errs, ErrBarcodeNotAvailable)
+		}
+		otelx.RecordSpanError(span, errs, "validation error: user already exists")
+		return errorx.Wrap(errs, op)
+	}
+
+	staff, err := user.AcceptStaffInvitation(user.AcceptStaffInvitationArgs{
+		Email:        cmd.Email,
+		Barcode:      cmd.Barcode,
+		Username:     cmd.Username,
+		Password:     cmd.Password,
+		FirstName:    cmd.FirstName,
+		LastName:     cmd.LastName,
+		InvitationID: uuid.UUID(invitation.ID()),
+	})
+	if err != nil {
+		otelx.RecordSpanError(span, err, "failed to create staff")
+		return errorx.Wrap(err, op)
+	}
+
+	err = h.staffRepo.SaveStaff(ctx, staff)
+	if err != nil {
+		otelx.RecordSpanError(span, err, "failed to save staff")
 		return errorx.Wrap(err, op)
 	}
 

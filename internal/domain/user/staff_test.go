@@ -8,120 +8,114 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/pkg/validationx"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 )
 
-func TestRegisterStaff_ArgValidation(t *testing.T) {
+func TestAcceptStaffInvitation_ArgValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		args    user.RegisterStaffArgs
+		args    user.AcceptStaffInvitationArgs
 		wantErr error
 	}{
 		{
 			name:    "valid args",
-			args:    builders.NewStaffBuilder().BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: nil,
 		},
 		{
 			name:    "missing Barcode",
-			args:    builders.NewStaffBuilder().WithBarcode("").BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithBarcode("").BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"barcode": validation.ErrRequired},
 		},
 		{
 			name:    "missing username",
-			args:    builders.NewStaffBuilder().WithUsername("").BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithUsername("").BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"username": validation.ErrRequired},
 		},
 		{
 			name:    "username too short",
-			args:    builders.NewStaffBuilder().WithUsername("ab").BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithUsername("ab").BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"username": validationx.ErrInvalidUsernameFormat},
 		},
 		{
 			name: "username too long",
 			args: builders.NewStaffBuilder().
 				WithUsername("a_very_long_username_exceeding_the_maximum_length_of_fifty_characters"). // 69 chars
-				BuildRegisterArgs(),
+				BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"username": validationx.ErrInvalidUsernameFormat},
 		},
 		{
 			name: "username format invalid",
 			args: builders.NewStaffBuilder().
 				WithUsername("invalid username!"). // contains space and exclamation mark
-				BuildRegisterArgs(),
+				BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"username": validationx.ErrInvalidUsernameFormat},
 		},
 		{
-			name:    "missing RegistrationID",
-			args:    builders.NewStaffBuilder().WithRegistrationID(registration.ID{}).BuildRegisterArgs(),
-			wantErr: validation.Errors{"registration_id": validation.ErrRequired},
-		},
-		{
-			name:    "invalid RegistrationID",
-			args:    builders.NewStaffBuilder().WithRegistrationID(registration.ID(uuid.Nil)).BuildRegisterArgs(),
-			wantErr: validation.Errors{"registration_id": validation.ErrRequired},
-		},
-		{
 			name:    "missing Email",
-			args:    builders.NewStaffBuilder().WithEmail("").BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithEmail("").BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"email": validation.ErrRequired},
 		},
 		{
 			name:    "invalid Email format",
-			args:    builders.NewStaffBuilder().WithEmail("invalid-email").BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithEmail("invalid-email").BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"email": is.ErrEmail},
 		},
 		{
 			name:    "missing Password",
-			args:    builders.NewStaffBuilder().WithPassword("").BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithPassword("").BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"password": validation.ErrRequired},
 		},
 		{
 			name:    "invalid Password format",
-			args:    builders.NewStaffBuilder().WithPassword("short").BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithPassword("short").BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"password": validation.ErrLengthOutOfRange},
 		},
 		{
 			name:    "missing FirstName",
-			args:    builders.NewStaffBuilder().WithFirstName("").BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithFirstName("").BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"first_name": validation.ErrRequired},
 		},
 		{
 			name:    "FirstName too long",
-			args:    builders.NewStaffBuilder().WithInvalidLongFirstName().BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithInvalidLongFirstName().BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"first_name": validation.ErrLengthOutOfRange},
 		},
 		{
 			name:    "FirstName too short",
-			args:    builders.NewStaffBuilder().WithInvalidShortFirstName().BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithInvalidShortFirstName().BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"first_name": validation.ErrLengthOutOfRange},
 		},
 		{
 			name:    "missing LastName",
-			args:    builders.NewStaffBuilder().WithLastName("").BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithLastName("").BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"last_name": validation.ErrRequired},
 		},
 		{
 			name:    "LastName too long",
-			args:    builders.NewStaffBuilder().WithInvalidLongLastName().BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithInvalidLongLastName().BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"last_name": validation.ErrLengthOutOfRange},
 		},
 		{
 			name:    "LastName too short",
-			args:    builders.NewStaffBuilder().WithInvalidShortLastName().BuildRegisterArgs(),
+			args:    builders.NewStaffBuilder().WithInvalidShortLastName().BuildAcceptStaffInvitationArgs(uuid.New()),
 			wantErr: validation.Errors{"last_name": validation.ErrLengthOutOfRange},
+		},
+		{
+			name:    "missing InvitationID",
+			args:    builders.NewStaffBuilder().BuildAcceptStaffInvitationArgs(uuid.Nil),
+			wantErr: validation.Errors{"invitation_id": validation.ErrRequired},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			staff, err := user.RegisterStaff(tt.args)
+			staff, err := user.AcceptStaffInvitation(tt.args)
 			if tt.wantErr == nil {
 				user.NewStaffAssertions(staff).
-					AssertByRegistrationArgs(t, tt.args)
+					AssertByAcceptStaffInvitationArgs(t, tt.args)
 			} else {
 				validationx.AssertValidationErrors(t, err, tt.wantErr)
 				assert.Nil(t, staff, "expected staff to be nil on error")
@@ -131,15 +125,15 @@ func TestRegisterStaff_ArgValidation(t *testing.T) {
 }
 
 func TestRegisterStaff_EmptyArgs(t *testing.T) {
-	staff, err := user.RegisterStaff(user.RegisterStaffArgs{})
+	staff, err := user.AcceptStaffInvitation(user.AcceptStaffInvitationArgs{})
 	validationx.AssertValidationErrors(t, err, validation.Errors{
-		"barcode":         validation.ErrRequired,
-		"username":        validation.ErrRequired,
-		"registration_id": validation.ErrRequired,
-		"email":           validation.ErrRequired,
-		"first_name":      validation.ErrRequired,
-		"last_name":       validation.ErrRequired,
-		"password":        validation.ErrRequired,
+		"barcode":       validation.ErrRequired,
+		"username":      validation.ErrRequired,
+		"email":         validation.ErrRequired,
+		"first_name":    validation.ErrRequired,
+		"last_name":     validation.ErrRequired,
+		"password":      validation.ErrRequired,
+		"invitation_id": validation.ErrRequired,
 	})
 	assert.Nil(t, staff, "expected staff to be nil on error")
 }

@@ -5,6 +5,8 @@ import (
 	"math/rand/v2"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/ARUMANDESU/ucms/internal/domain/group"
 	"github.com/ARUMANDESU/ucms/internal/domain/registration"
 	"github.com/ARUMANDESU/ucms/internal/domain/user"
@@ -482,29 +484,15 @@ func (b *StaffBuilder) RehydrateStaffArgs() user.RehydrateStaffArgs {
 	}
 }
 
-func (b *StaffBuilder) BuildNew() (*user.Staff, error) {
-	return user.RegisterStaff(user.RegisterStaffArgs{
-		Barcode:        b.barcode,
-		Username:       b.username,
-		RegistrationID: b.registrationID,
-		FirstName:      b.firstName,
-		LastName:       b.lastName,
-		AvatarURL:      b.avatarURL,
-		Email:          b.email,
-		Password:       b.password,
-	})
-}
-
-func (b *StaffBuilder) BuildRegisterArgs() user.RegisterStaffArgs {
-	return user.RegisterStaffArgs{
-		Barcode:        b.barcode,
-		Username:       b.username,
-		RegistrationID: b.registrationID,
-		FirstName:      b.firstName,
-		LastName:       b.lastName,
-		AvatarURL:      b.avatarURL,
-		Email:          b.email,
-		Password:       b.password,
+func (b *StaffBuilder) BuildAcceptStaffInvitationArgs(invitationID uuid.UUID) user.AcceptStaffInvitationArgs {
+	return user.AcceptStaffInvitationArgs{
+		Barcode:      b.barcode,
+		Username:     b.username,
+		FirstName:    b.firstName,
+		LastName:     b.lastName,
+		Email:        b.email,
+		Password:     b.password,
+		InvitationID: invitationID,
 	}
 }
 

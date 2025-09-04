@@ -48,6 +48,11 @@ func (b *StaffInvitationBuilder) WithRecipientsEmail(recipientsEmail []string) *
 	return b
 }
 
+func (b *StaffInvitationBuilder) WithAppendRecipientsEmail(email string) *StaffInvitationBuilder {
+	b.recipientsEmail = append(b.recipientsEmail, email)
+	return b
+}
+
 func (b *StaffInvitationBuilder) WithValidFrom(validFrom *time.Time) *StaffInvitationBuilder {
 	b.validFrom = validFrom
 	return b

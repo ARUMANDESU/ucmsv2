@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -139,6 +140,24 @@ func (h *Helper) UpdateStaffInvitationValidity(
 func (h *Helper) DeleteStaffInvitation(t *testing.T, invitationID string, opts ...RequestBuilderOptions) *Response {
 	t.Helper()
 	r := NewRequest("DELETE", "/v1/staffs/invitations/"+invitationID)
+	for _, opt := range opts {
+		opt(r)
+	}
+	return h.Do(t, r.Build())
+}
+
+func (h *Helper) ValidateStaffInvitation(t *testing.T, code string, email string, opts ...RequestBuilderOptions) *Response {
+	t.Helper()
+	r := NewRequest("GET", fmt.Sprintf("/v1/invitations/%s/validate?email=%s", code, email))
+	for _, opt := range opts {
+		opt(r)
+	}
+	return h.Do(t, r.Build())
+}
+
+func (h *Helper) AcceptStaffInvitation(t *testing.T, req staffhttp.AcceptInvitationRequest, opts ...RequestBuilderOptions) *Response {
+	t.Helper()
+	r := NewRequest("POST", "/v1/invitations/accept").WithJSON(req)
 	for _, opt := range opts {
 		opt(r)
 	}

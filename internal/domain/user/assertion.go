@@ -105,14 +105,13 @@ func NewStaffAssertions(s *Staff) *StaffAssertions {
 	}
 }
 
-func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterStaffArgs) *StaffAssertions {
+func (s *StaffAssertions) AssertByAcceptStaffInvitationArgs(t *testing.T, args AcceptStaffInvitationArgs) *StaffAssertions {
 	t.Helper()
 	assert.NotEmpty(t, s.staff.user.id, "ID should not be empty")
 	assert.Equal(t, args.Barcode, s.staff.user.barcode, "Barcode mismatch")
 	assert.Equal(t, args.Username, s.staff.user.username, "Username mismatch")
 	assert.Equal(t, args.FirstName, s.staff.user.firstName, "FirstName mismatch")
 	assert.Equal(t, args.LastName, s.staff.user.lastName, "LastName mismatch")
-	assert.Equal(t, args.AvatarURL, s.staff.user.avatarURL, "AvatarURL mismatch")
 	assert.Equal(t, args.Email, s.staff.user.email, "Email mismatch")
 	assert.Equal(t, role.Staff, s.staff.user.role, "Role mismatch")
 	assert.WithinDuration(t, time.Now(), s.staff.user.createdAt, time.Minute, "CreatedAt should be recent")
@@ -122,14 +121,15 @@ func (s *StaffAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterSt
 
 	events := s.staff.GetUncommittedEvents()
 	require.Len(t, events, 1, "expected one event")
-	assert.IsType(t, &StaffRegistered{}, events[0], "expected StaffRegistered event type")
-	staffRegisteredEvent := events[0].(*StaffRegistered)
+	assert.IsType(t, &StaffInvitationAccepted{}, events[0], "expected StaffRegistered event type")
+	staffRegisteredEvent := events[0].(*StaffInvitationAccepted)
 	assert.Equal(t, s.staff.user.id, staffRegisteredEvent.StaffID, "StaffID in event mismatch")
 	assert.Equal(t, args.Barcode, staffRegisteredEvent.StaffBarcode, "StaffBarcode in event mismatch")
 	assert.Equal(t, args.Username, staffRegisteredEvent.StaffUsername, "StaffUsername in event mismatch")
 	assert.Equal(t, args.Email, staffRegisteredEvent.Email, "Email in event mismatch")
 	assert.Equal(t, args.FirstName, staffRegisteredEvent.FirstName, "FirstName in event mismatch")
 	assert.Equal(t, args.LastName, staffRegisteredEvent.LastName, "LastName in event mismatch")
+	assert.Equal(t, args.InvitationID, staffRegisteredEvent.InvitationID, "InvitationID in event mismatch")
 
 	return s
 }

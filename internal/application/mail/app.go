@@ -9,15 +9,17 @@ type App struct {
 }
 
 type Args struct {
-	Mailsender             mailevent.MailSender
-	StaffInvitationBaseURL string
+	Mailsender              mailevent.MailSender
+	StaffInvitationBaseURL  string
+	InvitationCreatorGetter mailevent.InvitationCreatorGetter
 }
 
 func NewApp(args Args) *App {
 	return &App{
 		Event: mailevent.NewMailEventHandler(mailevent.MailEventHandlerArgs{
-			Mailsender:             args.Mailsender,
-			StaffInvitationBaseURL: args.StaffInvitationBaseURL,
+			Mailsender:              args.Mailsender,
+			StaffInvitationBaseURL:  args.StaffInvitationBaseURL,
+			InvitationCreatorGetter: args.InvitationCreatorGetter,
 		}),
 	}
 }

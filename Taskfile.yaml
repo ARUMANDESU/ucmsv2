@@ -27,6 +27,11 @@ tasks:
             - cmd: go run ./cmd/api/
               ignore_error: true
 
+    lint:
+        desc: Run linters
+        cmds:
+            - cmd: golangci-lint run ./...
+
     test:unit:
         desc: Run unit tests
         cmds:

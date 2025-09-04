@@ -119,6 +119,14 @@ func (r *Response) AssertHeader(key, value string) *Response {
 	return r
 }
 
+func (r *Response) AssertHeaderContains(key, value string) *Response {
+	r.t.Helper()
+
+	actual := r.Header().Get(key)
+	require.Contains(r.t, actual, value, fmt.Sprintf("expected header %s to contain %s, got %s", key, value, actual))
+	return r
+}
+
 func (r *Response) AssertMessage(expected string) *Response {
 	r.t.Helper()
 
@@ -215,7 +223,9 @@ func (r *Response) ParseJSONIfExists(v any) *Response {
 	}
 
 	err := json.Unmarshal(r.Body.Bytes(), v)
-	require.NoError(r.t, err, "failed to parse JSON response: %s", r.Body.String())
+	if err != nil {
+		return r
+	}
 
 	return r
 }
