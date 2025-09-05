@@ -5,15 +5,18 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
+	"github.com/ARUMANDESU/ucms/internal/domain/user"
 	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
 	staffhttp "github.com/ARUMANDESU/ucms/internal/ports/http/staff"
 	"github.com/ARUMANDESU/ucms/tests/integration/builders"
 	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
 	"github.com/ARUMANDESU/ucms/tests/integration/framework"
+	"github.com/ARUMANDESU/ucms/tests/integration/framework/event"
 	httpframework "github.com/ARUMANDESU/ucms/tests/integration/framework/http"
 )
 
@@ -181,7 +184,7 @@ func (s *AcceptInvitationTest) TestAccept_HappyPath() {
 	}).
 		RequireStatus(http.StatusCreated)
 
-	s.DB.RequireStaffExistsByEmail(t, email).
+	staffAssertion := s.DB.RequireStaffExistsByEmail(t, email).
 		AssertIDNotEmpty(t).
 		AssertBarcode(t, fixtures.TestStaff2.Barcode).
 		AssertUsername(t, fixtures.TestStaff2.Username).
@@ -189,6 +192,16 @@ func (s *AcceptInvitationTest) TestAccept_HappyPath() {
 		AssertLastName(t, fixtures.TestStaff2.LastName).
 		AssertPassword(t, fixtures.TestStaff2.Password).
 		AssertRole(t, role.Staff)
+
+	e := event.RequireEvent(t, s.Event, &user.StaffInvitationAccepted{})
+	user.NewStaffInvitationAcceptedAssertion(t, e).
+		AssertStaffID(staffAssertion.Staff().User().ID()).
+		AssertStaffBarcode(fixtures.TestStaff2.Barcode).
+		AssertStaffUsername(fixtures.TestStaff2.Username).
+		AssertFirstName(fixtures.TestStaff2.FirstName).
+		AssertLastName(fixtures.TestStaff2.LastName).
+		AssertInvitationID(uuid.UUID(invitation.ID())).
+		AssertEmail(email)
 }
 
 func (s *AcceptInvitationTest) TestAccept_FailPath() {

@@ -105,6 +105,10 @@ func NewStaffAssertions(s *Staff) *StaffAssertions {
 	}
 }
 
+func (s *StaffAssertions) Staff() *Staff {
+	return s.staff
+}
+
 func (s *StaffAssertions) AssertByAcceptStaffInvitationArgs(t *testing.T, args AcceptStaffInvitationArgs) *StaffAssertions {
 	t.Helper()
 	assert.NotEmpty(t, s.staff.user.id, "ID should not be empty")
