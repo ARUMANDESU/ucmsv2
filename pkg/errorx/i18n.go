@@ -160,6 +160,15 @@ func (e *I18nError) WithCause(cause error, op string) *I18nError {
 	return e
 }
 
+func (e *I18nError) WithOp(op string) *I18nError {
+	if e.cause != nil {
+		e.cause = fmt.Errorf("%s: %w", op, e.cause)
+	} else {
+		e.cause = errors.New(op)
+	}
+	return e
+}
+
 func (e *I18nError) WithKey(key string) *I18nError {
 	e.MessageKey = key
 	return e

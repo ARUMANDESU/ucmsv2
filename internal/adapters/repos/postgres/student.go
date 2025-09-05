@@ -50,7 +50,8 @@ func (st *StudentRepo) GetStudentByID(ctx context.Context, id user.ID) (*user.St
 
 	query := `
         SELECT  u.id, u.barcode, u.username, u.role_id,
-                u.first_name, u.last_name, u.avatar_url,
+                u.first_name, u.last_name, 
+				u.avatar_source, u.avatar_external, u.avatar_s3_key,
                 u.email, u.pass_hash, u.created_at, u.updated_at,
                 gr.id, gr.name,
                 s.group_id
@@ -64,7 +65,8 @@ func (st *StudentRepo) GetStudentByID(ctx context.Context, id user.ID) (*user.St
 	var studentDTO StudentDTO
 	err := st.pool.QueryRow(ctx, query, id).Scan(
 		&dto.ID, &dto.Barcode, &dto.Username, &dto.RoleID,
-		&dto.FirstName, &dto.LastName, &dto.AvatarURL,
+		&dto.FirstName, &dto.LastName,
+		&dto.AvatarSource, &dto.AvatarExternal, &dto.AvatarS3Key,
 		&dto.Email, &dto.Passhash, &dto.CreatedAt, &dto.UpdatedAt,
 		&dto.RoleID, &roleDTO.Name,
 		&studentDTO.GroupID,
@@ -87,7 +89,8 @@ func (st *StudentRepo) GetStudentByEmail(ctx context.Context, email string) (*us
 
 	query := `
         SELECT  u.id, u.barcode, u.username, u.role_id,
-                u.first_name, u.last_name, u.avatar_url,
+                u.first_name, u.last_name, 
+				u.avatar_source, u.avatar_external, u.avatar_s3_key,
                 u.email, u.pass_hash, u.created_at, u.updated_at,
                 gr.id, gr.name,
                 s.group_id
@@ -101,7 +104,8 @@ func (st *StudentRepo) GetStudentByEmail(ctx context.Context, email string) (*us
 	var studentDTO StudentDTO
 	err := st.pool.QueryRow(ctx, query, email).Scan(
 		&dto.ID, &dto.Barcode, &dto.Username, &dto.RoleID,
-		&dto.FirstName, &dto.LastName, &dto.AvatarURL,
+		&dto.FirstName, &dto.LastName,
+		&dto.AvatarSource, &dto.AvatarExternal, &dto.AvatarS3Key,
 		&dto.Email, &dto.Passhash, &dto.CreatedAt, &dto.UpdatedAt,
 		&dto.RoleID, &roleDTO.Name,
 		&studentDTO.GroupID,
@@ -123,7 +127,7 @@ func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) e
 	defer span.End()
 
 	err := postgres.WithTx(ctx, st.pool, func(ctx context.Context, tx pgx.Tx) error {
-		dto := DomainToUserDTO(student.User(), 0)
+		dto := DomainToUserDTO(student.User())
 		res, err := tx.Exec(ctx, insertUserQuery,
 			dto.ID,
 			dto.Barcode,
@@ -132,7 +136,9 @@ func (st *StudentRepo) SaveStudent(ctx context.Context, student *user.Student) e
 			dto.Email,
 			dto.FirstName,
 			dto.LastName,
-			dto.AvatarURL,
+			dto.AvatarSource,
+			dto.AvatarExternal,
+			dto.AvatarS3Key,
 			dto.Passhash,
 			dto.CreatedAt,
 			dto.UpdatedAt,

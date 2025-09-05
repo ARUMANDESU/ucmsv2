@@ -10,6 +10,7 @@ import (
 
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/avatars"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
 )
 
@@ -58,9 +59,9 @@ func (u *UserAssertions) AssertLastName(expected string) *UserAssertions {
 	return u
 }
 
-func (u *UserAssertions) AssertAvatarURL(expected string) *UserAssertions {
+func (u *UserAssertions) AssertAvatar(expected avatars.Avatar) *UserAssertions {
 	u.t.Helper()
-	assert.Equal(u.t, expected, u.user.avatarURL, "AvatarURL mismatch")
+	assert.Equal(u.t, expected, u.user.avatar, "Avatar mismatch")
 	return u
 }
 
@@ -196,9 +197,9 @@ func (s *StaffAssertions) AssertLastName(t *testing.T, expected string) *StaffAs
 	return s
 }
 
-func (s *StaffAssertions) AssertAvatarURL(t *testing.T, expected string) *StaffAssertions {
+func (s *StaffAssertions) AssertAvatar(t *testing.T, expected avatars.Avatar) *StaffAssertions {
 	t.Helper()
-	assert.Equal(t, expected, s.staff.user.avatarURL, "AvatarURL mismatch")
+	assert.Equal(t, expected, s.staff.user.avatar, "Avatar mismatch")
 	return s
 }
 
@@ -240,7 +241,6 @@ func (s *StudentAssertions) AssertByRegistrationArgs(t *testing.T, args Register
 	assert.Equal(t, args.Username, s.student.user.username, "Username mismatch")
 	assert.Equal(t, args.FirstName, s.student.user.firstName, "FirstName mismatch")
 	assert.Equal(t, args.LastName, s.student.user.lastName, "LastName mismatch")
-	assert.Equal(t, args.AvatarURL, s.student.user.avatarURL, "AvatarURL mismatch")
 	assert.Equal(t, args.Email, s.student.user.email, "Email mismatch")
 	assert.Equal(t, args.GroupID, s.student.groupID, "GroupID mismatch")
 	assert.Equal(t, roles.Student, s.student.user.role, "Role mismatch")
@@ -292,9 +292,9 @@ func (s *StudentAssertions) AssertLastName(t *testing.T, expected string) *Stude
 	return s
 }
 
-func (s *StudentAssertions) AssertAvatarURL(t *testing.T, expected string) *StudentAssertions {
+func (s *StudentAssertions) AssertAvatar(t *testing.T, expected avatars.Avatar) *StudentAssertions {
 	t.Helper()
-	assert.Equal(t, expected, s.student.user.avatarURL, "AvatarURL mismatch")
+	assert.Equal(t, expected, s.student.user.avatar, "Avatar mismatch")
 	return s
 }
 

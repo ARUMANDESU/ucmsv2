@@ -11,21 +11,26 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/avatars"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/sanitizex"
 )
 
-const PasswordCostFactor = 12 // Future-proofing; default is 10 in 2025.08.18
+const (
+	PasswordCostFactor  = 12 // Future-proofing; default is 10 in 2025.08.18
+	UserEventStreamName = "events_user"
+)
 
 const (
-	MaxFirstNameLen = 100
-	MinFirstNameLen = 2
-	MaxLastNameLen  = 100
-	MinLastNameLen  = 2
-	MaxBarcodeLen   = 100
-	MinBarcodeLen   = 6
-	MaxAvatarURLLen = 1000
+	MaxFirstNameLen   = 100
+	MinFirstNameLen   = 2
+	MaxLastNameLen    = 100
+	MinLastNameLen    = 2
+	MaxBarcodeLen     = 100
+	MinBarcodeLen     = 6
+	MaxAvatarS3KeyLen = 255
 )
 
 type ID uuid.UUID
@@ -73,7 +78,7 @@ type User struct {
 	username  string
 	firstName string
 	lastName  string
-	avatarURL string
+	avatar    avatars.Avatar
 	role      roles.Global
 	email     string
 	passHash  []byte
@@ -88,7 +93,7 @@ type RehydrateUserArgs struct {
 	FirstName string
 	LastName  string
 	Role      roles.Global
-	AvatarURL string
+	Avatar    avatars.Avatar
 	Email     string
 	PassHash  []byte
 	CreatedAt time.Time
@@ -103,7 +108,7 @@ func RehydrateUser(p RehydrateUserArgs) *User {
 		firstName: p.FirstName,
 		lastName:  p.LastName,
 		role:      p.Role,
-		avatarURL: p.AvatarURL,
+		avatar:    p.Avatar,
 		email:     p.Email,
 		passHash:  p.PassHash,
 		createdAt: p.CreatedAt,
@@ -111,48 +116,57 @@ func RehydrateUser(p RehydrateUserArgs) *User {
 	}
 }
 
-func (u *User) SetFirstName(firstName string) error {
-	const op = "user.User.SetFirstName"
+func (u *User) SetAvatarFromS3(s3Key string) error {
+	const op = "user.User.SetAvatarFromS3"
 	if u == nil {
 		return errorx.Wrap(errors.New("user is nil"), op)
 	}
-	err := validation.Validate(firstName, validation.Required, validation.Length(MinFirstNameLen, MaxFirstNameLen))
+	s3Key = sanitizex.CleanSingleLine(s3Key)
+	err := validation.Validate(s3Key, validation.Required, validation.Length(1, MaxAvatarS3KeyLen))
 	if err != nil {
 		return errorx.Wrap(err, op)
 	}
 
-	u.firstName = firstName
+	oldAvatar := u.avatar
+	u.avatar = avatars.Avatar{
+		Source:   avatars.SourceS3,
+		S3Key:    s3Key,
+		External: "",
+	}
 	u.updatedAt = time.Now().UTC()
+
+	u.AddEvent(&UserAvatarUpdated{
+		Header:    event.NewEventHeader(),
+		UserID:    u.id,
+		NewAvatar: u.avatar,
+		OldAvatar: oldAvatar,
+	})
 	return nil
 }
 
-func (u *User) SetLastName(lastName string) error {
-	const op = "user.User.SetLastName"
+func (u *User) DeleteAvatar() error {
+	const op = "user.User.DeleteAvatar"
 	if u == nil {
 		return errorx.Wrap(errors.New("user is nil"), op)
 	}
-	err := validation.Validate(lastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen))
-	if err != nil {
-		return errorx.Wrap(err, op)
+	if u.avatar.IsZero() {
+		return errorx.NewNotFound().WithDetails("user avatar does not exist").WithOp(op)
 	}
 
-	u.lastName = lastName
+	oldAvatar := u.avatar
+	u.avatar = avatars.Avatar{
+		Source:   avatars.SourceUnknown,
+		S3Key:    "",
+		External: "",
+	}
 	u.updatedAt = time.Now().UTC()
-	return nil
-}
 
-func (u *User) SetAvatarURL(avatarURL string) error {
-	const op = "user.User.SetAvatarURL"
-	if u == nil {
-		return errorx.Wrap(errors.New("user is nil"), op)
-	}
-	err := validation.Validate(avatarURL, validation.Length(1, MaxAvatarURLLen))
-	if err != nil {
-		return errorx.Wrap(err, op)
-	}
-
-	u.avatarURL = avatarURL
-	u.updatedAt = time.Now().UTC()
+	u.AddEvent(&UserAvatarUpdated{
+		Header:    event.NewEventHeader(),
+		UserID:    u.id,
+		NewAvatar: u.avatar,
+		OldAvatar: oldAvatar,
+	})
 	return nil
 }
 
@@ -208,12 +222,12 @@ func (u *User) Role() roles.Global {
 	return u.role
 }
 
-func (u *User) AvatarUrl() string {
+func (u *User) Avatar() avatars.Avatar {
 	if u == nil {
-		return ""
+		return avatars.Avatar{}
 	}
 
-	return u.avatarURL
+	return u.avatar
 }
 
 func (u *User) Email() string {
@@ -259,4 +273,16 @@ func NewPasswordHash(password string) ([]byte, error) {
 		return nil, fmt.Errorf("%s: failed to generate password hash: %w", op, err)
 	}
 	return passhash, nil
+}
+
+type UserAvatarUpdated struct {
+	event.Header
+	event.Otel
+	UserID    ID             `json:"user_id"`
+	NewAvatar avatars.Avatar `json:"new_avatar"`
+	OldAvatar avatars.Avatar `json:"old_avatar"`
+}
+
+func (e *UserAvatarUpdated) GetStreamName() string {
+	return UserEventStreamName
 }

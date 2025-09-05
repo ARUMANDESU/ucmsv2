@@ -9,22 +9,25 @@ import (
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/avatars"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/majors"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
 )
 
 type UserDTO struct {
-	ID        uuid.UUID
-	Barcode   string
-	Username  string
-	RoleID    int
-	FirstName string
-	LastName  string
-	Email     string
-	AvatarURL string
-	Passhash  []byte
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID             uuid.UUID
+	Barcode        string
+	Username       string
+	RoleID         int
+	FirstName      string
+	LastName       string
+	Email          string
+	AvatarSource   string
+	AvatarExternal string
+	AvatarS3Key    string
+	Passhash       []byte
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type StudentDTO struct {
@@ -102,19 +105,21 @@ func RegistrationToDomain(dto RegistrationDTO) *registration.Registration {
 	})
 }
 
-func DomainToUserDTO(u *user.User, roleID int) UserDTO {
+func DomainToUserDTO(u *user.User) UserDTO {
 	return UserDTO{
-		ID:        uuid.UUID(u.ID()),
-		Barcode:   string(u.Barcode()),
-		Username:  u.Username(),
-		RoleID:    roleID,
-		FirstName: u.FirstName(),
-		LastName:  u.LastName(),
-		Email:     u.Email(),
-		AvatarURL: u.AvatarUrl(),
-		Passhash:  u.PassHash(),
-		CreatedAt: u.CreatedAt(),
-		UpdatedAt: u.UpdatedAt(),
+		ID:             uuid.UUID(u.ID()),
+		Barcode:        string(u.Barcode()),
+		Username:       u.Username(),
+		RoleID:         0,
+		FirstName:      u.FirstName(),
+		LastName:       u.LastName(),
+		Email:          u.Email(),
+		AvatarSource:   u.Avatar().Source.String(),
+		AvatarExternal: u.Avatar().External,
+		AvatarS3Key:    u.Avatar().S3Key,
+		Passhash:       u.PassHash(),
+		CreatedAt:      u.CreatedAt(),
+		UpdatedAt:      u.UpdatedAt(),
 	}
 }
 
@@ -126,7 +131,11 @@ func UserToDomain(dto UserDTO, roleDTO GlobalRoleDTO) *user.User {
 		FirstName: dto.FirstName,
 		LastName:  dto.LastName,
 		Role:      roles.Global(roleDTO.Name),
-		AvatarURL: dto.AvatarURL,
+		Avatar: avatars.Avatar{
+			Source:   avatars.SourceFromString(dto.AvatarSource),
+			S3Key:    dto.AvatarS3Key,
+			External: dto.AvatarExternal,
+		},
 		Email:     dto.Email,
 		PassHash:  dto.Passhash,
 		CreatedAt: dto.CreatedAt,
@@ -143,7 +152,11 @@ func StudentToDomain(userDTO UserDTO, roleDTO GlobalRoleDTO, studentDTO StudentD
 			FirstName: userDTO.FirstName,
 			LastName:  userDTO.LastName,
 			Role:      roles.Global(roleDTO.Name),
-			AvatarURL: userDTO.AvatarURL,
+			Avatar: avatars.Avatar{
+				Source:   avatars.SourceFromString(userDTO.AvatarSource),
+				S3Key:    userDTO.AvatarS3Key,
+				External: userDTO.AvatarExternal,
+			},
 			Email:     userDTO.Email,
 			PassHash:  userDTO.Passhash,
 			CreatedAt: userDTO.CreatedAt,
@@ -210,7 +223,11 @@ func StaffToDomain(userDTO UserDTO, roleDTO GlobalRoleDTO, staffDTO StaffDTO) *u
 			FirstName: userDTO.FirstName,
 			LastName:  userDTO.LastName,
 			Role:      roles.Global(roleDTO.Name),
-			AvatarURL: userDTO.AvatarURL,
+			Avatar: avatars.Avatar{
+				Source:   avatars.SourceFromString(userDTO.AvatarSource),
+				S3Key:    userDTO.AvatarS3Key,
+				External: userDTO.AvatarExternal,
+			},
 			Email:     userDTO.Email,
 			PassHash:  userDTO.Passhash,
 			CreatedAt: userDTO.CreatedAt,

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -269,29 +270,19 @@ func (h *Helper) SeedRegistration(t *testing.T, r *registration.Registration) {
 func (h *Helper) SeedUser(t *testing.T, u *user.User) {
 	t.Helper()
 
-	var roleID int16
-	err := h.pool.QueryRow(context.Background(),
-		"SELECT id FROM global_roles WHERE name = $1", string(u.Role())).Scan(&roleID)
-	require.NoError(t, err)
-
-	_, err = h.pool.Exec(context.Background(), `
-        INSERT INTO users (id, barcode, username, email, role_id, first_name, last_name, 
-                          avatar_url, pass_hash, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        ON CONFLICT (id) DO UPDATE SET
-            barcode = EXCLUDED.barcode,
-            username = EXCLUDED.username,
-            email = EXCLUDED.email,
-            role_id = EXCLUDED.role_id,
-            first_name = EXCLUDED.first_name,
-            last_name = EXCLUDED.last_name,
-            avatar_url = EXCLUDED.avatar_url,
-            pass_hash = EXCLUDED.pass_hash,
-            updated_at = EXCLUDED.updated_at
-    `, u.ID(), u.Barcode().String(), u.Username(), u.Email(), roleID, u.FirstName(), u.LastName(),
-		u.AvatarUrl(), u.PassHash(), u.CreatedAt(), u.UpdatedAt())
-
-	require.NoError(t, err)
+	err := h.user.SaveUser(t.Context(), u)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			if err := h.user.UpdateUser(t.Context(), u.ID(), func(ctx context.Context, dbU *user.User) error {
+				*dbU = *u
+				return nil
+			}); err == nil {
+				return
+			}
+		}
+		t.Fatalf("failed to upsert user: %v", err)
+	}
 }
 
 func (h *Helper) SeedStudent(t *testing.T, student *user.Student) {

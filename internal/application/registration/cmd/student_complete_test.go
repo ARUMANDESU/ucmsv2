@@ -76,7 +76,6 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 
 		s.MockStudent.RequireStudentByBarcode(t, user.Barcode(fixtures.TestStudent.Barcode)).
 			AssertEmail(t, fixtures.ValidStudentEmail).
-			AssertAvatarURL(t, "").
 			AssertUsername(t, fixtures.TestStudent.Username).
 			AssertFirstName(t, fixtures.TestStudent.FirstName).
 			AssertLastName(t, fixtures.TestStudent.LastName).

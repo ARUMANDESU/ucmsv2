@@ -69,7 +69,7 @@ func (r *StaffRepo) SaveStaff(ctx context.Context, staff *user.Staff) error {
 	defer span.End()
 
 	return postgres.WithTx(ctx, r.pool, func(ctx context.Context, tx pgx.Tx) error {
-		dto := DomainToUserDTO(staff.User(), 0)
+		dto := DomainToUserDTO(staff.User())
 		res, err := tx.Exec(ctx, insertUserQuery,
 			dto.ID,
 			dto.Barcode,
@@ -78,7 +78,9 @@ func (r *StaffRepo) SaveStaff(ctx context.Context, staff *user.Staff) error {
 			dto.Email,
 			dto.FirstName,
 			dto.LastName,
-			dto.AvatarURL,
+			dto.AvatarSource,
+			dto.AvatarExternal,
+			dto.AvatarS3Key,
 			dto.Passhash,
 			dto.CreatedAt,
 			dto.UpdatedAt,
@@ -127,8 +129,9 @@ func (r *StaffRepo) GetStaffByID(ctx context.Context, id user.ID) (*user.Staff, 
 	defer span.End()
 
 	query := `
-        SELECT s.user_id, u.id, u.barcode, u.username, u.role_id,
-                u.first_name, u.last_name, u.avatar_url,
+        SELECT  s.user_id, u.id, u.barcode, u.username, 
+				u.role_id, u.first_name, u.last_name, 
+				u.avatar_source, u.avatar_external, u.avatar_s3_key,
                 u.email, u.pass_hash, u.created_at, u.updated_at,
                 gr.id, gr.name
         FROM staffs s
@@ -141,8 +144,9 @@ func (r *StaffRepo) GetStaffByID(ctx context.Context, id user.ID) (*user.Staff, 
 	var roleDTO GlobalRoleDTO
 	var staffDTO StaffDTO
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&staffDTO.ID, &userDTO.ID, &userDTO.Barcode, &userDTO.Username, &userDTO.RoleID,
-		&userDTO.FirstName, &userDTO.LastName, &userDTO.AvatarURL,
+		&staffDTO.ID, &userDTO.ID, &userDTO.Barcode, &userDTO.Username,
+		&userDTO.RoleID, &userDTO.FirstName, &userDTO.LastName,
+		&userDTO.AvatarSource, &userDTO.AvatarExternal, &userDTO.AvatarS3Key,
 		&userDTO.Email, &userDTO.Passhash, &userDTO.CreatedAt, &userDTO.UpdatedAt,
 		&roleDTO.ID, &roleDTO.Name,
 	)
@@ -165,8 +169,9 @@ func (r *StaffRepo) GetStaffByEmail(ctx context.Context, email string) (*user.St
 	defer span.End()
 
 	query := `
-        SELECT s.user_id, u.id, u.barcode, u.username, u.role_id,
-                u.first_name, u.last_name, u.avatar_url,
+        SELECT 	s.user_id, u.id, u.barcode, u.username, 
+				u.role_id, u.first_name, u.last_name, 
+				u.avatar_source, u.avatar_external, u.avatar_s3_key,
                 u.email, u.pass_hash, u.created_at, u.updated_at,
                 gr.id, gr.name
         FROM staffs s
@@ -179,8 +184,9 @@ func (r *StaffRepo) GetStaffByEmail(ctx context.Context, email string) (*user.St
 	var roleDTO GlobalRoleDTO
 	var staffDTO StaffDTO
 	err := r.pool.QueryRow(ctx, query, email).Scan(
-		&staffDTO.ID, &userDTO.ID, &userDTO.Barcode, &userDTO.Username, &userDTO.RoleID,
-		&userDTO.FirstName, &userDTO.LastName, &userDTO.AvatarURL,
+		&staffDTO.ID, &userDTO.ID, &userDTO.Barcode, &userDTO.Username,
+		&userDTO.RoleID, &userDTO.FirstName, &userDTO.LastName,
+		&userDTO.AvatarSource, &userDTO.AvatarExternal, &userDTO.AvatarS3Key,
 		&userDTO.Email, &userDTO.Passhash, &userDTO.CreatedAt, &userDTO.UpdatedAt,
 		&roleDTO.ID, &roleDTO.Name,
 	)
@@ -203,8 +209,9 @@ func (r *StaffRepo) GetCreatorByInvitationID(ctx context.Context, id staffinvita
 	defer span.End()
 
 	query := `
-        SELECT s.user_id, u.id, u.barcode, u.username, u.role_id,
-                u.first_name, u.last_name, u.avatar_url,
+        SELECT s.user_id, u.id, u.barcode, u.username, 
+				u.role_id, u.first_name, u.last_name, 
+				u.avatar_source, u.avatar_external, u.avatar_s3_key,
                 u.email, u.pass_hash, u.created_at, u.updated_at,
                 gr.id, gr.name
         FROM staff_invitations si
@@ -218,8 +225,9 @@ func (r *StaffRepo) GetCreatorByInvitationID(ctx context.Context, id staffinvita
 	var roleDTO GlobalRoleDTO
 	var staffDTO StaffDTO
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&staffDTO.ID, &userDTO.ID, &userDTO.Barcode, &userDTO.Username, &userDTO.RoleID,
-		&userDTO.FirstName, &userDTO.LastName, &userDTO.AvatarURL,
+		&staffDTO.ID, &userDTO.ID, &userDTO.Barcode, &userDTO.Username,
+		&userDTO.RoleID, &userDTO.FirstName, &userDTO.LastName,
+		&userDTO.AvatarSource, &userDTO.AvatarExternal, &userDTO.AvatarS3Key,
 		&userDTO.Email, &userDTO.Passhash, &userDTO.CreatedAt, &userDTO.UpdatedAt,
 		&roleDTO.ID, &roleDTO.Name,
 	)

@@ -10,6 +10,7 @@ import (
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/avatars"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
 	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
 )
@@ -51,7 +52,7 @@ type UserBuilder struct {
 	email     string
 	password  string
 	passHash  []byte
-	avatarURL string
+	avatar    avatars.Avatar
 	role      roles.Global
 	createdAt time.Time
 	updatedAt time.Time
@@ -70,7 +71,7 @@ func NewUserBuilder() *UserBuilder {
 		email:     fixtures.ValidStudentEmail,
 		password:  fixtures.TestStudent.Password,
 		passHash:  hash,
-		avatarURL: "",
+		avatar:    avatars.Avatar{},
 		role:      roles.Student,
 		createdAt: now,
 		updatedAt: now,
@@ -120,7 +121,7 @@ func (b *UserBuilder) WithPassword(password string) *UserBuilder {
 	return b
 }
 
-func (b *UserBuilder) withPassHash(passHash []byte) *UserBuilder {
+func (b *UserBuilder) WithPassHash(passHash []byte) *UserBuilder {
 	b.passHash = passHash
 	return b
 }
@@ -145,6 +146,32 @@ func (b *UserBuilder) AsAITUSA() *UserBuilder {
 	return b
 }
 
+func (b *UserBuilder) WithS3Avatar(s3Key string) *UserBuilder {
+	b.avatar = avatars.NewS3Avatar(s3Key)
+	return b
+}
+
+func (b *UserBuilder) WithExternalAvatar() *UserBuilder {
+	b.avatar = NewAvatarBuilder().AsExternalAvatar(fixtures.GetRandomExternalAvatarURL()).Build()
+	return b
+}
+
+func (b *UserBuilder) WithDefaultAvatar() *UserBuilder {
+	b.avatar = NewAvatarBuilder().AsDefaultAvatar().Build()
+	return b
+}
+
+func (b *UserBuilder) WithEmptyAvatar() *UserBuilder {
+	b.avatar = avatars.Avatar{}
+	return b
+}
+
+func (b *UserBuilder) WithGeneratedS3Avatar() *UserBuilder {
+	s3Key := fixtures.GenerateAvatarS3Key(b.id.String(), "jpg")
+	b.avatar = avatars.NewS3Avatar(s3Key)
+	return b
+}
+
 func (b *UserBuilder) Build() *user.User {
 	return user.RehydrateUser(user.RehydrateUserArgs{
 		ID:        b.id,
@@ -153,7 +180,7 @@ func (b *UserBuilder) Build() *user.User {
 		FirstName: b.firstName,
 		LastName:  b.lastName,
 		Role:      b.role,
-		AvatarURL: b.avatarURL,
+		Avatar:    b.avatar,
 		Email:     b.email,
 		PassHash:  b.passHash,
 		CreatedAt: b.createdAt,
@@ -168,7 +195,7 @@ func (b *UserBuilder) RehydrateArgs() user.RehydrateUserArgs {
 		FirstName: b.firstName,
 		LastName:  b.lastName,
 		Role:      b.role,
-		AvatarURL: b.avatarURL,
+		Avatar:    b.avatar,
 		Email:     b.email,
 		PassHash:  b.passHash,
 		CreatedAt: b.createdAt,
@@ -182,7 +209,7 @@ func (b *UserBuilder) BuildNew() *user.User {
 		Barcode:   b.barcode,
 		FirstName: b.firstName,
 		LastName:  b.lastName,
-		AvatarURL: b.avatarURL,
+		Avatar:    b.avatar,
 		Email:     b.email,
 		PassHash:  b.passHash,
 		CreatedAt: b.createdAt,
@@ -258,7 +285,7 @@ func (b *StudentBuilder) WithPassword(password string) *StudentBuilder {
 }
 
 func (b *StudentBuilder) WithPassHash(passHash []byte) *StudentBuilder {
-	b.withPassHash(passHash)
+	b.UserBuilder.WithPassHash(passHash)
 	return b
 }
 
@@ -311,7 +338,7 @@ func (b *StudentBuilder) Build() *user.Student {
 			FirstName: b.firstName,
 			LastName:  b.lastName,
 			Role:      roles.Student,
-			AvatarURL: b.avatarURL,
+			Avatar:    b.avatar,
 			Email:     b.email,
 			PassHash:  b.passHash,
 			CreatedAt: b.createdAt,
@@ -335,7 +362,6 @@ func (b *StudentBuilder) BuildNew() (*user.Student, error) {
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,
-		AvatarURL:      b.avatarURL,
 		Email:          b.email,
 		Password:       b.password,
 		GroupID:        b.groupID,
@@ -349,7 +375,6 @@ func (b *StudentBuilder) BuildRegisterArgs() user.RegisterStudentArgs {
 		RegistrationID: b.registrationID,
 		FirstName:      b.firstName,
 		LastName:       b.lastName,
-		AvatarURL:      b.avatarURL,
 		Email:          b.email,
 		Password:       b.password,
 		GroupID:        b.groupID,
@@ -416,7 +441,7 @@ func (b *StaffBuilder) WithPassword(password string) *StaffBuilder {
 }
 
 func (b *StaffBuilder) WithPassHash(passHash []byte) *StaffBuilder {
-	b.withPassHash(passHash)
+	b.UserBuilder.WithPassHash(passHash)
 	return b
 }
 
@@ -469,7 +494,6 @@ func (b *StaffBuilder) Build() *user.Staff {
 			FirstName: b.firstName,
 			LastName:  b.lastName,
 			Role:      roles.Staff,
-			AvatarURL: b.avatarURL,
 			Email:     b.email,
 			PassHash:  b.passHash,
 			CreatedAt: b.createdAt,

@@ -26,7 +26,6 @@ type RegisterStudentArgs struct {
 	RegistrationID registration.ID `json:"registration_id"`
 	FirstName      string          `json:"first_name"`
 	LastName       string          `json:"last_name"`
-	AvatarURL      string          `json:"avatar_url"`
 	Email          string          `json:"email"`
 	Password       string          `json:"password"`
 	GroupID        group.ID        `json:"group_id"`
@@ -43,7 +42,6 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 		validation.Field(&p.LastName, validation.Required, validation.Length(MinLastNameLen, MaxLastNameLen)),
 		validation.Field(&p.Password, validationx.PasswordRules...),
 		validation.Field(&p.GroupID, validationx.Required),
-		validation.Field(&p.AvatarURL, validation.Length(0, 1000)),
 	)
 	if err != nil {
 		return nil, errorx.Wrap(err, op)
@@ -63,7 +61,6 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 			username:  p.Username,
 			firstName: p.FirstName,
 			lastName:  p.LastName,
-			avatarURL: p.AvatarURL,
 			role:      roles.Student,
 			email:     p.Email,
 			passHash:  passhash,

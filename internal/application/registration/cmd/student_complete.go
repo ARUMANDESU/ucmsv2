@@ -124,7 +124,6 @@ func (h *StudentCompleteHandler) Handle(ctx context.Context, cmd StudentComplete
 		RegistrationID: reg.ID(),
 		FirstName:      cmd.FirstName,
 		LastName:       cmd.LastName,
-		AvatarURL:      "",
 		Email:          cmd.Email,
 		Password:       cmd.Password,
 		GroupID:        cmd.GroupID,
