@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
 )
 
 func TestRegistrationID_JSONMarshaling(t *testing.T) {

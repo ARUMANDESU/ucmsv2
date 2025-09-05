@@ -1,7 +1,7 @@
 package registration
 
 import (
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
 )
 
 const EventStreamName = "events_registration"

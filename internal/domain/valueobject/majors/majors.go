@@ -1,8 +1,8 @@
-package major
+package majors
 
 import (
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/i18nx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/i18nx"
 )
 
 var ErrInvalidMajor = errorx.NewValidationFieldFailed(i18nx.FieldMajor)

@@ -8,9 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/validationx"
-	"github.com/ARUMANDESU/ucms/tests/integration/builders"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/validationx"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/builders"
 )
 
 func TestAcceptStaffInvitation_ArgValidation(t *testing.T) {

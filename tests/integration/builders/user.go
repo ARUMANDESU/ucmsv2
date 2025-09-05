@@ -7,11 +7,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
 )
 
 const TestPasswordCost = 4
@@ -52,7 +52,7 @@ type UserBuilder struct {
 	password  string
 	passHash  []byte
 	avatarURL string
-	role      role.Global
+	role      roles.Global
 	createdAt time.Time
 	updatedAt time.Time
 }
@@ -71,7 +71,7 @@ func NewUserBuilder() *UserBuilder {
 		password:  fixtures.TestStudent.Password,
 		passHash:  hash,
 		avatarURL: "",
-		role:      role.Student,
+		role:      roles.Student,
 		createdAt: now,
 		updatedAt: now,
 	}
@@ -125,23 +125,23 @@ func (b *UserBuilder) withPassHash(passHash []byte) *UserBuilder {
 	return b
 }
 
-func (b *UserBuilder) WithRole(role role.Global) *UserBuilder {
+func (b *UserBuilder) WithRole(role roles.Global) *UserBuilder {
 	b.role = role
 	return b
 }
 
 func (b *UserBuilder) AsStudent() *UserBuilder {
-	b.role = role.Student
+	b.role = roles.Student
 	return b
 }
 
 func (b *UserBuilder) AsStaff() *UserBuilder {
-	b.role = role.Staff
+	b.role = roles.Staff
 	return b
 }
 
 func (b *UserBuilder) AsAITUSA() *UserBuilder {
-	b.role = role.AITUSA
+	b.role = roles.AITUSA
 	return b
 }
 
@@ -262,7 +262,7 @@ func (b *StudentBuilder) WithPassHash(passHash []byte) *StudentBuilder {
 	return b
 }
 
-func (b *StudentBuilder) WithRole(role role.Global) *StudentBuilder {
+func (b *StudentBuilder) WithRole(role roles.Global) *StudentBuilder {
 	b.UserBuilder.WithRole(role)
 	return b
 }
@@ -310,7 +310,7 @@ func (b *StudentBuilder) Build() *user.Student {
 			Username:  b.username,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
-			Role:      role.Student,
+			Role:      roles.Student,
 			AvatarURL: b.avatarURL,
 			Email:     b.email,
 			PassHash:  b.passHash,
@@ -420,7 +420,7 @@ func (b *StaffBuilder) WithPassHash(passHash []byte) *StaffBuilder {
 	return b
 }
 
-func (b *StaffBuilder) WithRole(role role.Global) *StaffBuilder {
+func (b *StaffBuilder) WithRole(role roles.Global) *StaffBuilder {
 	b.UserBuilder.WithRole(role)
 	return b
 }
@@ -468,7 +468,7 @@ func (b *StaffBuilder) Build() *user.Staff {
 			Username:  b.username,
 			FirstName: b.firstName,
 			LastName:  b.lastName,
-			Role:      role.Staff,
+			Role:      roles.Staff,
 			AvatarURL: b.avatarURL,
 			Email:     b.email,
 			PassHash:  b.passHash,

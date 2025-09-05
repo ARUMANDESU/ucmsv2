@@ -7,7 +7,7 @@ import (
 	"github.com/ARUMANDESU/validation"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ARUMANDESU/ucms/pkg/validationx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/validationx"
 )
 
 func TestUser_SetFirstName(t *testing.T) {

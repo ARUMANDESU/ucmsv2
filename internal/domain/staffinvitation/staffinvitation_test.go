@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/validationx"
-	"github.com/ARUMANDESU/ucms/tests/integration/builders"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/validationx"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/builders"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
 )
 
 // Test constants

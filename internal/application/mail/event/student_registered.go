@@ -10,11 +10,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/logging"
-	"github.com/ARUMANDESU/ucms/pkg/otelx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/mails"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/logging"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
 )
 
 const WelcomeSubject = "Welcome to UCMS"
@@ -47,7 +47,7 @@ func (h *MailEventHandler) HandleStudentRegistered(ctx context.Context, e *user.
 		return errorx.Wrap(err, op)
 	}
 
-	payload := mail.Payload{
+	payload := mails.Payload{
 		To:      e.Email,
 		Subject: WelcomeSubject,
 		Body: fmt.Sprintf(

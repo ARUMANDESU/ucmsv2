@@ -10,12 +10,12 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
-	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
-	"github.com/ARUMANDESU/ucms/internal/application/student/studentquery"
-	"github.com/ARUMANDESU/ucms/internal/ports/http/middlewares"
-	"github.com/ARUMANDESU/ucms/pkg/ctxs"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/httpx"
+	studentapp "gitlab.com/ucmsv2/ucms-backend/internal/application/student"
+	"gitlab.com/ucmsv2/ucms-backend/internal/application/student/studentquery"
+	"gitlab.com/ucmsv2/ucms-backend/internal/ports/http/middlewares"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/ctxs"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/httpx"
 )
 
 var (

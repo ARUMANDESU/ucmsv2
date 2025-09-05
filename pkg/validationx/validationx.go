@@ -12,7 +12,7 @@ import (
 
 	"github.com/ARUMANDESU/validation"
 
-	"github.com/ARUMANDESU/ucms/pkg/i18nx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/i18nx"
 )
 
 var (

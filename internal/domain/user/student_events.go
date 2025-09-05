@@ -1,9 +1,9 @@
 package user
 
 import (
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
 )
 
 const (

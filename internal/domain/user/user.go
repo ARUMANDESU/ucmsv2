@@ -10,10 +10,10 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	"github.com/ARUMANDESU/ucms/pkg/env"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 )
 
 const PasswordCostFactor = 12 // Future-proofing; default is 10 in 2025.08.18
@@ -74,7 +74,7 @@ type User struct {
 	firstName string
 	lastName  string
 	avatarURL string
-	role      role.Global
+	role      roles.Global
 	email     string
 	passHash  []byte
 	createdAt time.Time
@@ -87,7 +87,7 @@ type RehydrateUserArgs struct {
 	Username  string
 	FirstName string
 	LastName  string
-	Role      role.Global
+	Role      roles.Global
 	AvatarURL string
 	Email     string
 	PassHash  []byte
@@ -200,7 +200,7 @@ func (u *User) LastName() string {
 	return u.lastName
 }
 
-func (u *User) Role() role.Global {
+func (u *User) Role() roles.Global {
 	if u == nil {
 		return ""
 	}

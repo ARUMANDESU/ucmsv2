@@ -7,9 +7,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 )
 
 var (
@@ -25,7 +25,7 @@ const (
 
 type User struct {
 	ID   user.ID
-	Role role.Global
+	Role roles.Global
 }
 
 func WithUser(ctx context.Context, user *User) context.Context {

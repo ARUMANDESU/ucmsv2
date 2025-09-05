@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/i18nx"
-	"github.com/ARUMANDESU/ucms/pkg/randcode"
-	"github.com/ARUMANDESU/ucms/pkg/validationx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/i18nx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/randcode"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/validationx"
 )
 
 const EventStreamName = "events_staff_invitation"

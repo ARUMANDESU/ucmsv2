@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/tests/integration/builders"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
-	"github.com/ARUMANDESU/ucms/tests/mocks"
+	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/builders"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/tests/mocks"
 )
 
 type AppSuite struct {

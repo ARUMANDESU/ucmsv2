@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ARUMANDESU/ucms/pkg/env"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
 )
 
 func TestNewRegistration(t *testing.T) {

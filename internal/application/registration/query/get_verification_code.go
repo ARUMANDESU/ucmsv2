@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 )
 
 var (

@@ -10,25 +10,25 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/mails"
 )
 
 type MockMailSender struct {
 	mu        sync.Mutex
-	sentMails []mail.Payload
+	sentMails []mails.Payload
 }
 
 func NewMockMailSender() *MockMailSender {
 	return &MockMailSender{
-		sentMails: make([]mail.Payload, 0),
+		sentMails: make([]mails.Payload, 0),
 	}
 }
 
-func (m *MockMailSender) SendMail(ctx context.Context, payload mail.Payload) error {
+func (m *MockMailSender) SendMail(ctx context.Context, payload mails.Payload) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.sentMails = append(m.sentMails, mail.Payload{
+	m.sentMails = append(m.sentMails, mails.Payload{
 		To:      payload.To,
 		Subject: payload.Subject,
 		Body:    payload.Body,
@@ -38,23 +38,23 @@ func (m *MockMailSender) SendMail(ctx context.Context, payload mail.Payload) err
 	return nil
 }
 
-func (m *MockMailSender) GetSentMails() []mail.Payload {
+func (m *MockMailSender) GetSentMails() []mails.Payload {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return append([]mail.Payload{}, m.sentMails...)
+	return append([]mails.Payload{}, m.sentMails...)
 }
 
 func (m *MockMailSender) Reset() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.sentMails = make([]mail.Payload, 0)
+	m.sentMails = make([]mails.Payload, 0)
 }
 
 func (m *MockMailSender) AssertMailSent(t *testing.T, email, subject string) {
-	mails := m.GetSentMails()
-	for _, mail := range mails {
+	sentMails := m.GetSentMails()
+	for _, mail := range sentMails {
 		if mail.To == email && strings.Contains(mail.Subject, subject) {
 			return
 		}
@@ -63,12 +63,12 @@ func (m *MockMailSender) AssertMailSent(t *testing.T, email, subject string) {
 }
 
 // EventuallyRequireMailSent checks periodically for up to 5 seconds if an email with the specified subject has been sent to the given address.
-func (m *MockMailSender) EventuallyRequireMailSent(t *testing.T, email, subject string) *mail.Payload {
+func (m *MockMailSender) EventuallyRequireMailSent(t *testing.T, email, subject string) *mails.Payload {
 	t.Helper()
-	var foundMail mail.Payload
+	var foundMail mails.Payload
 	require.Eventually(t, func() bool {
-		mails := m.GetSentMails()
-		for _, mail := range mails {
+		sentMails := m.GetSentMails()
+		for _, mail := range sentMails {
 			if mail.To == email && strings.Contains(mail.Subject, subject) {
 				foundMail = mail
 				return true

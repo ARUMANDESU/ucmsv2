@@ -5,8 +5,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 )
 
 type GroupRepo struct {

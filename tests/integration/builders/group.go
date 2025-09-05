@@ -3,9 +3,9 @@ package builders
 import (
 	"time"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/majors"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
 )
 
 type GroupFactory struct{}
@@ -35,7 +35,7 @@ func (f *GroupFactory) CSGroup() *group.Group {
 type GroupBuilder struct {
 	id        group.ID
 	name      string
-	major     major.Major
+	major     majors.Major
 	year      string
 	createdAt time.Time
 	updatedAt time.Time
@@ -62,7 +62,7 @@ func (b *GroupBuilder) WithName(name string) *GroupBuilder {
 	return b
 }
 
-func (b *GroupBuilder) WithMajor(major major.Major) *GroupBuilder {
+func (b *GroupBuilder) WithMajor(major majors.Major) *GroupBuilder {
 	b.major = major
 	return b
 }

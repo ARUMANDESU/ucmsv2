@@ -3,10 +3,10 @@ package builders
 import (
 	"time"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/randcode"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/randcode"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
 )
 
 type StaffInvitationBuilder struct {

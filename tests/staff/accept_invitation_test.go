@@ -9,15 +9,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	staffhttp "github.com/ARUMANDESU/ucms/internal/ports/http/staff"
-	"github.com/ARUMANDESU/ucms/tests/integration/builders"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
-	"github.com/ARUMANDESU/ucms/tests/integration/framework"
-	"github.com/ARUMANDESU/ucms/tests/integration/framework/event"
-	httpframework "github.com/ARUMANDESU/ucms/tests/integration/framework/http"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	staffhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/staff"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/builders"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/framework"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/event"
+	httpframework "gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/http"
 )
 
 type AcceptInvitationTest struct {
@@ -191,7 +191,7 @@ func (s *AcceptInvitationTest) TestAccept_HappyPath() {
 		AssertFirstName(t, fixtures.TestStaff2.FirstName).
 		AssertLastName(t, fixtures.TestStaff2.LastName).
 		AssertPassword(t, fixtures.TestStaff2.Password).
-		AssertRole(t, role.Staff)
+		AssertRole(t, roles.Staff)
 
 	e := event.RequireEvent(t, s.Event, &user.StaffInvitationAccepted{})
 	user.NewStaffInvitationAcceptedAssertion(t, e).

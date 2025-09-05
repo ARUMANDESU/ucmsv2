@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
 )
 
 type EventRepo struct {

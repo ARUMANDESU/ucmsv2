@@ -10,11 +10,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/logging"
-	"github.com/ARUMANDESU/ucms/pkg/otelx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/mails"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/logging"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
 )
 
 const VerificationCodeResentSubject = "Verification Code Resent"
@@ -55,7 +55,7 @@ func (h *MailEventHandler) HandleVerificationCodeResent(ctx context.Context, e *
 		return errorx.Wrap(err, op)
 	}
 
-	if err := h.mailsender.SendMail(ctx, mail.Payload{
+	if err := h.mailsender.SendMail(ctx, mails.Payload{
 		To:      e.Email,
 		Subject: VerificationCodeResentSubject,
 		Body:    fmt.Sprintf("Your verification code has been resent: %s", e.VerificationCode),

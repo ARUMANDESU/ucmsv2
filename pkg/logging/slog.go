@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ARUMANDESU/ucms/pkg/env"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
 )
 
 // Setup creates a new logger based on the environment

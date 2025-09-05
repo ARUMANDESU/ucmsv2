@@ -9,10 +9,10 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	mailevent "github.com/ARUMANDESU/ucms/internal/application/mail/event"
-	"github.com/ARUMANDESU/ucms/internal/application/registration"
-	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
-	"github.com/ARUMANDESU/ucms/pkg/watermillx"
+	mailevent "gitlab.com/ucmsv2/ucms-backend/internal/application/mail/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
+	studentapp "gitlab.com/ucmsv2/ucms-backend/internal/application/student"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/watermillx"
 )
 
 type Port struct {

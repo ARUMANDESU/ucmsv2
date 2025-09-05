@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
+	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
 )
 
 type JWTFactory struct{}

@@ -15,12 +15,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
-	"github.com/ARUMANDESU/ucms/pkg/env"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/httpx"
-	"github.com/ARUMANDESU/ucms/pkg/sanitizex"
-	"github.com/ARUMANDESU/ucms/pkg/validationx"
+	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/httpx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/sanitizex"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/validationx"
 )
 
 const (

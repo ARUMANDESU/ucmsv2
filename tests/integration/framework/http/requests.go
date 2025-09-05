@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
-	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
-	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
-	staffhttp "github.com/ARUMANDESU/ucms/internal/ports/http/staff"
+	authhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/auth"
+	registrationhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/registration"
+	staffhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/staff"
 )
 
 var ApplicationJSONHeaders = map[string]string{"Content-Type": "application/json"}

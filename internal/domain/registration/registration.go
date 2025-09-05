@@ -9,10 +9,10 @@ import (
 	"github.com/ARUMANDESU/validation/is"
 	"github.com/google/uuid"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/pkg/env"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/randcode"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/randcode"
 )
 
 const (

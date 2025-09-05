@@ -13,9 +13,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/text/language"
 
-	ucmsv2 "github.com/ARUMANDESU/ucms"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/otelx"
+	ucmsv2 "gitlab.com/ucmsv2/ucms-backend"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
 )
 
 type ErrorHandler struct {

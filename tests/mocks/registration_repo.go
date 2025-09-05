@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 )
 
 type RegistrationRepo struct {

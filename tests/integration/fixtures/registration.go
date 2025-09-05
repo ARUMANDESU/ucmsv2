@@ -5,9 +5,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/majors"
 )
 
 // Test emails
@@ -54,7 +54,7 @@ var (
 		LastName  string
 		Password  string
 		GroupID   group.ID
-		Major     major.Major
+		Major     majors.Major
 	}{
 		ID:        user.ID(uuid.MustParse("990e8400-e29b-41d4-a716-446655440000")),
 		Barcode:   TestStudentBarcode,
@@ -64,7 +64,7 @@ var (
 		LastName:  "Student",
 		Password:  "SecurePass123!",
 		GroupID:   SEGroup.ID,
-		Major:     major.SE,
+		Major:     majors.SE,
 	}
 
 	TestStudent2 = struct {
@@ -76,7 +76,7 @@ var (
 		LastName  string
 		Password  string
 		GroupID   group.ID
-		Major     major.Major
+		Major     majors.Major
 	}{
 		ID:        user.ID(uuid.MustParse("990e8400-e29b-41d4-a716-446655440001")),
 		Barcode:   TestStudent2Barcode,
@@ -86,7 +86,7 @@ var (
 		LastName:  "Studenttwo",
 		Password:  "AnotherPass123!",
 		GroupID:   ITGroup.ID,
-		Major:     major.IT,
+		Major:     majors.IT,
 	}
 
 	TestStaff = struct {
@@ -138,35 +138,35 @@ var (
 		ID    group.ID
 		Name  string
 		Year  string
-		Major major.Major
+		Major majors.Major
 	}{
 		ID:    group.ID(uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")),
 		Name:  "SE-2301",
 		Year:  "2023",
-		Major: major.SE,
+		Major: majors.SE,
 	}
 
 	ITGroup = struct {
 		ID    group.ID
 		Name  string
 		Year  string
-		Major major.Major
+		Major majors.Major
 	}{
 		ID:    group.ID(uuid.MustParse("660e8400-e29b-41d4-a716-446655440001")),
 		Name:  "CS-2301",
 		Year:  "2023",
-		Major: major.IT,
+		Major: majors.IT,
 	}
 
 	CSGroup = struct {
 		ID    group.ID
 		Name  string
 		Year  string
-		Major major.Major
+		Major majors.Major
 	}{
 		ID:    group.ID(uuid.MustParse("770e8400-e29b-41d4-a716-446655440002")),
 		Name:  "CS-2301",
 		Year:  "2023",
-		Major: major.CS,
+		Major: majors.CS,
 	}
 )

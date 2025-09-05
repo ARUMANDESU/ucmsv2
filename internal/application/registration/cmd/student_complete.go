@@ -7,12 +7,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/i18nx"
-	"github.com/ARUMANDESU/ucms/pkg/logging"
-	"github.com/ARUMANDESU/ucms/pkg/otelx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/i18nx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/logging"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
 )
 
 var (

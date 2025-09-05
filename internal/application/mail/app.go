@@ -1,7 +1,7 @@
 package mail
 
 import (
-	mailevent "github.com/ARUMANDESU/ucms/internal/application/mail/event"
+	mailevent "gitlab.com/ucmsv2/ucms-backend/internal/application/mail/event"
 )
 
 type App struct {

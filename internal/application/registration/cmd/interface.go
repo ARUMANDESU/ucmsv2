@@ -3,9 +3,9 @@ package cmd
 import (
 	"context"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
 )
 
 type Repo interface {

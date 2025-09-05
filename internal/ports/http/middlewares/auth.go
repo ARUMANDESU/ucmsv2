@@ -14,13 +14,13 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
-	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
-	"github.com/ARUMANDESU/ucms/pkg/ctxs"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/httpx"
+	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	authhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/auth"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/ctxs"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/httpx"
 )
 
 var (
@@ -155,7 +155,7 @@ func (m *Middleware) Auth(next http.Handler) http.Handler {
 
 		ctx = ctxs.WithUser(ctx, &ctxs.User{
 			ID:   user.ID(userID),
-			Role: role.Global(userRole),
+			Role: roles.Global(userRole),
 		})
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -174,7 +174,7 @@ func (m *Middleware) StaffOnly(next http.Handler) http.Handler {
 		}
 		ctxUser.SetSpanAttrs(span)
 
-		if ctxUser.Role != role.Staff {
+		if ctxUser.Role != roles.Staff {
 			err = errorx.NewForbidden().WithCause(fmt.Errorf("user role %s is not allowed", ctxUser.Role), op)
 			m.errhandler.HandleError(w, r, span, err, "user is not staff")
 			return

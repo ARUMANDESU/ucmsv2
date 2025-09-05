@@ -3,9 +3,9 @@ package builders
 import (
 	"time"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/pkg/env"
-	"github.com/ARUMANDESU/ucms/pkg/randcode"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/randcode"
 )
 
 // Factory for common registration scenarios

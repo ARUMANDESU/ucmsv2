@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/majors"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 )
 
 const (
@@ -55,13 +55,13 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 type Group struct {
 	id        ID
 	name      string
-	major     major.Major
+	major     majors.Major
 	year      string
 	createdAt time.Time
 	updatedAt time.Time
 }
 
-func NewGroup(name, year string, m major.Major) (*Group, error) {
+func NewGroup(name, year string, m majors.Major) (*Group, error) {
 	const op = "group.NewGroup"
 	err := validation.Validate(name, validation.Required, validation.Length(MinNameLength, MaxNameLength))
 	if err != nil {
@@ -76,8 +76,8 @@ func NewGroup(name, year string, m major.Major) (*Group, error) {
 	if err != nil {
 		return nil, errorx.Wrap(err, op)
 	}
-	if !major.IsValid(m) {
-		return nil, errorx.Wrap(major.ErrInvalidMajor, op)
+	if !majors.IsValid(m) {
+		return nil, errorx.Wrap(majors.ErrInvalidMajor, op)
 	}
 
 	now := time.Now().UTC()
@@ -95,7 +95,7 @@ func NewGroup(name, year string, m major.Major) (*Group, error) {
 type RehydrateArgs struct {
 	ID        ID
 	Name      string
-	Major     major.Major
+	Major     majors.Major
 	Year      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -120,7 +120,7 @@ func (g *Group) Name() string {
 	return g.name
 }
 
-func (g *Group) Major() major.Major {
+func (g *Group) Major() majors.Major {
 	return g.major
 }
 
@@ -159,7 +159,7 @@ func (a *GroupAssertion) AssertName(t *testing.T, expected string) *GroupAsserti
 	return a
 }
 
-func (a *GroupAssertion) AssertMajor(t *testing.T, expected major.Major) *GroupAssertion {
+func (a *GroupAssertion) AssertMajor(t *testing.T, expected majors.Major) *GroupAssertion {
 	t.Helper()
 	assert.Equal(t, expected, a.group.Major(), "Expected group major to be %s, got %s", expected, a.group.Major())
 	return a

@@ -9,16 +9,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
-	"github.com/ARUMANDESU/ucms/internal/application/registration"
-	staffapp "github.com/ARUMANDESU/ucms/internal/application/staff"
-	studentapp "github.com/ARUMANDESU/ucms/internal/application/student"
-	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
-	"github.com/ARUMANDESU/ucms/internal/ports/http/middlewares"
-	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
-	staffhttp "github.com/ARUMANDESU/ucms/internal/ports/http/staff"
-	studenthttp "github.com/ARUMANDESU/ucms/internal/ports/http/student"
-	"github.com/ARUMANDESU/ucms/pkg/httpx"
+	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
+	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
+	staffapp "gitlab.com/ucmsv2/ucms-backend/internal/application/staff"
+	studentapp "gitlab.com/ucmsv2/ucms-backend/internal/application/student"
+	authhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/auth"
+	"gitlab.com/ucmsv2/ucms-backend/internal/ports/http/middlewares"
+	registrationhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/registration"
+	staffhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/staff"
+	studenthttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/student"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/httpx"
 )
 
 type Port struct {

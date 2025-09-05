@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ARUMANDESU/ucms/internal/adapters/repos/postgres"
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
+	"gitlab.com/ucmsv2/ucms-backend/internal/adapters/repos/postgres"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/majors"
 )
 
 type Helper struct {
@@ -299,7 +299,7 @@ func (h *Helper) SeedStudent(t *testing.T, student *user.Student) {
 	require.NoError(t, h.student.SaveStudent(t.Context(), student))
 }
 
-func (h *Helper) SeedGroup(t *testing.T, groupID group.ID, name string, year string, major major.Major) {
+func (h *Helper) SeedGroup(t *testing.T, groupID group.ID, name string, year string, major majors.Major) {
 	t.Helper()
 	g := group.Rehydrate(group.RehydrateArgs{
 		ID:        groupID,

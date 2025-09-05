@@ -9,12 +9,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/pkg/env"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/i18nx"
-	"github.com/ARUMANDESU/ucms/pkg/logging"
-	"github.com/ARUMANDESU/ucms/pkg/otelx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/i18nx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/logging"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
 )
 
 var ErrEmailNotAvailable = errorx.NewDuplicateEntry().WithKey(i18nx.KeyEmailNotAvailable)

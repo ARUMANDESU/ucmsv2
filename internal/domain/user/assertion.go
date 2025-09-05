@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
 )
 
 type UserAssertions struct {
@@ -70,7 +70,7 @@ func (u *UserAssertions) AssertEmail(expected string) *UserAssertions {
 	return u
 }
 
-func (u *UserAssertions) AssertRole(expected role.Global) *UserAssertions {
+func (u *UserAssertions) AssertRole(expected roles.Global) *UserAssertions {
 	u.t.Helper()
 	assert.Equal(u.t, expected, u.user.role, "Role mismatch")
 	return u
@@ -117,7 +117,7 @@ func (s *StaffAssertions) AssertByAcceptStaffInvitationArgs(t *testing.T, args A
 	assert.Equal(t, args.FirstName, s.staff.user.firstName, "FirstName mismatch")
 	assert.Equal(t, args.LastName, s.staff.user.lastName, "LastName mismatch")
 	assert.Equal(t, args.Email, s.staff.user.email, "Email mismatch")
-	assert.Equal(t, role.Staff, s.staff.user.role, "Role mismatch")
+	assert.Equal(t, roles.Staff, s.staff.user.role, "Role mismatch")
 	assert.WithinDuration(t, time.Now(), s.staff.user.createdAt, time.Minute, "CreatedAt should be recent")
 	assert.WithinDuration(t, time.Now(), s.staff.user.updatedAt, time.Minute, "UpdatedAt should be recent")
 
@@ -146,7 +146,7 @@ func (s *StaffAssertions) AssertByCreateInitialArgs(t *testing.T, args CreateIni
 	assert.Equal(t, args.FirstName, s.staff.user.firstName, "FirstName mismatch")
 	assert.Equal(t, args.LastName, s.staff.user.lastName, "LastName mismatch")
 	assert.Equal(t, args.Email, s.staff.user.email, "Email mismatch")
-	assert.Equal(t, role.Staff, s.staff.user.role, "Role mismatch")
+	assert.Equal(t, roles.Staff, s.staff.user.role, "Role mismatch")
 	assert.WithinDuration(t, time.Now(), s.staff.user.createdAt, time.Minute, "CreatedAt should be recent")
 	assert.WithinDuration(t, time.Now(), s.staff.user.updatedAt, time.Minute, "UpdatedAt should be recent")
 
@@ -208,7 +208,7 @@ func (s *StaffAssertions) AssertEmail(t *testing.T, expected string) *StaffAsser
 	return s
 }
 
-func (s *StaffAssertions) AssertRole(t *testing.T, expected role.Global) *StaffAssertions {
+func (s *StaffAssertions) AssertRole(t *testing.T, expected roles.Global) *StaffAssertions {
 	t.Helper()
 	assert.Equal(t, expected, s.staff.user.role, "Role mismatch")
 	return s
@@ -243,7 +243,7 @@ func (s *StudentAssertions) AssertByRegistrationArgs(t *testing.T, args Register
 	assert.Equal(t, args.AvatarURL, s.student.user.avatarURL, "AvatarURL mismatch")
 	assert.Equal(t, args.Email, s.student.user.email, "Email mismatch")
 	assert.Equal(t, args.GroupID, s.student.groupID, "GroupID mismatch")
-	assert.Equal(t, role.Student, s.student.user.role, "Role mismatch")
+	assert.Equal(t, roles.Student, s.student.user.role, "Role mismatch")
 	assert.NoError(t, bcrypt.CompareHashAndPassword(s.student.user.passHash, []byte(args.Password)), "PassHash mismatch")
 
 	events := s.student.GetUncommittedEvents()
@@ -310,7 +310,7 @@ func (s *StudentAssertions) AssertGroupID(t *testing.T, expected group.ID) *Stud
 	return s
 }
 
-func (s *StudentAssertions) AssertRole(t *testing.T, expected role.Global) *StudentAssertions {
+func (s *StudentAssertions) AssertRole(t *testing.T, expected roles.Global) *StudentAssertions {
 	t.Helper()
 	assert.Equal(t, expected, s.student.user.role, "Role mismatch")
 	return s

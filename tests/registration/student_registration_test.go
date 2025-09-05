@@ -12,16 +12,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	mailevent "github.com/ARUMANDESU/ucms/internal/application/mail/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	registrationhttp "github.com/ARUMANDESU/ucms/internal/ports/http/registration"
-	"github.com/ARUMANDESU/ucms/tests/integration/builders"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
-	"github.com/ARUMANDESU/ucms/tests/integration/framework"
-	"github.com/ARUMANDESU/ucms/tests/integration/framework/event"
-	frameworkhttp "github.com/ARUMANDESU/ucms/tests/integration/framework/http"
+	mailevent "gitlab.com/ucmsv2/ucms-backend/internal/application/mail/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	registrationhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/registration"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/builders"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/framework"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/event"
+	frameworkhttp "gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/http"
 )
 
 type RegistrationIntegrationSuite struct {
@@ -99,7 +99,7 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 		}, 5*time.Second, 100*time.Millisecond, "Student should be created within 5 seconds")
 
 		s.DB.RequireStudentExistsByEmail(t, email).
-			AssertRole(t, role.Student).
+			AssertRole(t, roles.Student).
 			AssertFirstName(t, fixtures.TestStudent.FirstName).
 			AssertLastName(t, fixtures.TestStudent.LastName).
 			AssertGroupID(t, fixtures.SEGroup.ID)

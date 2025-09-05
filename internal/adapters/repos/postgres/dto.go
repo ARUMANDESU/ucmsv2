@@ -5,12 +5,12 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/major"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/majors"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
 )
 
 type UserDTO struct {
@@ -125,7 +125,7 @@ func UserToDomain(dto UserDTO, roleDTO GlobalRoleDTO) *user.User {
 		Username:  dto.Username,
 		FirstName: dto.FirstName,
 		LastName:  dto.LastName,
-		Role:      role.Global(roleDTO.Name),
+		Role:      roles.Global(roleDTO.Name),
 		AvatarURL: dto.AvatarURL,
 		Email:     dto.Email,
 		PassHash:  dto.Passhash,
@@ -142,7 +142,7 @@ func StudentToDomain(userDTO UserDTO, roleDTO GlobalRoleDTO, studentDTO StudentD
 			Username:  userDTO.Username,
 			FirstName: userDTO.FirstName,
 			LastName:  userDTO.LastName,
-			Role:      role.Global(roleDTO.Name),
+			Role:      roles.Global(roleDTO.Name),
 			AvatarURL: userDTO.AvatarURL,
 			Email:     userDTO.Email,
 			PassHash:  userDTO.Passhash,
@@ -168,7 +168,7 @@ func GroupToDomain(dto GroupDTO) *group.Group {
 	return group.Rehydrate(group.RehydrateArgs{
 		ID:    group.ID(dto.ID),
 		Name:  dto.Name,
-		Major: major.Major(dto.Major),
+		Major: majors.Major(dto.Major),
 		Year:  dto.Year,
 	})
 }
@@ -209,7 +209,7 @@ func StaffToDomain(userDTO UserDTO, roleDTO GlobalRoleDTO, staffDTO StaffDTO) *u
 			Username:  userDTO.Username,
 			FirstName: userDTO.FirstName,
 			LastName:  userDTO.LastName,
-			Role:      role.Global(roleDTO.Name),
+			Role:      roles.Global(roleDTO.Name),
 			AvatarURL: userDTO.AvatarURL,
 			Email:     userDTO.Email,
 			PassHash:  userDTO.Passhash,

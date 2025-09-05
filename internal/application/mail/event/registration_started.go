@@ -10,11 +10,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/logging"
-	"github.com/ARUMANDESU/ucms/pkg/otelx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/mails"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/logging"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
 )
 
 const RegistrationStartedSubject = "Email Verification Code"
@@ -48,7 +48,7 @@ func (h *MailEventHandler) HandleRegistrationStarted(ctx context.Context, e *reg
 		return errorx.Wrap(err, op)
 	}
 
-	payload := mail.Payload{
+	payload := mails.Payload{
 		To:      e.Email,
 		Subject: RegistrationStartedSubject,
 		Body:    fmt.Sprintf("Your email verification code is: %s", e.VerificationCode),

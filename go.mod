@@ -1,4 +1,4 @@
-module github.com/ARUMANDESU/ucms
+module gitlab.com/ucmsv2/ucms-backend
 
 go 1.24.0
 

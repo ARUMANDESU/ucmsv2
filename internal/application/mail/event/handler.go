@@ -8,9 +8,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/mails"
 )
 
 var (
@@ -23,7 +23,7 @@ type InvitationCreatorGetter interface {
 }
 
 type MailSender interface {
-	SendMail(ctx context.Context, payload mail.Payload) error
+	SendMail(ctx context.Context, payload mails.Payload) error
 }
 
 type MailEventHandler struct {

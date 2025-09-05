@@ -6,12 +6,12 @@ import (
 	"github.com/ARUMANDESU/validation"
 	"github.com/ARUMANDESU/validation/is"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/validationx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/validationx"
 )
 
 type Student struct {
@@ -64,7 +64,7 @@ func RegisterStudent(p RegisterStudentArgs) (*Student, error) {
 			firstName: p.FirstName,
 			lastName:  p.LastName,
 			avatarURL: p.AvatarURL,
-			role:      role.Student,
+			role:      roles.Student,
 			email:     p.Email,
 			passHash:  passhash,
 			createdAt: now,

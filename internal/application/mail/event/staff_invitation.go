@@ -9,12 +9,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/mail"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/logging"
-	"github.com/ARUMANDESU/ucms/pkg/otelx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/mails"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/logging"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
 )
 
 const (
@@ -124,7 +124,7 @@ func (h *MailEventHandler) HandleStaffInvitationAccepted(ctx context.Context, e 
 		slog.String("invitation.id", e.InvitationID.String()),
 	)
 
-	newStaffWelcomePayload := mail.Payload{
+	newStaffWelcomePayload := mails.Payload{
 		To:      e.Email,
 		Subject: "Welcome to the Staff Team",
 		Body: fmt.Sprintf(
@@ -150,7 +150,7 @@ func (h *MailEventHandler) HandleStaffInvitationAccepted(ctx context.Context, e 
 		return nil // Do not return error to avoid blocking staff creation process
 	}
 
-	notificationPayload := mail.Payload{
+	notificationPayload := mails.Payload{
 		To:      creator.User().Email(),
 		Subject: "Staff Invitation Accepted",
 		Body: fmt.Sprintf(
@@ -173,7 +173,7 @@ func (h *MailEventHandler) HandleStaffInvitationAccepted(ctx context.Context, e 
 
 func (h *MailEventHandler) sendStaffInvitationEmail(ctx context.Context, email, code string) error {
 	const op = "mailevent.sendStaffInvitationEmail"
-	payload := mail.Payload{
+	payload := mails.Payload{
 		To:      email,
 		Subject: StaffInvitationSubject,
 		Body: fmt.Sprintf(

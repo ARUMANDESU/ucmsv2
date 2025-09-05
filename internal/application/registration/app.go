@@ -3,10 +3,10 @@ package registration
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/ARUMANDESU/ucms/internal/application/registration/cmd"
-	"github.com/ARUMANDESU/ucms/internal/application/registration/event"
-	"github.com/ARUMANDESU/ucms/internal/application/registration/query"
-	"github.com/ARUMANDESU/ucms/pkg/env"
+	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration/cmd"
+	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration/query"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
 )
 
 type App struct {

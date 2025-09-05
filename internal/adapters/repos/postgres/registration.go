@@ -11,11 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/otelx"
-	"github.com/ARUMANDESU/ucms/pkg/postgres"
-	"github.com/ARUMANDESU/ucms/pkg/watermillx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/postgres"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/watermillx"
 )
 
 type RegistrationRepo struct {

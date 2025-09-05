@@ -13,17 +13,17 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
-	registrationapp "github.com/ARUMANDESU/ucms/internal/application/registration"
-	"github.com/ARUMANDESU/ucms/internal/application/registration/cmd"
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/pkg/env"
-	"github.com/ARUMANDESU/ucms/pkg/httpx"
-	"github.com/ARUMANDESU/ucms/pkg/logging"
-	"github.com/ARUMANDESU/ucms/pkg/otelx"
-	"github.com/ARUMANDESU/ucms/pkg/sanitizex"
-	"github.com/ARUMANDESU/ucms/pkg/validationx"
+	registrationapp "gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration/cmd"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/httpx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/logging"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/sanitizex"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/validationx"
 )
 
 var (

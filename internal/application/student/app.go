@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ARUMANDESU/ucms/internal/application/student/studentquery"
+	"gitlab.com/ucmsv2/ucms-backend/internal/application/student/studentquery"
 )
 
 type App struct {

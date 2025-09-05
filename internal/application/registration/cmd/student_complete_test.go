@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/group"
-	"github.com/ARUMANDESU/ucms/internal/domain/registration"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/tests/integration/builders"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
-	"github.com/ARUMANDESU/ucms/tests/mocks"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/registration"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/builders"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/tests/mocks"
 )
 
 type StudentCompleteSuite struct {
@@ -82,7 +82,7 @@ func TestStudentCompleteHandler_HappyPath(t *testing.T) {
 			AssertLastName(t, fixtures.TestStudent.LastName).
 			AssertGroupID(t, fixtures.TestStudent.GroupID).
 			AssertPassword(t, fixtures.TestStudent.Password).
-			AssertRole(t, role.Student)
+			AssertRole(t, roles.Student)
 
 		s.MockStudent.AssertEventCount(t, 1)
 		e := mocks.RequireEventExists(t, s.MockStudent.EventRepo, &user.StudentRegistered{})

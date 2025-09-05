@@ -9,7 +9,7 @@ import (
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 
-	"github.com/ARUMANDESU/ucms/pkg/i18nx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/i18nx"
 )
 
 type I18nErrors []*I18nError

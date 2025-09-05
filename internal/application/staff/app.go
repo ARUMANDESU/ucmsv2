@@ -1,6 +1,6 @@
 package staffapp
 
-import "github.com/ARUMANDESU/ucms/internal/application/staff/cmd"
+import "gitlab.com/ucmsv2/ucms-backend/internal/application/staff/cmd"
 
 type App struct {
 	Command Command

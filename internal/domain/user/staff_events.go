@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
 )
 
 const StaffEventStreamName = "events_staff"

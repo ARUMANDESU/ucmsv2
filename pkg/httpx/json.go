@@ -13,7 +13,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 )
 
 type Envelope map[string]any

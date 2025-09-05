@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
-	"github.com/ARUMANDESU/ucms/tests/integration/builders"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	authhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/auth"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/builders"
 )
 
 type Helper struct {
@@ -267,14 +267,14 @@ type RequestBuilderOptions func(*RequestBuilder)
 
 func WithStaff(t *testing.T, id user.ID) RequestBuilderOptions {
 	token := builders.JWTFactory{}.
-		AccessTokenBuilder(id.String(), role.Staff.String()).
+		AccessTokenBuilder(id.String(), roles.Staff.String()).
 		BuildSignedStringT(t)
 	return WithAccessTokenCookie(token)
 }
 
 func WithStudent(t *testing.T, id user.ID) RequestBuilderOptions {
 	token := builders.JWTFactory{}.
-		AccessTokenBuilder(id.String(), role.Student.String()).
+		AccessTokenBuilder(id.String(), roles.Student.String()).
 		BuildSignedStringT(t)
 	return WithAccessTokenCookie(token)
 }

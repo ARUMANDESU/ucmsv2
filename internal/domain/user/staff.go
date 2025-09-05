@@ -7,10 +7,10 @@ import (
 	"github.com/ARUMANDESU/validation/is"
 	"github.com/google/uuid"
 
-	"github.com/ARUMANDESU/ucms/internal/domain/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	"github.com/ARUMANDESU/ucms/pkg/errorx"
-	"github.com/ARUMANDESU/ucms/pkg/validationx"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/validationx"
 )
 
 type Staff struct {
@@ -58,7 +58,7 @@ func AcceptStaffInvitation(p AcceptStaffInvitationArgs) (*Staff, error) {
 			firstName: p.FirstName,
 			lastName:  p.LastName,
 			avatarURL: "",
-			role:      role.Staff,
+			role:      roles.Staff,
 			email:     p.Email,
 			passHash:  passhash,
 			createdAt: now,
@@ -118,7 +118,7 @@ func CreateInitialStaff(p CreateInitialStaffArgs) (*Staff, error) {
 			firstName: p.FirstName,
 			lastName:  p.LastName,
 			avatarURL: "",
-			role:      role.Staff,
+			role:      roles.Staff,
 			email:     p.Email,
 			passHash:  passhash,
 			createdAt: now,

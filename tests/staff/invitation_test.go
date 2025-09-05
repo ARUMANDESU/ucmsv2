@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
-	mailevent "github.com/ARUMANDESU/ucms/internal/application/mail/event"
-	"github.com/ARUMANDESU/ucms/internal/domain/staffinvitation"
-	staffhttp "github.com/ARUMANDESU/ucms/internal/ports/http/staff"
-	"github.com/ARUMANDESU/ucms/tests/integration/builders"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
-	"github.com/ARUMANDESU/ucms/tests/integration/framework"
-	httpframework "github.com/ARUMANDESU/ucms/tests/integration/framework/http"
+	mailevent "gitlab.com/ucmsv2/ucms-backend/internal/application/mail/event"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
+	staffhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/staff"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/builders"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/framework"
+	httpframework "gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/http"
 )
 
 type StaffInvitationSuite struct {

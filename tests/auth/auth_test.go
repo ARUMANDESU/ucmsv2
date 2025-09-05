@@ -10,14 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	authapp "github.com/ARUMANDESU/ucms/internal/application/auth"
-	"github.com/ARUMANDESU/ucms/internal/domain/user"
-	"github.com/ARUMANDESU/ucms/internal/domain/valueobject/role"
-	authhttp "github.com/ARUMANDESU/ucms/internal/ports/http/auth"
-	"github.com/ARUMANDESU/ucms/tests/integration/builders"
-	"github.com/ARUMANDESU/ucms/tests/integration/fixtures"
-	"github.com/ARUMANDESU/ucms/tests/integration/framework"
-	httpframework "github.com/ARUMANDESU/ucms/tests/integration/framework/http"
+	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/internal/domain/valueobject/roles"
+	authhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/auth"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/builders"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/fixtures"
+	"gitlab.com/ucmsv2/ucms-backend/tests/integration/framework"
+	httpframework "gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/http"
 )
 
 type AuthIntegrationSuite struct {
@@ -45,7 +45,7 @@ func (s *AuthIntegrationSuite) TestAuth_Login() {
 		WithEmail(aitusaStudentEmail).
 		WithBarcode(aitusaStudentBarcode).
 		WithPassword(aitusaStudentPassword).
-		WithRole(role.AITUSA).
+		WithRole(roles.AITUSA).
 		Build()
 	s.DB.SeedUser(s.T(), aitusaStudent)
 
@@ -56,7 +56,7 @@ func (s *AuthIntegrationSuite) TestAuth_Login() {
 		WithEmail(staffEmail).
 		WithBarcode(staffBarcode).
 		WithPassword(staffPassword).
-		WithRole(role.Staff).
+		WithRole(roles.Staff).
 		Build()
 	s.DB.SeedUser(s.T(), staff)
 
@@ -301,7 +301,7 @@ func (s *AuthIntegrationSuite) TestAuth_Refresh() {
 			WithEmail(user.Email()).
 			WithBarcode(user.Barcode()).
 			WithPassword(fixtures.TestStudent.Password).
-			WithRole(role.Staff).
+			WithRole(roles.Staff).
 			Build()
 		s.DB.SeedUser(s.T(), changedUser)
 
@@ -551,21 +551,21 @@ func (s *AuthIntegrationSuite) TestAuth_RoleBasedAccess() {
 		WithEmail(fixtures.TestStudent.Email).
 		WithBarcode(fixtures.TestStudent.Barcode).
 		WithPassword(fixtures.TestStudent.Password).
-		WithRole(role.Student).
+		WithRole(roles.Student).
 		Build()
 
 	staff := builders.NewUserBuilder().
 		WithEmail(fixtures.TestStaff.Email).
 		WithBarcode(fixtures.TestStaff.Barcode).
 		WithPassword(fixtures.TestStaff.Password).
-		WithRole(role.Staff).
+		WithRole(roles.Staff).
 		Build()
 
 	aitusaStudent := builders.NewUserBuilder().
 		WithEmail(fixtures.TestStudent2.Email).
 		WithBarcode(fixtures.TestStudent2.Barcode).
 		WithPassword(fixtures.TestStudent2.Password).
-		WithRole(role.AITUSA).
+		WithRole(roles.AITUSA).
 		Build()
 
 	s.DB.SeedUser(s.T(), student)
@@ -582,19 +582,19 @@ func (s *AuthIntegrationSuite) TestAuth_RoleBasedAccess() {
 			name:         "student login",
 			user:         student,
 			password:     fixtures.TestStudent.Password,
-			expectedRole: role.Student.String(),
+			expectedRole: roles.Student.String(),
 		},
 		{
 			name:         "staff login",
 			user:         staff,
 			password:     fixtures.TestStaff.Password,
-			expectedRole: role.Staff.String(),
+			expectedRole: roles.Staff.String(),
 		},
 		{
 			name:         "aitusa student login",
 			user:         aitusaStudent,
 			password:     fixtures.TestStudent2.Password,
-			expectedRole: role.AITUSA.String(),
+			expectedRole: roles.AITUSA.String(),
 		},
 	}
 
