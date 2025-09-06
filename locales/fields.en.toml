@@ -38,3 +38,6 @@ other = "Status"
 
 [recipients_email]
 other = "Recipients' Email"
+
+[major]
+other = "Major"

@@ -38,3 +38,6 @@ other = "Статус"
 
 [recipients_email]
 other = "Электронная почта получателей"
+
+[major]
+other = "Специальность"

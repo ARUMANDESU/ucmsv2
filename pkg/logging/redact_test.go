@@ -174,3 +174,36 @@ func TestRedactUsername(t *testing.T) {
 		})
 	}
 }
+
+func TestRedactKeepPrefix(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		tag      string
+		input    string
+		keep     int
+		expected string
+	}{
+		{"t1", "", 3, ""},
+		{"t2", "a", 3, "a"},
+		{"t3", "ab", 3, "ab"},
+		{"t4", "abc", 3, "abc"},
+		{"t5", "abcd", 3, "abc****"},
+		{"t6", "abcdefg", 4, "abcd****"},
+		{"t7", "  spaced  ", 3, "spa****"},
+		{"t8", "пользователь", 3, "пол****"},
+		{"t9", "😀😁😂😃", 2, "😀😁****"},
+		{"t10", "mixedユーザー", 5, "mixed****"},
+		{"t11", "short", 10, "short"},
+		{"t12", "exactlyten", 10, "exactlyten"},
+		{"t13", "elevenchars", 10, "elevenchar****"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.tag, func(t *testing.T) {
+			t.Parallel()
+			result := RedactKeepPrefix(tc.input, tc.keep)
+			assert.Equal(t, tc.expected, result, "Redacted string should match expected value")
+		})
+	}
+}

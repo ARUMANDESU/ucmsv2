@@ -14,11 +14,13 @@ import (
 	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
 	staffapp "gitlab.com/ucmsv2/ucms-backend/internal/application/staff"
 	studentapp "gitlab.com/ucmsv2/ucms-backend/internal/application/student"
+	userapp "gitlab.com/ucmsv2/ucms-backend/internal/application/user"
 	authhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/auth"
 	"gitlab.com/ucmsv2/ucms-backend/internal/ports/http/middlewares"
 	registrationhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/registration"
 	staffhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/staff"
 	studenthttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/student"
+	userhttp "gitlab.com/ucmsv2/ucms-backend/internal/ports/http/user"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/httpx"
 )
 
@@ -28,6 +30,7 @@ type Port struct {
 	auth        *authhttp.HTTP
 	student     *studenthttp.HTTP
 	staff       *staffhttp.HTTP
+	user        *userhttp.HTTP
 }
 
 type Args struct {
@@ -36,6 +39,7 @@ type Args struct {
 	AuthApp                 *authapp.App
 	StudentApp              *studentapp.App
 	StaffApp                *staffapp.App
+	UserApp                 *userapp.App
 	CookieDomain            string
 	Secret                  []byte
 	AcceptInvitationPageURL string
@@ -76,6 +80,11 @@ func NewPort(args Args) *Port {
 			InvitationTokenKey:      args.InvitationTokenKey,
 			InvitationTokenExp:      args.InvitationTokenExp,
 		}),
+		user: userhttp.NewHTTP(userhttp.Args{
+			UserApp:    args.UserApp,
+			Middleware: m,
+			Errhandler: errorHandler,
+		}),
 	}
 }
 
@@ -94,7 +103,7 @@ func (p *Port) Route(r chi.Router) chi.Router {
 	r.Use(middleware.RealIP)
 	r.Use(middlewares.OTel)
 	r.Use(middleware.Logger)
-	r.Use(middleware.AllowContentType("application/json"))
+	r.Use(middleware.AllowContentType("application/json", "multipart/form-data"))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(middleware.Heartbeat("/ping"))
@@ -113,6 +122,7 @@ func (p *Port) Route(r chi.Router) chi.Router {
 	p.auth.Route(r)
 	p.student.Route(r)
 	p.staff.Route(r)
+	p.user.Route(r)
 
 	return r
 }

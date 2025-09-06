@@ -32,11 +32,13 @@ import (
 
 	ucmsv2 "gitlab.com/ucmsv2/ucms-backend"
 	"gitlab.com/ucmsv2/ucms-backend/internal/adapters/repos/postgres"
+	"gitlab.com/ucmsv2/ucms-backend/internal/adapters/services/s3"
 	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
 	"gitlab.com/ucmsv2/ucms-backend/internal/application/mail"
 	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
 	staffapp "gitlab.com/ucmsv2/ucms-backend/internal/application/staff"
 	studentapp "gitlab.com/ucmsv2/ucms-backend/internal/application/student"
+	userapp "gitlab.com/ucmsv2/ucms-backend/internal/application/user"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
 	httpport "gitlab.com/ucmsv2/ucms-backend/internal/ports/http"
 	watermillport "gitlab.com/ucmsv2/ucms-backend/internal/ports/watermill"
@@ -58,12 +60,14 @@ type Application struct {
 	Student      *studentapp.App
 	Staff        *staffapp.App
 	Auth         *authapp.App
+	User         *userapp.App
 }
 
 // Config holds all configuration for the application
 type Config struct {
 	Mode                     env.Mode
 	Service                  ServiceConfig
+	S3                       S3Config
 	Port                     string
 	PgDSN                    string
 	LogPath                  string
@@ -82,6 +86,16 @@ type ServiceConfig struct {
 	InstanceId string
 }
 
+type S3Config struct {
+	Endpoint     string
+	AccessKey    string
+	SecretKey    string
+	Bucket       string
+	Region       string // can be anything for MinIO
+	BaseURL      string // For building public URLs
+	UsePathStyle bool   // true for MinIO
+}
+
 func main() {
 	startTime := time.Now()
 	ctx := context.Background()
@@ -97,6 +111,7 @@ func main() {
 	shutdownOTel, err := setupOTelSDK(ctx, config)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to set up OpenTelemetry SDK", "error", err)
+		fmt.Fprintf(os.Stderr, "Failed to set up OpenTelemetry SDK: %v\n", err)
 		os.Exit(1)
 	}
 	defer func() {
@@ -116,6 +131,7 @@ func main() {
 	pool, err := setupDatabase(ctx, config)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to setup database", "error", err)
+		fmt.Fprintf(os.Stderr, "Failed to setup database: %v\n", err)
 		os.Exit(1)
 	}
 	defer pool.Close()
@@ -123,20 +139,24 @@ func main() {
 	// Set up repositories
 	repos := setupRepositories(pool)
 
+	infrastructure := setupInfrastructure(ctx, config)
+
 	// Set up event processing
 	eventRouter, err := setupEventProcessing(ctx, pool)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to setup event processing", "error", err)
+		fmt.Fprintf(os.Stderr, "Failed to setup event processing: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Set up applications
-	apps := setupApplications(config, repos)
+	apps := setupApplications(config, repos, infrastructure)
 
 	// Set up event handlers
 	wmport, err := watermillport.NewPort(eventRouter, pool, watermill.NewSlogLogger(slog.Default()))
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to create Watermill port", "error", err)
+		fmt.Fprintf(os.Stderr, "Failed to create Watermill port: %v\n", err)
 		os.Exit(1)
 	}
 	if err := wmport.Run(ctx, watermillport.AppEventHandlers{
@@ -145,6 +165,7 @@ func main() {
 		Student:      apps.Student.Event,
 	}); err != nil {
 		slog.ErrorContext(ctx, "Failed to run Watermill port", "error", err)
+		fmt.Fprintf(os.Stderr, "Failed to run Watermill port: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -152,6 +173,7 @@ func main() {
 		// Start event router
 		if err := eventRouter.Run(ctx); err != nil {
 			slog.ErrorContext(ctx, "Failed to start event router", "error", err)
+			fmt.Fprintf(os.Stderr, "Failed to start event router: %v\n", err)
 			os.Exit(1)
 		}
 		defer func() {
@@ -165,6 +187,7 @@ func main() {
 	hasStaff, err := repos.Staff.HasAnyStaff(ctx)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to check for existing staff users", "error", err)
+		fmt.Fprintf(os.Stderr, "Failed to check for existing staff users: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -172,10 +195,12 @@ func main() {
 		initStaff, err := user.CreateInitialStaff(*config.InitialStaff)
 		if err != nil {
 			slog.ErrorContext(ctx, "Failed to create initial staff user", "error", err)
+			fmt.Fprintf(os.Stderr, "Failed to create initial staff user: %v\n", err)
 			os.Exit(1)
 		}
 		if err := repos.Staff.SaveStaff(ctx, initStaff); err != nil {
 			slog.ErrorContext(ctx, "Failed to save initial staff user", "error", err)
+			fmt.Fprintf(os.Stderr, "Failed to save initial staff user: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -191,6 +216,7 @@ func main() {
 		slog.InfoContext(ctx, "Starting HTTP server", "port", config.Port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.ErrorContext(ctx, "HTTP server error", "error", err)
+			fmt.Fprintf(os.Stderr, "HTTP server error: %v\n", err)
 			os.Exit(1)
 		}
 	}()
@@ -209,6 +235,7 @@ func main() {
 
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		slog.ErrorContext(shutdownCtx, "Server forced to shutdown", "error", err)
+		fmt.Fprintf(os.Stderr, "Server forced to shutdown: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -230,6 +257,14 @@ func loadConfig() *Config {
 	service.Name = getEnvOrDefault("SERVICE_NAME", "ucms-api")
 	service.Version = getEnvOrDefault("SERVICE_VERSION", "0.1.0")
 	service.InstanceId = getEnvOrDefault("SERVICE_INSTANCE_ID", "instance-1")
+	var s3 S3Config
+	s3.Endpoint = getEnvOrDefault("S3_ENDPOINT", "http://localhost:9000")
+	s3.AccessKey = getEnvOrDefault("S3_ACCESS_KEY", "minioadmin")
+	s3.SecretKey = getEnvOrDefault("S3_SECRET_KEY", "minioadmin")
+	s3.Bucket = getEnvOrDefault("S3_BUCKET", "ucms-avatars")
+	s3.Region = getEnvOrDefault("S3_REGION", "us-east-1")
+	s3.BaseURL = getEnvOrDefault("S3_BASE_URL", "http://localhost:9000/ucms-avatars")
+	s3.UsePathStyle = getEnvOrDefault("S3_USE_PATH_STYLE", "true") == "true"
 
 	var initialStaff *user.CreateInitialStaffArgs
 	if os.Getenv("INITIAL_STAFF_EMAIL") != "" {
@@ -246,6 +281,7 @@ func loadConfig() *Config {
 	return &Config{
 		Mode:                     mode,
 		Service:                  service,
+		S3:                       s3,
 		Port:                     port,
 		PgDSN:                    pgdsn,
 		LogPath:                  logPath,
@@ -304,16 +340,31 @@ func setupRepositories(pool *pgxpool.Pool) *Repositories {
 	}
 }
 
+type Infrastructure struct {
+	S3Client *s3.Client
+}
+
+func setupInfrastructure(ctx context.Context, config *Config) *Infrastructure {
+	s3Storage, err := s3.NewClient(ctx, config.S3.Endpoint, config.S3.AccessKey, config.S3.SecretKey, config.S3.Bucket, config.S3.Region)
+	if err != nil {
+		slog.ErrorContext(ctx, "Failed to set up S3 storage", "error", err)
+		fmt.Fprintf(os.Stderr, "Failed to set up S3 storage: %v\n", err)
+		os.Exit(1)
+	}
+
+	return &Infrastructure{
+		S3Client: s3Storage,
+	}
+}
+
 func setupEventProcessing(ctx context.Context, pool *pgxpool.Pool) (*message.Router, error) {
 	wlogger := watermill.NewSlogLogger(slog.Default())
 
-	// Create Watermill router
 	router, err := message.NewRouter(message.RouterConfig{}, wlogger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create watermill router: %w", err)
 	}
 
-	// Initialize event schema
 	if err := watermillx.InitializeEventSchema(ctx, pool, wlogger); err != nil {
 		return nil, fmt.Errorf("failed to initialize event schema: %w", err)
 	}
@@ -322,11 +373,9 @@ func setupEventProcessing(ctx context.Context, pool *pgxpool.Pool) (*message.Rou
 	return router, nil
 }
 
-func setupApplications(config *Config, repos *Repositories) *Application {
-	// Mock mail sender for development
+func setupApplications(config *Config, repos *Repositories, infrastructure *Infrastructure) *Application {
 	mailSender := mocks.NewMockMailSender()
 
-	// Registration application
 	regApp := registration.NewApp(registration.Args{
 		Mode:         config.Mode,
 		Repo:         repos.Registration,
@@ -336,14 +385,12 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 		PgxPool:      repos.PgxPool,
 	})
 
-	// Mail application
 	mailApp := mail.NewApp(mail.Args{
 		Mailsender:              mailSender,
 		StaffInvitationBaseURL:  config.StaffInvitationBaseURL,
 		InvitationCreatorGetter: repos.Staff,
 	})
 
-	// Student application
 	studentApp := studentapp.NewApp(studentapp.Args{
 		PgxPool: repos.PgxPool,
 	})
@@ -361,12 +408,19 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 		RefreshTokenExpDuration: nil,
 	})
 
+	userApp := userapp.NewApp(userapp.Args{
+		S3BaseURL:     config.S3.BaseURL,
+		AvatarStorage: infrastructure.S3Client,
+		UserRepo:      repos.User,
+	})
+
 	return &Application{
 		Registration: regApp,
 		Mail:         mailApp,
 		Student:      studentApp,
 		Staff:        staffApp,
 		Auth:         authApp,
+		User:         userApp,
 	}
 }
 
@@ -415,6 +469,7 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 		AuthApp:                 apps.Auth,
 		StudentApp:              apps.Student,
 		StaffApp:                apps.Staff,
+		UserApp:                 apps.User,
 		Secret:                  []byte(config.AccessTokenSecretKey),
 		CookieDomain:            "",
 		AcceptInvitationPageURL: config.AccestInvitationPageURL,

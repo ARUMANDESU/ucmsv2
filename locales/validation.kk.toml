@@ -62,10 +62,10 @@ other = "кемінде {{.threshold}} болуы тиіс"
 other = "ең көбі {{.threshold}} болуы тиіс"
 
 [validation_min_greater_than_required]
-other = "{{.threshold}}-тен үлкен болуы тиіс"
+other = "{{.threshold}} үлкен болуы тиіс"
 
 [validation_max_less_than_required]
-other = "{{.threshold}}-тен кіші болуы тиіс"
+other = "{{.threshold}} кіші болуы тиіс"
 
 [validation_not_nil_required]
 other = "міндетті"
@@ -268,3 +268,12 @@ other = "уақыт өткен уақытта болмауы мүмкін"
 
 [validation_time_before_threshold]
 other = "уақыт {{.threshold}} уақытынан кейін болуы керек"
+
+[validation_file_size_too_large]
+other = "файл өлшемі {{.threshold}} {{.unit}} аспауы тиіс"
+
+[validation_file_size_too_small]
+other = "файл өлшемі кемінде {{.threshold}} {{.unit}} болуы керек"
+
+[validation_invalid_file_type]
+other = "файл түрі рұқсат етілген түрлердің бірі болуы керек: {{.list}}"

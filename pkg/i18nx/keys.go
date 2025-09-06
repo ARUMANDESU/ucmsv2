@@ -82,6 +82,9 @@ const (
 	ValidationNoDuplicate         = "validation_no_duplicate"
 	ValidationTimeInPast          = "validation_time_in_past"
 	ValidationTimeBeforeThreshold = "validation_time_before_threshold"
+	ValidationFileSizeTooLarge    = "validation_file_size_too_large"
+	ValidationFileSizeTooSmall    = "validation_file_size_too_small"
+	ValidationInvalidFileType     = "validation_invalid_file_type"
 )
 
 // Validation messages (English defaults)
@@ -93,6 +96,9 @@ const (
 	MsgValidationNoDuplicateOther         = "duplicate values are not allowed"
 	MsgValidationTimeInPastOther          = "time cannot be in the past"
 	MsgValidationTimeBeforeThresholdOther = "time must be after {{.threshold}}"
+	MsgValidationFileSizeTooLargeOther    = "file size must not exceed {{.threshold}} {{.unit}}"
+	MsgValidationFileSizeTooSmallOther    = "file size must be at least {{.threshold}} {{.unit}}"
+	MsgValidationInvalidFileTypeOther     = "file type must be one of the allowed types: {{.list}}"
 )
 
 // Field name keys
@@ -115,10 +121,13 @@ const (
 // Template argument keys (snake_case naming)
 const (
 	ArgLocalePrefix       = "locale_"
-	ArgField              = "field"
-	ArgResourceType       = "resource_type"
 	ArgLocaleResourceType = "locale_resource_type"
-	ArgRetryAfter         = "retry_after"
-	ArgMaxEmails          = "max_emails"
-	ArgThreshold          = "threshold"
+
+	ArgField        = "field"
+	ArgResourceType = "resource_type"
+	ArgRetryAfter   = "retry_after"
+	ArgMaxEmails    = "max_emails"
+	ArgThreshold    = "threshold"
+	ArgUnit         = "unit"
+	ArgList         = "list"
 )

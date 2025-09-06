@@ -216,6 +216,7 @@ func InitializeEventSchema(ctx context.Context, conn *pgxpool.Pool, logger water
 		registration.EventStreamName,
 		user.StudentEventStreamName,
 		user.StaffEventStreamName,
+		user.UserEventStreamName,
 		staffinvitation.EventStreamName,
 	}
 

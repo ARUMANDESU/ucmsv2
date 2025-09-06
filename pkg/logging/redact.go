@@ -60,3 +60,25 @@ func RedactUsername(s string) string {
 
 	return prefix + "****"
 }
+
+// RedactKeepPrefix shows first 'keep' runes of the input string and replaces the rest
+// with "****". It leaves the input unchanged if: input is empty or has fewer than 'keep' runes
+func RedactKeepPrefix(s string, keep int) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+
+	if utf8.RuneCountInString(s) <= keep {
+		return s
+	}
+
+	offset := 0
+	for count := 0; count < keep && offset < len(s); count++ {
+		_, size := utf8.DecodeRuneInString(s[offset:])
+		offset += size
+	}
+	prefix := s[:offset]
+
+	return prefix + "****"
+}

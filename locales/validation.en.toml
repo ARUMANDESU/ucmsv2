@@ -268,3 +268,12 @@ other = "time cannot be in the past"
 
 [validation_time_before_threshold]
 other = "time must be after {{.threshold}}"
+
+[validation_file_size_too_large]
+other = "file size must not exceed {{.threshold}} {{.unit}}"
+
+[validation_file_size_too_small]
+other = "file size must be at least {{.threshold}} {{.unit}}"
+
+[validation_invalid_file_type]
+other = "file type must be one of the allowed types: {{.list}}"
