@@ -14,18 +14,21 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 
 	ucmsv2 "gitlab.com/ucmsv2/ucms-backend"
 	"gitlab.com/ucmsv2/ucms-backend/internal/adapters/repos/postgres"
@@ -38,10 +41,14 @@ import (
 	httpport "gitlab.com/ucmsv2/ucms-backend/internal/ports/http"
 	watermillport "gitlab.com/ucmsv2/ucms-backend/internal/ports/watermill"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
-	"gitlab.com/ucmsv2/ucms-backend/pkg/logging"
 	pgpkg "gitlab.com/ucmsv2/ucms-backend/pkg/postgres"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/watermillx"
 	"gitlab.com/ucmsv2/ucms-backend/tests/mocks"
+)
+
+const (
+	traceBatchTimeout      = 1 * time.Second
+	metricPeriodicInterval = 3 * time.Second
 )
 
 // Application holds all the application dependencies
@@ -56,6 +63,7 @@ type Application struct {
 // Config holds all configuration for the application
 type Config struct {
 	Mode                     env.Mode
+	Service                  ServiceConfig
 	Port                     string
 	PgDSN                    string
 	LogPath                  string
@@ -67,6 +75,13 @@ type Config struct {
 	InvitationTokenSecretKey string
 }
 
+type ServiceConfig struct {
+	Namespace  string
+	Name       string
+	Version    string
+	InstanceId string
+}
+
 func main() {
 	startTime := time.Now()
 	ctx := context.Background()
@@ -76,10 +91,10 @@ func main() {
 
 	env.SetMode(config.Mode)
 	// Set up logging
-	setupLogging(config.LogPath, config.Mode)
+	// setupLogging(config.LogPath, config.Mode)
 
 	// Set up tracing (in production you'd configure a proper tracing provider)
-	shutdownOTel, err := setupOTelSDK(ctx)
+	shutdownOTel, err := setupOTelSDK(ctx, config)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to set up OpenTelemetry SDK", "error", err)
 		os.Exit(1)
@@ -210,6 +225,11 @@ func loadConfig() *Config {
 	staffInvitationBaseURL := getEnvOrDefault("STAFF_INVITATION_BASE_URL", "http://localhost:3000/invitations/accept")
 	acceptInvitationPageURL := getEnvOrDefault("STAFF_INVITATION_PAGE_URL", "http://localhost:3000/invitations/accept")
 	invitationTokenSecretKey := getEnvOrDefault("INVITATION_TOKEN_SECRET", "default_invitation_secret")
+	var service ServiceConfig
+	service.Namespace = getEnvOrDefault("SERVICE_NAMESPACE", "ucms")
+	service.Name = getEnvOrDefault("SERVICE_NAME", "ucms-api")
+	service.Version = getEnvOrDefault("SERVICE_VERSION", "0.1.0")
+	service.InstanceId = getEnvOrDefault("SERVICE_INSTANCE_ID", "instance-1")
 
 	var initialStaff *user.CreateInitialStaffArgs
 	if os.Getenv("INITIAL_STAFF_EMAIL") != "" {
@@ -225,6 +245,7 @@ func loadConfig() *Config {
 
 	return &Config{
 		Mode:                     mode,
+		Service:                  service,
 		Port:                     port,
 		PgDSN:                    pgdsn,
 		LogPath:                  logPath,
@@ -242,15 +263,6 @@ func getEnvOrDefault(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
-}
-
-func setupLogging(_ string, mode env.Mode) {
-	// Use the existing logging setup from pkg/logging
-	logger, cleanup := logging.Setup(mode)
-	slog.SetDefault(logger)
-
-	// Store cleanup function for later use if needed
-	_ = cleanup
 }
 
 func setupDatabase(ctx context.Context, config *Config) (*pgxpool.Pool, error) {
@@ -359,7 +371,6 @@ func setupApplications(config *Config, repos *Repositories) *Application {
 }
 
 func setupHTTPServer(config *Config, apps *Application) *http.Server {
-	// Create main router
 	router := chi.NewRouter()
 
 	if config.Mode == env.Dev {
@@ -399,6 +410,7 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 
 	// Set up HTTP ports
 	httpPort := httpport.NewPort(httpport.Args{
+		ServiceName:             config.Service.Name,
 		RegistrationApp:         apps.Registration,
 		AuthApp:                 apps.Auth,
 		StudentApp:              apps.Student,
@@ -424,12 +436,9 @@ func setupHTTPServer(config *Config, apps *Application) *http.Server {
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
-func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
+func setupOTelSDK(ctx context.Context, config *Config) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
-	// shutdown calls cleanup functions registered via shutdownFuncs.
-	// The errors from the calls are joined.
-	// Each registered cleanup will be invoked once.
 	shutdown = func(ctx context.Context) error {
 		var err error
 		for _, fn := range shutdownFuncs {
@@ -439,17 +448,23 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 		return err
 	}
 
-	// handleErr calls shutdown for cleanup and makes sure that all errors are returned.
 	handleErr := func(inErr error) {
 		err = errors.Join(inErr, shutdown(ctx))
 	}
 
-	// Set up propagator.
+	appResource := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.DeploymentEnvironmentName(config.Mode.String()),
+		semconv.ServiceNamespaceKey.String(config.Service.Namespace),
+		semconv.ServiceNameKey.String(config.Service.Name),
+		semconv.ServiceVersionKey.String(config.Service.Version),
+		semconv.ServiceInstanceIDKey.String(config.Service.InstanceId),
+	)
+
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
-	// Set up trace provider.
-	tracerProvider, err := newTracerProvider()
+	tracerProvider, err := NewTracerProvider(ctx, appResource)
 	if err != nil {
 		handleErr(err)
 		return
@@ -457,8 +472,7 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 
-	// Set up meter provider.
-	meterProvider, err := newMeterProvider()
+	meterProvider, err := newMeterProvider(ctx, appResource)
 	if err != nil {
 		handleErr(err)
 		return
@@ -466,14 +480,23 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
 	otel.SetMeterProvider(meterProvider)
 
-	// Set up logger provider.
-	loggerProvider, err := newLoggerProvider()
+	loggerProvider, err := newLoggerProvider(ctx, appResource)
 	if err != nil {
 		handleErr(err)
 		return
 	}
 	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
 	global.SetLoggerProvider(loggerProvider)
+
+	h := otelslog.NewHandler(
+		config.Service.Name,
+		otelslog.WithLoggerProvider(loggerProvider),
+		otelslog.WithSource(true),
+	)
+	logger := slog.New(h)
+	slog.SetDefault(logger)
+
+	slog.Debug("OpenTelemetry SDK setup completed")
 
 	return
 }
@@ -485,44 +508,50 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newTracerProvider() (*trace.TracerProvider, error) {
-	traceExporter, err := stdouttrace.New(
-		stdouttrace.WithPrettyPrint())
+func NewTracerProvider(ctx context.Context, res *resource.Resource) (*trace.TracerProvider, error) {
+	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
 
-	tracerProvider := trace.NewTracerProvider(
+	traceProvider := trace.NewTracerProvider(
+		trace.WithResource(res),
 		trace.WithBatcher(traceExporter,
 			// Default is 5s. Set to 1s for demonstrative purposes.
-			trace.WithBatchTimeout(5*time.Second)),
+			trace.WithBatchTimeout(traceBatchTimeout),
+		),
 	)
-	return tracerProvider, nil
+	return traceProvider, nil
 }
 
-func newMeterProvider() (*metric.MeterProvider, error) {
-	metricExporter, err := stdoutmetric.New()
+func newMeterProvider(ctx context.Context, res *resource.Resource) (*metric.MeterProvider, error) {
+	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
 
 	meterProvider := metric.NewMeterProvider(
-		metric.WithReader(metric.NewPeriodicReader(metricExporter,
-			// Default is 1m. Set to 3s for demonstrative purposes.
-			metric.WithInterval(1*time.Minute),
-		)),
+		metric.WithResource(res),
+		metric.WithReader(
+			metric.NewPeriodicReader(metricExporter,
+				// Default is 1m. Set to 3s for demonstrative purposes.
+				metric.WithInterval(metricPeriodicInterval),
+			),
+		),
 	)
 	return meterProvider, nil
 }
 
-func newLoggerProvider() (*log.LoggerProvider, error) {
-	logExporter, err := stdoutlog.New()
+func newLoggerProvider(ctx context.Context, res *resource.Resource) (*log.LoggerProvider, error) {
+	logExporter, err := otlploggrpc.New(ctx, otlploggrpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
 
 	loggerProvider := log.NewLoggerProvider(
+		log.WithResource(res),
 		log.WithProcessor(log.NewBatchProcessor(logExporter)),
 	)
+
 	return loggerProvider, nil
 }

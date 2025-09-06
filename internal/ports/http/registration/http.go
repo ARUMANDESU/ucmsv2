@@ -7,7 +7,7 @@ import (
 
 	"github.com/ARUMANDESU/validation"
 	"github.com/ARUMANDESU/validation/is"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"

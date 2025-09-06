@@ -51,3 +51,21 @@ tasks:
         desc: Run local Postgres database in Docker
         cmds:
             - cmd: docker run --name ucmsv2-postgres -d -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=ucms -p 8765:5432 postgres:16.8
+    compose:infra:up:
+        desc: Start infrastructure services using Docker Compose
+        aliases:
+            - infra:up
+        cmds:
+            - cmd: docker compose -f compose.yaml --profile infra up -d
+    compose:infra:down:
+        desc: Stop infrastructure services using Docker Compose
+        aliases:
+            - infra:down
+        cmds:
+            - cmd: docker compose -f compose.yaml --profile infra down
+    compose:infra:restart:
+        desc: Restart infrastructure services using Docker Compose
+        aliases:
+            - infra:restart
+        cmds:
+            - cmd: docker compose -f compose.yaml --profile infra restart

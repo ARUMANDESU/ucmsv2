@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	otelchimetric "github.com/riandyrn/otelchi/metric"
+	"go.opentelemetry.io/otel"
 
 	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
 	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
@@ -22,13 +23,15 @@ import (
 )
 
 type Port struct {
-	reg     *registrationhttp.HTTP
-	auth    *authhttp.HTTP
-	student *studenthttp.HTTP
-	staff   *staffhttp.HTTP
+	serviceName string
+	reg         *registrationhttp.HTTP
+	auth        *authhttp.HTTP
+	student     *studenthttp.HTTP
+	staff       *staffhttp.HTTP
 }
 
 type Args struct {
+	ServiceName             string
 	RegistrationApp         *registration.App
 	AuthApp                 *authapp.App
 	StudentApp              *studentapp.App
@@ -49,6 +52,7 @@ func NewPort(args Args) *Port {
 		Errhandler: errorHandler,
 	})
 	return &Port{
+		serviceName: args.ServiceName,
 		reg: registrationhttp.NewHTTP(registrationhttp.Args{
 			App:        args.RegistrationApp,
 			Errhandler: errorHandler,
@@ -79,10 +83,16 @@ func (p *Port) Route(r chi.Router) chi.Router {
 	if r == nil {
 		r = chi.NewRouter()
 	}
-
-	r.Use(otelhttp.NewMiddleware("ucmsv2-api"))
+	baseCfg := otelchimetric.NewBaseConfig(p.serviceName, otelchimetric.WithMeterProvider(otel.GetMeterProvider()))
+	r.Use(
+		middlewares.OTel,
+		otelchimetric.NewRequestDurationMillis(baseCfg),
+		otelchimetric.NewRequestInFlight(baseCfg),
+		otelchimetric.NewResponseSizeBytes(baseCfg),
+	)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.RealIP)
+	r.Use(middlewares.OTel)
 	r.Use(middleware.Logger)
 	r.Use(middleware.AllowContentType("application/json"))
 	r.Use(middleware.Recoverer)
