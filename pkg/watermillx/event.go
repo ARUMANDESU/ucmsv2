@@ -19,11 +19,12 @@ import (
 )
 
 func NewEventProcessor(router *message.Router, conn *pgxpool.Pool, logger watermill.LoggerAdapter) (*cqrs.EventProcessor, error) {
+	const op = "watermillx.NewEventProcessor"
 	return cqrs.NewEventProcessorWithConfig(router, cqrs.EventProcessorConfig{
 		GenerateSubscribeTopic: func(params cqrs.EventProcessorGenerateSubscribeTopicParams) (string, error) {
 			evt, ok := params.EventHandler.NewEvent().(event.Event)
 			if !ok {
-				return "", fmt.Errorf("event handler %T does not implement event.Event", params.EventHandler.NewEvent())
+				return "", fmt.Errorf("%s: event handler %T does not implement event.Event", op, params.EventHandler.NewEvent())
 			}
 			return MessageTopic(evt)
 		},
@@ -47,11 +48,12 @@ func NewEventProcessor(router *message.Router, conn *pgxpool.Pool, logger waterm
 }
 
 func NewEventGroupProcessor(router *message.Router, conn *pgxpool.Pool, logger watermill.LoggerAdapter) (*cqrs.EventGroupProcessor, error) {
+	const op = "watermillx.NewEventGroupProcessor"
 	return cqrs.NewEventGroupProcessorWithConfig(router, cqrs.EventGroupProcessorConfig{
 		GenerateSubscribeTopic: func(params cqrs.EventGroupProcessorGenerateSubscribeTopicParams) (string, error) {
 			evt, ok := params.EventGroupHandlers[0].NewEvent().(event.Event) // all handlers' events' stream names have to be the same
 			if !ok {
-				return "", fmt.Errorf("event %T does not implement event.Event", params.EventGroupHandlers[0].NewEvent())
+				return "", fmt.Errorf("%s: event %T does not implement event.Event", op, params.EventGroupHandlers[0].NewEvent())
 			}
 
 			return MessageTopic(evt)
@@ -108,11 +110,12 @@ func NewEventGroupProcessorForTests(router *message.Router, conn *pgxpool.Pool, 
 }
 
 func NewEventProcessorForTests(router *message.Router, conn *pgxpool.Pool, logger watermill.LoggerAdapter) (*cqrs.EventProcessor, error) {
+	const op = "watermillx.NewEventProcessorForTests"
 	return cqrs.NewEventProcessorWithConfig(router, cqrs.EventProcessorConfig{
 		GenerateSubscribeTopic: func(params cqrs.EventProcessorGenerateSubscribeTopicParams) (string, error) {
 			evt, ok := params.EventHandler.NewEvent().(event.Event)
 			if !ok {
-				return "", fmt.Errorf("event handler %T does not implement event.Event", params.EventHandler.NewEvent())
+				return "", fmt.Errorf("%s: event handler %T does not implement event.Event", op, params.EventHandler.NewEvent())
 			}
 			return MessageTopic(evt)
 		},
@@ -139,6 +142,7 @@ func NewEventProcessorForTests(router *message.Router, conn *pgxpool.Pool, logge
 }
 
 func NewTxEventBus(tx pgx.Tx, logger watermill.LoggerAdapter) (*cqrs.EventBus, error) {
+	const op = "watermillx.NewTxEventBus"
 	publisher, err := watermillSQL.NewPublisher(
 		watermillSQL.TxFromPgx(tx),
 		watermillSQL.PublisherConfig{
@@ -147,14 +151,14 @@ func NewTxEventBus(tx pgx.Tx, logger watermill.LoggerAdapter) (*cqrs.EventBus, e
 		logger,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create publisher: %w", err)
+		return nil, fmt.Errorf("%s: failed to create publisher: %w", op, err)
 	}
 
 	eventBus, err := cqrs.NewEventBusWithConfig(publisher, cqrs.EventBusConfig{
 		GeneratePublishTopic: func(params cqrs.GenerateEventPublishTopicParams) (string, error) {
 			evt, ok := params.Event.(event.Event)
 			if !ok {
-				return "", fmt.Errorf("event %T does not implement event.Event", params.Event)
+				return "", fmt.Errorf("%s: event %T does not implement event.Event", op, params.Event)
 			}
 
 			return MessageTopic(evt)
@@ -164,25 +168,26 @@ func NewTxEventBus(tx pgx.Tx, logger watermill.LoggerAdapter) (*cqrs.EventBus, e
 		OnPublish: nil,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create event bus: %w", err)
+		return nil, fmt.Errorf("%s: failed to create event bus: %w", op, err)
 	}
 
 	return eventBus, nil
 }
 
 func Publish(ctx context.Context, tx pgx.Tx, logger watermill.LoggerAdapter, evts ...event.Event) error {
+	const op = "watermillx.Publish"
 	if len(evts) == 0 {
 		return nil
 	}
 
 	eventBus, err := NewTxEventBus(tx, logger)
 	if err != nil {
-		return fmt.Errorf("failed to create event bus: %w", err)
+		return fmt.Errorf("%s: failed to create event bus: %w", op, err)
 	}
 
 	for _, evt := range evts {
 		if err := eventBus.Publish(ctx, evt); err != nil {
-			return fmt.Errorf("failed to publish event %T: %w", evt, err)
+			return fmt.Errorf("%s: failed to publish event %T: %w", op, evt, err)
 		}
 	}
 
@@ -190,15 +195,17 @@ func Publish(ctx context.Context, tx pgx.Tx, logger watermill.LoggerAdapter, evt
 }
 
 func MessageTopic(event event.Event) (string, error) {
+	const op = "watermillx.MessageTopic"
 	streamName := event.GetStreamName()
 	if streamName == "" {
-		return "", fmt.Errorf("stream name is empty, event: %T", event)
+		return "", fmt.Errorf("%s: stream name is empty, event: %T", op, event)
 	}
 
 	return streamName, nil
 }
 
 func InitializeEventSchema(ctx context.Context, conn *pgxpool.Pool, logger watermill.LoggerAdapter) error {
+	const op = "watermillx.InitializeEventSchema"
 	subscriber, err := watermillSQL.NewSubscriber(
 		watermillSQL.BeginnerFromPgx(conn),
 		watermillSQL.SubscriberConfig{
@@ -209,7 +216,7 @@ func InitializeEventSchema(ctx context.Context, conn *pgxpool.Pool, logger water
 		logger,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create subscriber: %w", err)
+		return fmt.Errorf("%s: failed to create subscriber: %w", op, err)
 	}
 
 	events := []string{
@@ -222,7 +229,7 @@ func InitializeEventSchema(ctx context.Context, conn *pgxpool.Pool, logger water
 
 	for _, eventStream := range events {
 		if err := subscriber.SubscribeInitialize(eventStream); err != nil {
-			return fmt.Errorf("failed to initialize event schema for %s: %w", eventStream, err)
+			return fmt.Errorf("%s: failed to initialize event schema for %s: %w", op, eventStream, err)
 		}
 	}
 

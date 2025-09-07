@@ -7,29 +7,27 @@ receivers:
                 endpoint: 0.0.0.0:4318
 
 processors:
-    batch:
     tail_sampling:
         decision_wait: 10s
         num_traces: 100
         expected_new_traces_per_sec: 10
         policies:
             [
-                # turn off all policies for now
-                # {
-                #     name: error_policy,
-                #     type: status_code,
-                #     status_code: { status_codes: [ERROR, UNSET] },
-                # },
-                # {
-                #     name: latency_policy,
-                #     type: latency,
-                #     latency: { threshold_ms: 600, upper_threshold_ms: 10000 },
-                # },
-                # {
-                #     name: probabilistic_policy,
-                #     type: probabilistic,
-                #     probabilistic: { sampling_percentage: 10 },
-                # },
+                {
+                    name: error_policy,
+                    type: status_code,
+                    status_code: { status_codes: [ERROR, UNSET] },
+                },
+                {
+                    name: latency_policy,
+                    type: latency,
+                    latency: { threshold_ms: 600, upper_threshold_ms: 10000 },
+                },
+                {
+                    name: probabilistic_policy,
+                    type: probabilistic,
+                    probabilistic: { sampling_percentage: 10 },
+                },
             ]
 
 exporters:
@@ -58,11 +56,11 @@ service:
     pipelines:
         traces:
             receivers: [otlp]
-            processors: [batch]
+            processors: []
             exporters: [otlp]
         metrics:
             receivers: [otlp]
-            processors: [batch]
+            processors: []
             exporters: [prometheus]
         logs:
             receivers: [otlp]

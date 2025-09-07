@@ -77,14 +77,15 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, span 
 	var valErrs validation.Errors
 	var valErr validation.Error
 
+	var isClientErr bool
 	switch {
-
 	case errors.As(err, &appErrs):
 		writeError(w, r, httpErrorResponse{
 			Status:  appErrs.HTTPStatusCode(),
 			Code:    appErrs.Code(),
 			Message: appErrs.Localize(localizer),
 		})
+		isClientErr = appErrs.HTTPStatusCode() >= 400 && appErrs.HTTPStatusCode() < 500
 	case errors.As(err, &appErr):
 		writeError(w, r, httpErrorResponse{
 			Status:  appErr.HTTPStatusCode(),
@@ -92,6 +93,7 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, span 
 			Message: appErr.Localize(localizer),
 			Details: appErr.Details,
 		})
+		isClientErr = appErr.HTTPStatusCode() >= 400 && appErr.HTTPStatusCode() < 500
 	case errors.As(err, &valErrs):
 		var msg strings.Builder
 		for field, fieldErr := range valErrs {
@@ -114,6 +116,7 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, span 
 			Code:    errorx.CodeValidationFailed,
 			Message: msg.String(),
 		})
+		isClientErr = true
 	case errors.As(err, &valErr):
 		writeError(w, r, httpErrorResponse{
 			Status: http.StatusBadRequest,
@@ -123,6 +126,7 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, span 
 				TemplateData: valErr.Params(),
 			}),
 		})
+		isClientErr = true
 	default:
 		slog.ErrorContext(r.Context(), "Unhandled error", "error", err)
 		internalErr := errorx.NewInternalError().WithCause(err, "handle_error")
@@ -131,6 +135,11 @@ func (h *ErrorHandler) HandleError(w http.ResponseWriter, r *http.Request, span 
 			Code:    internalErr.Code,
 			Message: internalErr.Localize(localizer),
 		})
+		return
+	}
+
+	if isClientErr {
+		slog.WarnContext(r.Context(), "HTTP client error response", "error", err.Error())
 		return
 	}
 

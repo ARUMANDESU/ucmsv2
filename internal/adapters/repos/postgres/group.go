@@ -11,8 +11,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/watermillx"
 )
 
 type GroupRepo struct {
@@ -41,7 +43,7 @@ func NewGroupRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *GroupRepo
 		tracer:  t,
 		logger:  l,
 		pool:    pool,
-		wlogger: watermill.NewSlogLogger(l),
+		wlogger: watermillx.NewOTelFilteredSlogLogger(l, env.Current().SlogLevel()),
 	}
 }
 

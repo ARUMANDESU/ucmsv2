@@ -100,14 +100,10 @@ func main() {
 	startTime := time.Now()
 	ctx := context.Background()
 
-	// Load configuration from environment
 	config := loadConfig()
 
 	env.SetMode(config.Mode)
-	// Set up logging
-	// setupLogging(config.LogPath, config.Mode)
 
-	// Set up tracing (in production you'd configure a proper tracing provider)
 	shutdownOTel, err := setupOTelSDK(ctx, config)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to set up OpenTelemetry SDK", "error", err)
@@ -127,7 +123,6 @@ func main() {
 		"port", config.Port,
 	)
 
-	// Set up database
 	pool, err := setupDatabase(ctx, config)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to setup database", "error", err)
@@ -136,24 +131,22 @@ func main() {
 	}
 	defer pool.Close()
 
-	// Set up repositories
 	repos := setupRepositories(pool)
 
 	infrastructure := setupInfrastructure(ctx, config)
 
-	// Set up event processing
-	eventRouter, err := setupEventProcessing(ctx, pool)
+	wlogger := watermillx.NewOTelFilteredSlogLogger(slog.Default(), env.Current().SlogLevel())
+
+	eventRouter, err := setupEventProcessing(ctx, pool, wlogger)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to setup event processing", "error", err)
 		fmt.Fprintf(os.Stderr, "Failed to setup event processing: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Set up applications
 	apps := setupApplications(config, repos, infrastructure)
 
-	// Set up event handlers
-	wmport, err := watermillport.NewPort(eventRouter, pool, watermill.NewSlogLogger(slog.Default()))
+	wmport, err := watermillport.NewPort(eventRouter, pool, wlogger)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to create Watermill port", "error", err)
 		fmt.Fprintf(os.Stderr, "Failed to create Watermill port: %v\n", err)
@@ -357,9 +350,7 @@ func setupInfrastructure(ctx context.Context, config *Config) *Infrastructure {
 	}
 }
 
-func setupEventProcessing(ctx context.Context, pool *pgxpool.Pool) (*message.Router, error) {
-	wlogger := watermill.NewSlogLogger(slog.Default())
-
+func setupEventProcessing(ctx context.Context, pool *pgxpool.Pool, wlogger watermill.LoggerAdapter) (*message.Router, error) {
 	router, err := message.NewRouter(message.RouterConfig{}, wlogger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create watermill router: %w", err)

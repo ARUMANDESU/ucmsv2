@@ -14,6 +14,7 @@ import (
 
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/staffinvitation"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/env"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/logging"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/otelx"
@@ -43,7 +44,7 @@ func NewStaffRepo(pool *pgxpool.Pool, t trace.Tracer, l *slog.Logger) *StaffRepo
 		tracer:  t,
 		logger:  l,
 		pool:    pool,
-		wlogger: watermill.NewSlogLogger(l),
+		wlogger: watermillx.NewOTelFilteredSlogLogger(l, env.Current().SlogLevel()),
 	}
 }
 

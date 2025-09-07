@@ -1,5 +1,7 @@
 package env
 
+import "log/slog"
+
 type Mode string
 
 const (
@@ -32,5 +34,16 @@ func (e Mode) Validate() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (e Mode) SlogLevel() slog.Level {
+	switch e {
+	case Test, Local, Dev:
+		return slog.LevelDebug
+	case Prod:
+		return slog.LevelInfo
+	default:
+		return slog.LevelInfo
 	}
 }

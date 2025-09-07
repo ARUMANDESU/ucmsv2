@@ -29,6 +29,7 @@ import (
 	registrationapp "gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
 	staffapp "gitlab.com/ucmsv2/ucms-backend/internal/application/staff"
 	studentapp "gitlab.com/ucmsv2/ucms-backend/internal/application/student"
+	userapp "gitlab.com/ucmsv2/ucms-backend/internal/application/user"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/group"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
 	httpport "gitlab.com/ucmsv2/ucms-backend/internal/ports/http"
@@ -81,6 +82,7 @@ type Application struct {
 	Student      *studentapp.App
 	Staff        *staffapp.App
 	Auth         *authapp.App
+	User         *userapp.App
 }
 
 func (s *IntegrationTestSuite) SetupSuite() {
@@ -195,12 +197,19 @@ func (s *IntegrationTestSuite) createApplication() {
 		RefreshTokenExpDuration: nil,
 	})
 
+	userApp := userapp.NewApp(userapp.Args{
+		S3BaseURL:     fixtures.ValidS3BaseURL,
+		AvatarStorage: nil,
+		UserRepo:      userRepo,
+	})
+
 	s.app = &Application{
 		Registration: regApp,
 		Mail:         mailApp,
 		Student:      studentApp,
 		Staff:        staffApp,
 		Auth:         authApp,
+		User:         userApp,
 	}
 
 	s.httpHandler = chi.NewRouter()
@@ -215,6 +224,8 @@ func (s *IntegrationTestSuite) createApplication() {
 		InvitationTokenAlg:      fixtures.InvitationTokenAlg,
 		InvitationTokenKey:      fixtures.InvitationTokenKey,
 		InvitationTokenExp:      fixtures.InvitationTokenExp,
+		ServiceName:             fixtures.ServiceName,
+		UserApp:                 userApp,
 	})
 	s.HTTPPort.Route(s.httpHandler)
 }

@@ -190,6 +190,7 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 	refreshCookie, err := r.Cookie(RefreshJWTCookie)
 	if err != nil {
 		h.resetCookies(w)
+		err = errorx.NewInvalidCredentials().WithCause(err, op)
 		h.errhandler.HandleError(w, r, span, err, "failed to get refresh token from cookie")
 		return
 	}
@@ -197,6 +198,7 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 	err = validation.Validate(refreshCookie.Value, validation.Required, validation.Length(1, 1000))
 	if err != nil {
 		h.resetCookies(w)
+		err = errorx.NewInvalidCredentials().WithCause(err, op)
 		h.errhandler.HandleError(w, r, span, errorx.NewInvalidCredentials().WithCause(err, op), "invalid refresh token in cookie")
 		return
 	}
@@ -204,6 +206,7 @@ func (h *HTTP) Refresh(w http.ResponseWriter, r *http.Request) {
 	res, err := h.app.RefreshHandle(ctx, authapp.Refresh{RefreshToken: refreshCookie.Value})
 	if err != nil {
 		h.resetCookies(w)
+		err = errorx.NewInvalidCredentials().WithCause(err, op)
 		h.errhandler.HandleError(w, r, span, err, "failed to refresh token")
 		return
 	}
