@@ -2,6 +2,7 @@ package http
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 
@@ -162,4 +163,29 @@ func (h *Helper) AcceptStaffInvitation(t *testing.T, req staffhttp.AcceptInvitat
 		opt(r)
 	}
 	return h.Do(t, r.Build())
+}
+
+func (h *Helper) UpdateUserAvatar(t *testing.T, file io.Reader, opts ...RequestBuilderOptions) *Response {
+	var body io.Reader
+	var contentType string
+
+	if file != nil {
+		fileData, err := io.ReadAll(file)
+		if err != nil {
+			t.Fatalf("failed to read file data: %v", err)
+		}
+
+		body, contentType = NewMultipartFormBuilder().AddFile("avatar", "avatar.jpg", "image/jpeg", fileData).Build()
+	}
+
+	req := NewRequest("PATCH", "/v1/users/me/avatar")
+	if body != nil {
+		req.WithBody(body).WithHeader("Content-Type", contentType)
+	}
+
+	for _, opt := range opts {
+		opt(req)
+	}
+
+	return h.Do(t, req.Build())
 }

@@ -47,9 +47,15 @@ func (h *Helper) Do(t *testing.T, req Request) *Response {
 
 	var body io.Reader
 	if req.Body != nil {
-		jsonbytes, err := json.Marshal(req.Body)
-		require.NoError(t, err)
-		body = bytes.NewReader(jsonbytes)
+		// Check if the body is already an io.Reader (for multipart forms)
+		if reader, ok := req.Body.(io.Reader); ok {
+			body = reader
+		} else {
+			// Otherwise, treat it as JSON
+			jsonbytes, err := json.Marshal(req.Body)
+			require.NoError(t, err)
+			body = bytes.NewReader(jsonbytes)
+		}
 	}
 
 	httpReq := httptest.NewRequest(req.Method, req.Path, body)
@@ -333,6 +339,11 @@ func NewRequest(method, path string) *RequestBuilder {
 
 func (b *RequestBuilder) WithContext(ctx context.Context) *RequestBuilder {
 	b.req.Context = ctx
+	return b
+}
+
+func (b *RequestBuilder) WithBody(body any) *RequestBuilder {
+	b.req.Body = body
 	return b
 }
 

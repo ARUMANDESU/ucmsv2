@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/minio"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.opentelemetry.io/otel"
@@ -24,6 +25,7 @@ import (
 
 	ucmsv2 "gitlab.com/ucmsv2/ucms-backend"
 	postgresrepo "gitlab.com/ucmsv2/ucms-backend/internal/adapters/repos/postgres"
+	"gitlab.com/ucmsv2/ucms-backend/internal/adapters/services/s3"
 	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
 	"gitlab.com/ucmsv2/ucms-backend/internal/application/mail"
 	registrationapp "gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
@@ -42,7 +44,14 @@ import (
 	"gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/db"
 	"gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/event"
 	"gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/http"
+	s3helper "gitlab.com/ucmsv2/ucms-backend/tests/integration/framework/s3"
 	"gitlab.com/ucmsv2/ucms-backend/tests/mocks"
+)
+
+const (
+	MinIOUsername = "test-minio"
+	MinIOPassword = "test-minio-password"
+	MinIOBucket   = "ucms-test-bucket"
 )
 
 type IntegrationTestSuite struct {
@@ -51,8 +60,10 @@ type IntegrationTestSuite struct {
 	HTTPPort *httpport.Port
 
 	// Infrastructure
-	pgContainer     *postgres.PostgresContainer
-	pgPool          *pgxpool.Pool
+	pgContainer    *postgres.PostgresContainer
+	pgPool         *pgxpool.Pool
+	minioContainer *minio.MinioContainer
+
 	watermillRouter *message.Router
 	traceProvider   trace.TracerProvider
 	traceRecorder   *tracetest.SpanRecorder
@@ -71,9 +82,10 @@ type IntegrationTestSuite struct {
 	DB      *db.Helper
 	Event   *event.Helper
 	Builder *builders.Factory
+	S3      *s3helper.Helper
 
-	// Mocks
 	MockMailSender *mocks.MockMailSender
+	S3Client       *s3.Client
 }
 
 type Application struct {
@@ -95,6 +107,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	s.startPostgreSQL(ctx)
 	s.runMigrations()
+	s.startMinIO()
 	s.initializeWatermill()
 	s.createApplication()
 	s.createWatermillPort()
@@ -127,6 +140,15 @@ func (s *IntegrationTestSuite) startPostgreSQL(ctx context.Context) {
 	s.Require().NoError(err)
 }
 
+func (s *IntegrationTestSuite) startMinIO() {
+	minioContainer, err := minio.Run(s.Context(), "minio/minio:latest",
+		minio.WithUsername(MinIOUsername),
+		minio.WithPassword(MinIOPassword),
+	)
+	s.Require().NoError(err)
+	s.minioContainer = minioContainer
+}
+
 func (s *IntegrationTestSuite) runMigrations() {
 	connStr, _ := s.pgContainer.ConnectionString(context.Background(), "sslmode=disable")
 	connStr = strings.Replace(connStr, "postgres://", "pgx://", 1)
@@ -152,6 +174,29 @@ func (s *IntegrationTestSuite) initializeWatermill() {
 }
 
 func (s *IntegrationTestSuite) createApplication() {
+	endpoint, err := s.minioContainer.Endpoint(s.Context(), "")
+	s.Require().NoError(err)
+
+	// Ensure endpoint has http:// prefix for S3 client
+	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
+		endpoint = "http://" + endpoint
+	}
+
+	s3Client, err := s3.NewClient(s.Context(),
+		endpoint,
+		MinIOUsername,
+		MinIOPassword,
+		MinIOBucket,
+		"us-east-1",
+	)
+	s.Require().NoError(err)
+
+	// Create the bucket for tests
+	err = s3Client.CreateBucket(s.Context())
+	s.Require().NoError(err)
+
+	s.S3Client = s3Client
+
 	registrationRepo := postgresrepo.NewRegistrationRepo(s.pgPool, nil, nil)
 	userRepo := postgresrepo.NewUserRepo(s.pgPool, nil, nil)
 	studentRepo := postgresrepo.NewStudentRepo(s.pgPool, nil, nil)
@@ -199,7 +244,7 @@ func (s *IntegrationTestSuite) createApplication() {
 
 	userApp := userapp.NewApp(userapp.Args{
 		S3BaseURL:     fixtures.ValidS3BaseURL,
-		AvatarStorage: nil,
+		AvatarStorage: s3Client,
 		UserRepo:      userRepo,
 	})
 
@@ -279,6 +324,7 @@ func (s *IntegrationTestSuite) initializeHelpers() {
 	s.DB = db.NewHelper(db.Args{Pool: s.pgPool})
 	s.Event = event.NewHelper(s.pgPool)
 	s.Builder = builders.NewFactory()
+	s.S3 = s3helper.NewHelper(s.S3Client)
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
@@ -286,9 +332,11 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 		s.pgPool.Close()
 	}
 
+	if s.minioContainer != nil {
+		_ = s.minioContainer.Terminate(s.Context())
+	}
 	if s.pgContainer != nil {
-		ctx := context.Background()
-		_ = s.pgContainer.Terminate(ctx)
+		_ = s.pgContainer.Terminate(s.Context())
 	}
 
 	if s.watermillRouter != nil {

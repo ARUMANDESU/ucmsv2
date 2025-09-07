@@ -23,6 +23,10 @@ func NewUserAssertions(t *testing.T, u *User) *UserAssertions {
 	return &UserAssertions{t: t, user: u}
 }
 
+func (u *UserAssertions) User() *User {
+	return u.user
+}
+
 func (u *UserAssertions) AssertIDNotEmpty() *UserAssertions {
 	u.t.Helper()
 	assert.NotEmpty(u.t, u.user.id, "ID should not be empty")
@@ -93,6 +97,12 @@ func (u *UserAssertions) AssertCreatedAtWithin(expected time.Time, delta time.Du
 func (u *UserAssertions) AssertUpdatedAtWithin(expected time.Time, delta time.Duration) *UserAssertions {
 	u.t.Helper()
 	assert.WithinDuration(u.t, expected, u.user.updatedAt, delta, "UpdatedAt mismatch")
+	return u
+}
+
+func (u *UserAssertions) AssertAvatarNotEmpty() *UserAssertions {
+	u.t.Helper()
+	assert.NotEmpty(u.t, u.user.avatar, "Avatar should not be empty")
 	return u
 }
 
@@ -203,6 +213,12 @@ func (s *StaffAssertions) AssertAvatar(t *testing.T, expected avatars.Avatar) *S
 	return s
 }
 
+func (s *StaffAssertions) AssertAvatarNotEmpty(t *testing.T) *StaffAssertions {
+	t.Helper()
+	assert.NotEmpty(t, s.staff.user.avatar, "Avatar should not be empty")
+	return s
+}
+
 func (s *StaffAssertions) AssertEmail(t *testing.T, expected string) *StaffAssertions {
 	t.Helper()
 	assert.Equal(t, expected, s.staff.user.email, "Email mismatch")
@@ -227,12 +243,28 @@ func (s *StaffAssertions) AssertPassHash(t *testing.T, expected []byte) *StaffAs
 	return s
 }
 
+func (s *StaffAssertions) AssertCreatedAtWithin(t *testing.T, expected time.Time, delta time.Duration) *StaffAssertions {
+	t.Helper()
+	assert.WithinDuration(t, expected, s.staff.user.createdAt, delta, "CreatedAt mismatch")
+	return s
+}
+
+func (s *StaffAssertions) AssertUpdatedAtWithin(t *testing.T, expected time.Time, delta time.Duration) *StaffAssertions {
+	t.Helper()
+	assert.WithinDuration(t, expected, s.staff.user.updatedAt, delta, "UpdatedAt mismatch")
+	return s
+}
+
 type StudentAssertions struct {
 	student *Student
 }
 
 func NewStudentAssertions(s *Student) *StudentAssertions {
 	return &StudentAssertions{student: s}
+}
+
+func (s *StudentAssertions) Student() *Student {
+	return s.student
 }
 
 func (s *StudentAssertions) AssertByRegistrationArgs(t *testing.T, args RegisterStudentArgs) *StudentAssertions {
@@ -298,6 +330,12 @@ func (s *StudentAssertions) AssertAvatar(t *testing.T, expected avatars.Avatar) 
 	return s
 }
 
+func (s *StudentAssertions) AssertAvatarNotEmpty(t *testing.T) *StudentAssertions {
+	t.Helper()
+	assert.NotEmpty(t, s.student.user.avatar, "Avatar should not be empty")
+	return s
+}
+
 func (s *StudentAssertions) AssertEmail(t *testing.T, expected string) *StudentAssertions {
 	t.Helper()
 	assert.Equal(t, expected, s.student.user.email, "Email mismatch")
@@ -326,6 +364,18 @@ func (s *StudentAssertions) AssertPassword(t *testing.T, expected string) *Stude
 func (s *StudentAssertions) AssertPassHash(t *testing.T, expected []byte) *StudentAssertions {
 	t.Helper()
 	assert.Equal(t, expected, s.student.user.passHash, "PassHash mismatch")
+	return s
+}
+
+func (s *StudentAssertions) AssertCreatedAtWithin(t *testing.T, expected time.Time, delta time.Duration) *StudentAssertions {
+	t.Helper()
+	assert.WithinDuration(t, expected, s.student.user.createdAt, delta, "CreatedAt mismatch")
+	return s
+}
+
+func (s *StudentAssertions) AssertUpdatedAtWithin(t *testing.T, expected time.Time, delta time.Duration) *StudentAssertions {
+	t.Helper()
+	assert.WithinDuration(t, expected, s.student.user.updatedAt, delta, "UpdatedAt mismatch")
 	return s
 }
 

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -273,7 +274,7 @@ func (h *Helper) SeedUser(t *testing.T, u *user.User) {
 	err := h.user.SaveUser(t.Context(), u)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 			if err := h.user.UpdateUser(t.Context(), u.ID(), func(ctx context.Context, dbU *user.User) error {
 				*dbU = *u
 				return nil
