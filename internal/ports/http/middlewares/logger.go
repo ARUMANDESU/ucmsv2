@@ -20,7 +20,7 @@ func Logger(next http.Handler) http.Handler {
 
 		t1 := time.Now()
 		defer func() {
-			logstr := fmt.Sprintf("HTTP Request %s %s://%s%s %s from %s - %d %dB in %s",
+			logstr := fmt.Sprintf("HTTP Request Completed %s %s://%s%s %s from %s - %d %dB in %s",
 				r.Method,
 				scheme,
 				r.Host,

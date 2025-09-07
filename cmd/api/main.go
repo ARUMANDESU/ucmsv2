@@ -118,14 +118,18 @@ func main() {
 		}
 	}()
 
-	slog.InfoContext(ctx, "Starting UCMS API server",
-		"mode", config.Mode,
-		"port", config.Port,
+	logger := slog.With(
+		slog.String("service.name", config.Service.Name),
+		slog.String("service.namespace", config.Service.Namespace),
+		slog.String("service.version", config.Service.Version),
+		slog.String("service.instance.id", config.Service.InstanceId),
+		slog.String("mode", config.Mode.String()),
 	)
+	logger.InfoContext(ctx, "Starting UCMS API server")
 
 	pool, err := setupDatabase(ctx, config)
 	if err != nil {
-		slog.ErrorContext(ctx, "Failed to setup database", "error", err)
+		logger.ErrorContext(ctx, "Failed to setup database", "error", err)
 		fmt.Fprintf(os.Stderr, "Failed to setup database: %v\n", err)
 		os.Exit(1)
 	}
@@ -139,7 +143,7 @@ func main() {
 
 	eventRouter, err := setupEventProcessing(ctx, pool, wlogger)
 	if err != nil {
-		slog.ErrorContext(ctx, "Failed to setup event processing", "error", err)
+		logger.ErrorContext(ctx, "Failed to setup event processing", "error", err)
 		fmt.Fprintf(os.Stderr, "Failed to setup event processing: %v\n", err)
 		os.Exit(1)
 	}
@@ -148,7 +152,7 @@ func main() {
 
 	wmport, err := watermillport.NewPort(eventRouter, pool, wlogger)
 	if err != nil {
-		slog.ErrorContext(ctx, "Failed to create Watermill port", "error", err)
+		logger.ErrorContext(ctx, "Failed to create Watermill port", "error", err)
 		fmt.Fprintf(os.Stderr, "Failed to create Watermill port: %v\n", err)
 		os.Exit(1)
 	}
@@ -157,29 +161,27 @@ func main() {
 		Mail:         apps.Mail.Event,
 		Student:      apps.Student.Event,
 	}); err != nil {
-		slog.ErrorContext(ctx, "Failed to run Watermill port", "error", err)
+		logger.ErrorContext(ctx, "Failed to run Watermill port", "error", err)
 		fmt.Fprintf(os.Stderr, "Failed to run Watermill port: %v\n", err)
 		os.Exit(1)
 	}
 
 	go func() {
-		// Start event router
 		if err := eventRouter.Run(ctx); err != nil {
-			slog.ErrorContext(ctx, "Failed to start event router", "error", err)
+			logger.ErrorContext(ctx, "Failed to start event router", "error", err)
 			fmt.Fprintf(os.Stderr, "Failed to start event router: %v\n", err)
 			os.Exit(1)
 		}
 		defer func() {
 			if err := eventRouter.Close(); err != nil {
-				slog.ErrorContext(ctx, "Failed to close event router", "error", err)
+				logger.ErrorContext(ctx, "Failed to close event router", "error", err)
 			}
 		}()
 	}()
 
-	// Create initial staff user if configured
 	hasStaff, err := repos.Staff.HasAnyStaff(ctx)
 	if err != nil {
-		slog.ErrorContext(ctx, "Failed to check for existing staff users", "error", err)
+		logger.ErrorContext(ctx, "Failed to check for existing staff users", "error", err)
 		fmt.Fprintf(os.Stderr, "Failed to check for existing staff users: %v\n", err)
 		os.Exit(1)
 	}
@@ -187,52 +189,49 @@ func main() {
 	if config.InitialStaff != nil && !hasStaff {
 		initStaff, err := user.CreateInitialStaff(*config.InitialStaff)
 		if err != nil {
-			slog.ErrorContext(ctx, "Failed to create initial staff user", "error", err)
+			logger.ErrorContext(ctx, "Failed to create initial staff user", "error", err)
 			fmt.Fprintf(os.Stderr, "Failed to create initial staff user: %v\n", err)
 			os.Exit(1)
 		}
 		if err := repos.Staff.SaveStaff(ctx, initStaff); err != nil {
-			slog.ErrorContext(ctx, "Failed to save initial staff user", "error", err)
+			logger.ErrorContext(ctx, "Failed to save initial staff user", "error", err)
 			fmt.Fprintf(os.Stderr, "Failed to save initial staff user: %v\n", err)
 			os.Exit(1)
 		}
 
-		slog.InfoContext(ctx, "Initial staff user created", "email", config.InitialStaff.Email)
+		logger.InfoContext(ctx, "Initial staff user created", "email", config.InitialStaff.Email)
 	} else {
-		slog.InfoContext(ctx, "Skipping initial staff user creation", "hasStaff", hasStaff, "initialStaffConfigured", config.InitialStaff != nil)
+		logger.InfoContext(ctx, "Skipping initial staff user creation", "hasStaff", hasStaff, "initialStaffConfigured", config.InitialStaff != nil)
 	}
-	// Set up HTTP server
 	httpServer := setupHTTPServer(config, apps)
 
-	// Start server
 	go func() {
-		slog.InfoContext(ctx, "Starting HTTP server", "port", config.Port)
+		logger.InfoContext(ctx, "Starting HTTP server", "port", config.Port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.ErrorContext(ctx, "HTTP server error", "error", err)
+			logger.ErrorContext(ctx, "HTTP server error", "error", err)
 			fmt.Fprintf(os.Stderr, "HTTP server error: %v\n", err)
 			os.Exit(1)
 		}
 	}()
 
-	slog.InfoContext(ctx, "Server started in", "duration", time.Since(startTime).String())
-	// Wait for shutdown signal
+	logger.InfoContext(ctx, fmt.Sprintf("UCMS API server started in %s", time.Since(startTime).String()))
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	slog.InfoContext(ctx, "Shutting down server...")
+	logger.InfoContext(ctx, "Shutting down server...")
 
-	// Graceful shutdown
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		slog.ErrorContext(shutdownCtx, "Server forced to shutdown", "error", err)
+		logger.ErrorContext(shutdownCtx, "Server forced to shutdown", "error", err)
 		fmt.Fprintf(os.Stderr, "Server forced to shutdown: %v\n", err)
 		os.Exit(1)
 	}
 
-	slog.InfoContext(ctx, "Server exited")
+	logger.InfoContext(ctx, "Server exited")
 }
 
 func loadConfig() *Config {
