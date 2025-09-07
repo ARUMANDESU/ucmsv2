@@ -7,8 +7,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
-	otelchimetric "github.com/riandyrn/otelchi/metric"
-	"go.opentelemetry.io/otel"
 
 	authapp "gitlab.com/ucmsv2/ucms-backend/internal/application/auth"
 	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
@@ -92,17 +90,10 @@ func (p *Port) Route(r chi.Router) chi.Router {
 	if r == nil {
 		r = chi.NewRouter()
 	}
-	baseCfg := otelchimetric.NewBaseConfig(p.serviceName, otelchimetric.WithMeterProvider(otel.GetMeterProvider()))
-	r.Use(
-		middlewares.OTel,
-		otelchimetric.NewRequestDurationMillis(baseCfg),
-		otelchimetric.NewRequestInFlight(baseCfg),
-		otelchimetric.NewResponseSizeBytes(baseCfg),
-	)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.RealIP)
 	r.Use(middlewares.OTel)
-	r.Use(middleware.Logger)
+	r.Use(middlewares.Logger)
 	r.Use(middleware.AllowContentType("application/json", "multipart/form-data"))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
