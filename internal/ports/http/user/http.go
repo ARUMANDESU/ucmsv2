@@ -15,6 +15,7 @@ import (
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
 	"gitlab.com/ucmsv2/ucms-backend/internal/ports/http/middlewares"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/ctxs"
+	"gitlab.com/ucmsv2/ucms-backend/pkg/errorx"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/httpx"
 )
 
@@ -78,12 +79,14 @@ func (h *HTTP) UpdateAvatar(w http.ResponseWriter, r *http.Request) {
 
 	err = r.ParseMultipartForm(usercmd.MaxAvatarSize)
 	if err != nil {
+		err = errorx.NewInvalidRequest().WithCause(err, op)
 		h.errhandler.HandleError(w, r, span, err, "failed to parse multipart form")
 		return
 	}
 
 	file, header, err := r.FormFile("avatar")
 	if err != nil {
+		err = errorx.NewInvalidRequest().WithCause(err, op)
 		h.errhandler.HandleError(w, r, span, err, "failed to get avatar file from form")
 		return
 	}

@@ -83,10 +83,6 @@ func (c *Client) GetObject(ctx context.Context, key string) ([]byte, error) {
 	return data, nil
 }
 
-func (c *Client) Bucket() string {
-	return c.bucket
-}
-
 func (c *Client) CreateBucket(ctx context.Context) error {
 	const op = "s3.CreateBucket"
 	_, err := c.s3Client.CreateBucket(ctx, &s3.CreateBucketInput{
@@ -96,4 +92,8 @@ func (c *Client) CreateBucket(ctx context.Context) error {
 		return errorx.Wrap(err, op)
 	}
 	return nil
+}
+
+func (c *Client) Bucket() string {
+	return c.bucket
 }

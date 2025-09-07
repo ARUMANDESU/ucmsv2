@@ -160,6 +160,7 @@ func main() {
 		Registration: apps.Registration.Event,
 		Mail:         apps.Mail.Event,
 		Student:      apps.Student.Event,
+		User:         apps.User.Event,
 	}); err != nil {
 		logger.ErrorContext(ctx, "Failed to run Watermill port", "error", err)
 		fmt.Fprintf(os.Stderr, "Failed to run Watermill port: %v\n", err)

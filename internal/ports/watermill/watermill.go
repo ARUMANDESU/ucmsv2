@@ -12,6 +12,7 @@ import (
 	mailevent "gitlab.com/ucmsv2/ucms-backend/internal/application/mail/event"
 	"gitlab.com/ucmsv2/ucms-backend/internal/application/registration"
 	studentapp "gitlab.com/ucmsv2/ucms-backend/internal/application/student"
+	userapp "gitlab.com/ucmsv2/ucms-backend/internal/application/user"
 	"gitlab.com/ucmsv2/ucms-backend/pkg/watermillx"
 )
 
@@ -25,6 +26,7 @@ type AppEventHandlers struct {
 	Registration registration.Event
 	Mail         *mailevent.MailEventHandler
 	Student      studentapp.Event
+	User         userapp.Event
 }
 
 func NewPort(router *message.Router, conn *pgxpool.Pool, wmlogger watermill.LoggerAdapter) (*Port, error) {
@@ -71,6 +73,8 @@ func (p *Port) Run(ctx context.Context, handlers AppEventHandlers) error {
 		cqrs.NewEventHandler("MailOnStaffInvitationAccepted", handlers.Mail.HandleStaffInvitationAccepted),
 
 		cqrs.NewEventHandler("RegistrationOnStudentRegistered", handlers.Registration.Registration.StudentHandle),
+
+		cqrs.NewEventHandler("UserOnAvatarUpdated", handlers.User.AvatarUpdated.Handle),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to add event handlers: %w", err)

@@ -155,6 +155,7 @@ func (h *Helper) ClearAllEvents(t *testing.T) {
 		registration.EventStreamName,
 		user.StudentEventStreamName,
 		user.StaffEventStreamName,
+		user.UserEventStreamName,
 		staffinvitation.EventStreamName,
 	}
 
@@ -178,6 +179,20 @@ func RequireEvent[T event.Event](t *testing.T, h *Helper, e T) T {
 	// remove * from the type name
 	eventType = eventType[1:]
 
+	assertion := h.AssertEvent(t, eventType, e.GetStreamName())
+	assertion.Parse(&e)
+	return e
+}
+
+func RequireEventuallyEvent[T event.Event](t *testing.T, h *Helper, timeout time.Duration) T {
+	t.Helper()
+
+	var e T
+	eventType := fmt.Sprintf("%T", e)
+	// remove * from the type name
+	eventType = eventType[1:]
+
+	h.WaitForEvent(t, eventType, e.GetStreamName(), timeout)
 	assertion := h.AssertEvent(t, eventType, e.GetStreamName())
 	assertion.Parse(&e)
 	return e

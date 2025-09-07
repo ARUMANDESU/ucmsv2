@@ -28,3 +28,10 @@ func (h *Helper) RequireFile(t *testing.T, key string) {
 	_, err := h.s3.GetObject(t.Context(), key)
 	require.NoError(t, err, "failed to get file from S3")
 }
+
+func (h *Helper) RequireNoFile(t *testing.T, key string) {
+	t.Helper()
+
+	_, err := h.s3.GetObject(t.Context(), key)
+	require.Error(t, err, "expected error when getting non-existing file from S3")
+}

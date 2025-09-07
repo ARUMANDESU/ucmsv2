@@ -103,11 +103,12 @@ func (h *Helper) TruncateAll(t *testing.T) {
 	t.Helper()
 
 	tables := []string{
-		"registrations",
-		"students",
-		"users",
-		"groups",
 		"staff_invitations",
+		"registrations",
+		"staffs",
+		"students",
+		"groups",
+		"users",
 	}
 
 	ctx := context.Background()

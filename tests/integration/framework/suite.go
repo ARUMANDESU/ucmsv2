@@ -287,6 +287,7 @@ func (s *IntegrationTestSuite) createWatermillPort() {
 		Registration: s.app.Registration.Event,
 		Mail:         s.app.Mail.Event,
 		Student:      s.app.Student.Event,
+		User:         s.app.User.Event,
 	}
 
 	err = s.watermillPort.Run(context.Background(), handlers)

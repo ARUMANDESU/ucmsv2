@@ -68,7 +68,7 @@ func NewUserBuilder() *UserBuilder {
 		username:  fmt.Sprintf("user_%d_%d", rand.Uint()%1000, now.UnixNano()),
 		firstName: fixtures.TestStudent.FirstName,
 		lastName:  fixtures.TestStudent.LastName,
-		email:     fixtures.ValidStudentEmail,
+		email:     fmt.Sprintf("%s@test.com", uuid.NewString()),
 		password:  fixtures.TestStudent.Password,
 		passHash:  hash,
 		avatar:    avatars.Avatar{},

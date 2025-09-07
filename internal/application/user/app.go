@@ -2,16 +2,22 @@ package userapp
 
 import (
 	usercmd "gitlab.com/ucmsv2/ucms-backend/internal/application/user/cmd"
+	userevent "gitlab.com/ucmsv2/ucms-backend/internal/application/user/event"
 	"gitlab.com/ucmsv2/ucms-backend/internal/domain/user"
 )
 
 type App struct {
 	Command Command
 	Query   Query
+	Event   Event
 }
 
 type Command struct {
 	UpdateAvatar *usercmd.UpdateAvatarHandler
+}
+
+type Event struct {
+	AvatarUpdated *userevent.AvatarUpdatedHandler
 }
 
 type Query struct{}
@@ -30,6 +36,9 @@ func NewApp(args Args) *App {
 				Storage:             args.AvatarStorage,
 				Repo:                args.UserRepo,
 			}),
+		},
+		Event: Event{
+			AvatarUpdated: userevent.NewAvatarUpdatedHandler(args.AvatarStorage),
 		},
 		Query: Query{},
 	}

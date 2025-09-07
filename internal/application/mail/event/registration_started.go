@@ -20,9 +20,6 @@ import (
 const RegistrationStartedSubject = "Email Verification Code"
 
 func (h *MailEventHandler) HandleRegistrationStarted(ctx context.Context, e *registration.RegistrationStarted) error {
-	if e == nil {
-		return nil
-	}
 	const op = "mailevent.MailEventHandler.HandleRegistrationStarted"
 
 	l := h.logger.With(slog.String("event", "RegistrationStarted"), slog.String("registration.id", e.RegistrationID.String()))
