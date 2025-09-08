@@ -3,6 +3,7 @@ package roles
 type Global string
 
 const (
+	Unknown = Global("unknown")
 	Guest   = Global("guest")
 	Student = Global("student")
 	AITUSA  = Global("aitusa")

@@ -47,7 +47,7 @@ type UpdateAvatarHandlerArgs struct {
 	Tracer              trace.Tracer
 	AvatarDomainService *user.AvatarService
 	Storage             AvatarStorage
-	Repo                UserRepo
+	UserRepo            UserRepo
 }
 
 func NewUpdateAvatarHandler(args UpdateAvatarHandlerArgs) *UpdateAvatarHandler {
@@ -59,13 +59,13 @@ func NewUpdateAvatarHandler(args UpdateAvatarHandlerArgs) *UpdateAvatarHandler {
 		tracer:        args.Tracer,
 		avatarService: args.AvatarDomainService,
 		storage:       args.Storage,
-		repo:          args.Repo,
+		repo:          args.UserRepo,
 	}
 }
 
 func (h *UpdateAvatarHandler) Handle(ctx context.Context, cmd *UpdateAvatar) error {
 	const op = "usercmd.UpdateAvatarHandler.Handle"
-	ctx, span := h.tracer.Start(ctx, op, trace.WithAttributes(
+	ctx, span := h.tracer.Start(ctx, "UpdateAvatarHandler.Handle", trace.WithAttributes(
 		attribute.String("user.id", cmd.UserID.String()),
 		attribute.String("file.content_type", cmd.ContentType),
 		attribute.Int64("file.size", cmd.Size),

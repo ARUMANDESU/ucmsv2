@@ -118,13 +118,7 @@ func main() {
 		}
 	}()
 
-	logger := slog.With(
-		slog.String("service.name", config.Service.Name),
-		slog.String("service.namespace", config.Service.Namespace),
-		slog.String("service.version", config.Service.Version),
-		slog.String("service.instance.id", config.Service.InstanceId),
-		slog.String("mode", config.Mode.String()),
-	)
+	logger := slog.With(slog.String("mode", config.Mode.String()))
 	logger.InfoContext(ctx, "Starting UCMS API server")
 
 	pool, err := setupDatabase(ctx, config)

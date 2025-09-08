@@ -14,6 +14,7 @@ type App struct {
 
 type Command struct {
 	UpdateAvatar *usercmd.UpdateAvatarHandler
+	DeleteAvatar *usercmd.DeleteAvatarHandler
 }
 
 type Event struct {
@@ -34,7 +35,10 @@ func NewApp(args Args) *App {
 			UpdateAvatar: usercmd.NewUpdateAvatarHandler(usercmd.UpdateAvatarHandlerArgs{
 				AvatarDomainService: &user.AvatarService{},
 				Storage:             args.AvatarStorage,
-				Repo:                args.UserRepo,
+				UserRepo:            args.UserRepo,
+			}),
+			DeleteAvatar: usercmd.NewDeleteAvatarHandler(usercmd.DeleteAVatarHandlerArgs{
+				UserRepo: args.UserRepo,
 			}),
 		},
 		Event: Event{

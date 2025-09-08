@@ -69,6 +69,12 @@ func (u *UserAssertions) AssertAvatar(expected avatars.Avatar) *UserAssertions {
 	return u
 }
 
+func (u *UserAssertions) AssertEmptyAvatar() *UserAssertions {
+	u.t.Helper()
+	assert.Empty(u.t, u.user.avatar, "Avatar expected to be empty")
+	return u
+}
+
 func (u *UserAssertions) AssertEmail(expected string) *UserAssertions {
 	u.t.Helper()
 	assert.Equal(u.t, expected, u.user.email, "Email mismatch")

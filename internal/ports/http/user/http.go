@@ -62,6 +62,7 @@ func (h *HTTP) Route(r chi.Router) {
 		r.Use(h.middleware.Auth)
 
 		r.Patch("/me/avatar", h.UpdateAvatar)
+		r.Delete("/me/avatar", h.DeleteAvatar)
 	})
 }
 
@@ -116,6 +117,26 @@ func (h *HTTP) UpdateAvatar(w http.ResponseWriter, r *http.Request) {
 	err = h.cmd.UpdateAvatar.Handle(ctx, cmd)
 	if err != nil {
 		h.errhandler.HandleError(w, r, span, err, "failed to update avatar")
+		return
+	}
+
+	httpx.Success(w, r, http.StatusOK, nil)
+}
+
+func (h *HTTP) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.tracer.Start(r.Context(), "HTTP.DeleteAvatar")
+	defer span.End()
+
+	ctxUser, err := ctxs.UserFromCtx(ctx)
+	if err != nil {
+		h.errhandler.HandleError(w, r, span, err, "failed to get user from context")
+		return
+	}
+
+	ctxUser.SetSpanAttrs(span)
+
+	if err := h.cmd.DeleteAvatar.Handle(ctx, &usercmd.DeleteAvatar{UserID: ctxUser.ID}); err != nil {
+		h.errhandler.HandleError(w, r, span, err, "failed to delete user avatar")
 		return
 	}
 

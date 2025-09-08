@@ -2,6 +2,7 @@ package s3helper
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -34,4 +35,13 @@ func (h *Helper) RequireNoFile(t *testing.T, key string) {
 
 	_, err := h.s3.GetObject(t.Context(), key)
 	require.Error(t, err, "expected error when getting non-existing file from S3")
+}
+
+func (h *Helper) RequireEventuallyNoFile(t *testing.T, key string) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		_, err := h.s3.GetObject(t.Context(), key)
+		return err != nil
+	}, 5*time.Second, 100*time.Millisecond, "file still exists in S3")
 }

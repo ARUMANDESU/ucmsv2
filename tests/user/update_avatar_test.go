@@ -223,6 +223,11 @@ func (s *UpdateAvatarSuite) TestUpdateUserAvatar_Authentication() {
 			auth:           httpframework.WithStudent(t, u.ID()),
 			expectedStatus: http.StatusOK,
 		},
+		{
+			name:           "authenticated_staff",
+			auth:           httpframework.WithStaff(t, u.ID()),
+			expectedStatus: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
@@ -360,5 +365,92 @@ func (s *UpdateAvatarSuite) TestUpdateUserAvatar_ExistingAvatarReplacement() {
 	assert.Equal(t, avatars.SourceS3, e.OldAvatar.Source, "event old avatar source should be S3")
 	assert.NotEqual(t, originalS3Key, e.NewAvatar.S3Key, "new avatar S3 key should differ from original")
 
-	s.S3.RequireNoFile(t, originalS3Key)
+	s.S3.RequireEventuallyNoFile(t, originalS3Key)
+}
+
+func (s *UpdateAvatarSuite) TestDeleteUserAvatar_HappyPath() {
+	t := s.T()
+
+	u := builders.NewUserBuilder().Build()
+	s.DB.SeedUser(t, u)
+
+	validAvatar := fixtures.GetAvatarByKey("valid_png")
+	require.NotNil(t, validAvatar)
+
+	s.HTTP.UpdateUserAvatarWithFile(
+		t,
+		"new_avatar.png",
+		validAvatar.ContentType,
+		validAvatar.Data,
+		httpframework.WithUserJWT(t, u.ID()),
+	).
+		RequireStatus(http.StatusOK)
+
+	s.HTTP.DeleteUserAvatar(t, httpframework.WithUserJWT(t, u.ID())).
+		RequireStatus(http.StatusOK)
+	s.DB.RequireUserExists(t, u.Email()).
+		AssertEmptyAvatar()
+
+	e := event.RequireEventuallyEvent[*user.UserAvatarUpdated](t, s.Event, 5*time.Second)
+	assert.Equal(t, u.ID(), e.UserID, "event user ID should match")
+	assert.Empty(t, e.NewAvatar, "event avatar S3 key should be empty")
+	assert.NotEmpty(t, e.OldAvatar, "event old avatar S3 key should not be empty")
+
+	s.S3.RequireEventuallyNoFile(t, e.OldAvatar.S3Key)
+}
+
+func (s *UpdateAvatarSuite) TestDeleteUserAvatar_Authentication() {
+	t := s.T()
+
+	u := builders.NewUserBuilder().Build()
+	s.DB.SeedUser(t, u)
+
+	validAvatar := fixtures.GetAvatarByKey("valid_png")
+	require.NotNil(t, validAvatar)
+
+	tests := []struct {
+		name           string
+		auth           httpframework.RequestBuilderOptions
+		expectedStatus int
+	}{
+		{
+			name:           "unauthenticated",
+			auth:           httpframework.WithAnon(),
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "authenticated_student",
+			auth:           httpframework.WithStudent(t, u.ID()),
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "authenticated_staff",
+			auth:           httpframework.WithStaff(t, u.ID()),
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s.HTTP.UpdateUserAvatarWithFile(
+				t,
+				"new_avatar.png",
+				validAvatar.ContentType,
+				validAvatar.Data,
+				httpframework.WithUserJWT(t, u.ID()),
+			).
+				RequireStatus(http.StatusOK)
+			s.HTTP.DeleteUserAvatar(t, tt.auth).RequireStatus(tt.expectedStatus)
+		})
+	}
+}
+
+func (s *UpdateAvatarSuite) TestDeleteUserAvatar_NotFound() {
+	t := s.T()
+
+	u := builders.NewUserBuilder().WithEmptyAvatar().Build()
+	s.DB.SeedUser(t, u)
+
+	s.HTTP.DeleteUserAvatar(t, httpframework.WithUserJWT(t, u.ID())).
+		RequireStatus(http.StatusNotFound)
 }

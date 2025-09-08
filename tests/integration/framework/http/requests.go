@@ -198,3 +198,11 @@ func (h *Helper) UpdateUserAvatarWithFile(t *testing.T, filename, contentType st
 
 	return h.Do(t, req.Build())
 }
+
+func (h *Helper) DeleteUserAvatar(t *testing.T, opts ...RequestBuilderOptions) *Response {
+	req := NewRequest("DELETE", "/v1/users/me/avatar")
+	for _, opt := range opts {
+		opt(req)
+	}
+	return h.Do(t, req.Build())
+}

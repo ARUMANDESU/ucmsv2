@@ -285,6 +285,13 @@ func WithStudent(t *testing.T, id user.ID) RequestBuilderOptions {
 	return WithAccessTokenCookie(token)
 }
 
+func WithUserJWT(t *testing.T, id user.ID) RequestBuilderOptions {
+	token := builders.JWTFactory{}.
+		AccessTokenBuilder(id.String(), roles.Unknown.String()).
+		BuildSignedStringT(t)
+	return WithAccessTokenCookie(token)
+}
+
 // WithAccessTokenCookie adds access token cookie to the request to simulate authenticated user
 func WithAccessTokenCookie(token string) RequestBuilderOptions {
 	return func(b *RequestBuilder) {

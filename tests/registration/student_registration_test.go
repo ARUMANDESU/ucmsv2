@@ -106,7 +106,10 @@ func (s *RegistrationIntegrationSuite) TestStudentRegistrationFlow() {
 	})
 
 	s.T().Run("Verify Registration Status", func(t *testing.T) {
-		s.DB.RequireRegistrationExists(t, email).AssertStatus(t, registration.StatusCompleted)
+		reg := s.DB.RequireRegistrationExists(t, email).Registration
+		require.Eventually(t, func() bool {
+			return reg.IsStatus(registration.StatusCompleted)
+		}, 5*time.Second, 100*time.Millisecond, "")
 	})
 
 	s.T().Run("Verify Welcome Email Sent", func(t *testing.T) {
