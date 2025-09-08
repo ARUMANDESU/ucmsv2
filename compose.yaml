@@ -1,4 +1,56 @@
 services:
+    backend:
+        container_name: ucmsv2-backend
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - 8080:8080
+        environment:
+            MODE: "${MODE:-dev}"
+            PORT: "8080"
+            PG_DSN: "postgres://user:password@postgresql:5432/ucms?sslmode=disable"
+            S3_ENDPOINT: "http://minio-s3:9000"
+            S3_ACCESS_KEY: "ucmsadmin"
+            S3_SECRET_KEY: "ucmsadminpass"
+            S3_BUCKET: "ucms-avatars"
+            S3_REGION: "us-east-1"
+            S3_BASE_URL: "http://localhost:9000/ucms-avatars"
+            S3_USE_PATH_STYLE: "true"
+            ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET:-dev_access_secret_key_123456}"
+            REFRESH_TOKEN_SECRET: "${REFRESH_TOKEN_SECRET:-dev_refresh_secret_key_123456}"
+            INVITATION_TOKEN_SECRET: "${INVITATION_TOKEN_SECRET:-dev_invitation_secret_key_123456}"
+            STAFF_INVITATION_BASE_URL: "${STAFF_INVITATION_BASE_URL:-http://localhost:3000/invitations/accept}"
+            STAFF_INVITATION_PAGE_URL: "${STAFF_INVITATION_PAGE_URL:-http://localhost:3000/invitations/accept}"
+            SERVICE_NAMESPACE: "ucms"
+            SERVICE_NAME: "ucms-api"
+            SERVICE_VERSION: "${SERVICE_VERSION:-0.1.0}"
+            SERVICE_INSTANCE_ID: "backend-1"
+            OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+            INITIAL_STAFF_EMAIL: "${INITIAL_STAFF_EMAIL:-}"
+            INITIAL_STAFF_USERNAME: "${INITIAL_STAFF_USERNAME:-admin}"
+            INITIAL_STAFF_PASSWORD: "${INITIAL_STAFF_PASSWORD:-StrongP@ssw0rd}"
+            INITIAL_STAFF_BARCODE: "${INITIAL_STAFF_BARCODE:-000000}"
+            INITIAL_STAFF_FIRST_NAME: "${INITIAL_STAFF_FIRST_NAME:-Admin}"
+            INITIAL_STAFF_LAST_NAME: "${INITIAL_STAFF_LAST_NAME:-User}"
+        depends_on:
+            postgresql:
+                condition: service_healthy
+            minio-s3:
+                condition: service_healthy
+            # otel-collector:
+            #     condition: service_healthy
+        networks:
+            - default
+        restart: always
+        profiles: [ "app" ]
+        healthcheck:
+            test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8080/health" ]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
+
     postgresql:
         container_name: ucmsv2-postgresql
         image: "postgres:${PG_VERSION:-17-alpine}"

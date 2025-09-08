@@ -80,3 +80,23 @@ tasks:
             - infra:restart
         cmds:
             - cmd: docker compose -f compose.yaml --profile infra restart
+    compose:all:up:
+        desc: Start all services using Docker Compose
+        env:
+            MODE: local
+        aliases:
+            - all:up
+        cmds:
+            - cmd: docker compose -f compose.yaml --profile infra --profile app up -d 
+    compose:all:down:
+        desc: Stop all services using Docker Compose
+        aliases:
+            - all:down
+        cmds:
+            - cmd: docker compose -f compose.yaml --profile infra --profile app down
+    compose:all:restart:
+        desc: Restart all services using Docker Compose
+        aliases:
+            - all:restart
+        cmds:
+            - cmd: docker compose -f compose.yaml --profile infra --profile app restart 

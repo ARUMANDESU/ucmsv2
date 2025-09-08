@@ -108,6 +108,10 @@ func (p *Port) Route(r chi.Router) chi.Router {
 			h.ServeHTTP(w, r)
 		})
 	})
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("OK"))
+	})
 
 	p.reg.Route(r)
 	p.auth.Route(r)
