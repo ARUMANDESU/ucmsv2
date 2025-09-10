@@ -1,62 +1,110 @@
 # UCMS v2
 
-**University Clubs Management System** - A modern Go backend for university clubs management.
+University Course Management System - Go backend with DDD architecture.
 
-[![Go Version](https://img.shields.io/badge/go-1.24.0-blue.svg)](https://golang.org)
-[![PostgreSQL](https://img.shields.io/badge/postgresql-16.8-blue.svg)](https://postgresql.org)
+# Stack
 
-## Features
+- Go 1.24.0
+- PostgreSQL 16.8
+- Watermill (CQRS)
+- Chi + OpenAPI
 
-- 🎓 **Student Registration** - Email-verified workflow with group assignment
-- 👥 **Staff Management** - Invitation-based onboarding system  
-- 🔐 **JWT Authentication** - Secure token-based auth with refresh tokens
-- 🌐 **Multi-language** - English, Kazakh, Russian support
-- ⚡ **Event-Driven** - CQRS architecture with async processing
-- 📧 **Email Integration** - Automated notifications and verification
+# Setup
 
-## Quick Start
+## Prerequisites
+
+- Go 1.24.0+
+- Docker
+- Task runner: `go install github.com/go-task/task/v3/cmd/task@latest`
+
+## 1. Clone the repository
 
 ```bash
-# Clone repository
-git clone <repo-url>
-cd ucms-v2
+git clone git@gitlab.com:ucmsv2/ucms-backend.git
+cd ucms-backend
+```
 
-# Create environment file
-cp .env.example .env.local
-# Edit .env.local with your settings
+```bash
+git clone https://gitlab.com/ucmsv2/ucms-backend.git
+cd ucms-backend
+```
 
-# Start PostgreSQL
-task docker:local
+## 2. Create environment file
 
-# Run the API
+Create `.env.local` in the project root:
+
+```bash
+# .env.local
+MODE=local
+PORT=8080
+PG_DSN=postgres://user:password@localhost:8765/ucms?sslmode=disable
+
+# Optional: Create initial admin user
+INITIAL_STAFF_EMAIL=admin@example.com
+INITIAL_STAFF_USERNAME=admin
+INITIAL_STAFF_PASSWORD=StrongP@ssw0rd
+INITIAL_STAFF_BARCODE=000000
+INITIAL_STAFF_FIRST_NAME=Admin
+INITIAL_STAFF_LAST_NAME=User
+
+# Staff invitation frontend base url 
+STAFF_INVITATION_BASE_URL=
+
+# JWT Configuration
+ACCESS_TOKEN_SECRET=secret
+REFRESH_TOKEN_SECRET=secret2
+INVITATION_TOKEN_SECRET=invitation_secret
+
+# OpenTelemetry Configuration
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+OTEL_EXPORTER_OTLP_INSECURE=true
+OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta
+OTEL_SERVICE_NAME=ucms-api
+OTEL_SERVICE_VERSION=0.1.0
+OTEL_SERVICE_NAMESPACE=ucms
+OTEL_SERVICE_INSTANCE_ID=instance-1
+
+# Service Configuration (for OpenTelemetry resource attributes)
+SERVICE_NAME=ucms-api
+SERVICE_VERSION=0.1.0
+SERVICE_NAMESPACE=ucms
+SERVICE_INSTANCE_ID=instance-1
+
+# S3/MinIO Configuration (for avatar storage for now)
+S3_ENDPOINT=http://localhost:9000
+S3_ACCESS_KEY=ucmsadmin
+S3_SECRET_KEY=ucmsadminpass
+S3_BUCKET=ucms
+S3_REGION=us-east-1
+S3_BASE_URL=http://localhost:9000/ucms-avatars
+S3_USE_PATH_STYLE=true
+```
+
+## 3. Run docker compose file
+
+```bash
+task infra:up
+```
+
+This starts all needed infrastructure (postgres, minio, otel-collector, grafana, loki, tempo, prometheus)
+
+## 4. Run the application
+
+```bash
 task http:local
 ```
 
-**Test it works:**
+The API server will start on `http://localhost:8080`.
+
+## 5. Test it works
+
 ```bash
+# Health check
 curl http://localhost:8080/health
 ```
 
-🎉 **API running at http://localhost:8080**
+If you see a response (not an error), everything is working! :tada:
 
-## Tech Stack
-
-- **Language:** Go 1.24.0
-- **Database:** PostgreSQL 16.8  
-- **Architecture:** DDD + CQRS + Event Sourcing
-- **Message Broker:** Watermill
-- **HTTP Router:** Chi with OpenAPI
-- **Testing:** Testcontainers + Integration tests
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/registrations/students/start` | POST | Start student registration |
-| `/v1/registrations/verify` | POST | Verify email with code |
-| `/v1/registrations/students/complete` | POST | Complete registration |
-| `/v1/auth/login` | POST | User authentication |
-| `/v1/students/me` | GET | Get student information |
 
 ## Documentation
 
@@ -67,13 +115,6 @@ curl http://localhost:8080/health
 - [First API Call](docs/first-api-call.md) - Complete registration flow
 - [Architecture](docs/architecture.md) - System design and patterns
 - [API Reference](docs/api.md) - Detailed endpoint docs
-
-## Development
-
-**Prerequisites:**
-- Go 1.24.0+
-- Docker
-- Task runner: `go install github.com/go-task/task/v3/cmd/task@latest`
 
 **Common commands:**
 ```bash
@@ -95,34 +136,3 @@ task openapi:http      # Generate API types
 ├── migrations/        # Database migrations
 └── docs/             # Documentation
 ```
-
-## Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Make changes and add tests
-4. Run tests: `task test`
-5. Commit changes: `git commit -m 'Add amazing feature'`
-6. Push branch: `git push origin feature/amazing-feature`
-7. Create Pull Request
-
-**Development workflow:**
-- Read [Development Guide](docs/development.md)
-- Follow [Architecture patterns](docs/architecture.md)
-- Write tests for new features
-
-## Environment Variables
-
-Create `.env.local` from `.env.example`:
-
-```bash
-MODE=local
-PORT=8080
-PG_DSN=postgres://user:password@localhost:8765/ucms?sslmode=disable
-
-# Optional: Initial admin user
-INITIAL_STAFF_EMAIL=admin@example.com
-INITIAL_STAFF_PASSWORD=StrongP@ssw0rd
-```
-
-See [Configuration Guide](docs/configuration.md) for all options.
