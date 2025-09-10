@@ -1,6 +1,6 @@
 # UCMS v2
 
-University Course Management System - Go backend with DDD architecture.
+University Club Management System - Go backend with DDD architecture.
 
 # Stack
 
